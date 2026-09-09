@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeRabbit AI Replication: Architecture Blueprint & Technical Roadmap</title>
+    <title>Git-Fix | Cyberpunk Code Review Engine</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,31 +12,33 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            50: '#fdf4ff',
-                            100: '#fae8ff',
-                            400: '#e879f9',
-                            500: '#d946ef',
-                            600: '#c026d3',
-                            700: '#a21caf',
+                        cyber: {
+                            900: '#0a0a0f',
+                            800: '#1a1a2e',
+                            700: '#16213e',
+                            600: '#0f3460',
+                            500: '#1e4d92',
+                            400: '#2a6fc4',
+                            300: '#3a9cff',
+                            200: '#5aBDFF',
+                            100: '#8adeff',
+                            50: '#c6ffff',
                         },
-                        dark: {
-                            900: '#090d16',
-                            800: '#0f172a',
-                            750: '#151f38',
-                            700: '#1e293b',
-                            600: '#334155'
+                        neon: {
+                            magenta: '#ff00ff',
+                            cyan: '#00ffff',
+                            amber: '#ff8c00',
+                            green: '#00ff00',
                         },
-                        accent: {
-                            cyan: '#06b6d4',
-                            emerald: '#10b981',
-                            amber: '#f59e0b',
-                            violet: '#8b5cf6'
+                        glitch: {
+                            red: '#ff3333',
+                            blue: '#33ffff',
                         }
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Menlo', 'monospace']
+                        mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+                        display: ['Orbitron', 'system-ui', 'sans-serif']
                     }
                 }
             }
@@ -45,44 +47,216 @@
     <!-- Google Fonts & Lucide Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Custom scrollbar and backdrop filter fixes */
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --fg-primary: #e0e0f0;
+            --fg-muted: #6a6a8a;
+            --accent-magenta: #ff00ff;
+            --accent-cyan: #00ffff;
+            --accent-amber: #ff8c00;
+            --accent-green: #00ff00;
+            --glow-intensity: 0.8;
+        }
+
+        /* Matrix rain background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(#0f0f23 1px, transparent 1px),
+                linear-gradient(90deg, #0f0f23 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Neon scanlines */
+        .neon-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(255,0,255,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(0,255,255,0.03) 0%, transparent 50%);
+        }
+
+        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #090d16;
+            background: var(--bg-primary);
         }
         ::-webkit-scrollbar-thumb {
-            background: #1e293b;
+            background: var(--bg-secondary);
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
+            background: var(--accent-cyan);
         }
-        .glow-effect {
-            box-shadow: 0 0 35px -5px rgba(217, 70, 239, 0.15);
+
+        /* Glow effects */
+        .glow-magenta {
+            box-shadow: 0 0 35px -5px rgba(255, 0, 255, var(--glow-intensity));
         }
         .glow-cyan {
-            box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.2);
+            box-shadow: 0 0 30px -5px rgba(0, 255, 255, var(--glow-intensity));
         }
-        .blueprint-grid {
-            background-size: 32px 32px;
+        .glow-amber {
+            box-shadow: 0 0 25px -5px rgba(255, 140, 0, var(--glow-intensity));
+        }
+        .glow-green {
+            box-shadow: 0 0 20px -5px rgba(0, 255, 0, var(--glow-intensity));
+        }
+
+        .glow-text {
+            text-shadow: 0 0 20px rgba(255, 0, 255, 0.5),
+                         0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Background grid */
+        .cyber-grid {
+            background-size: 40px 40px;
             background-image: 
-                linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+                linear-gradient(var(--bg-primary) 1px, transparent 1px),
+                linear-gradient(90deg, var(--bg-primary) 1px, transparent 1px);
         }
-        .code-preview {
-            background-color: #0b0f19;
+
+        /* Button styles */
+        .btn-cyber {
+            position: relative;
+            padding: 0.5rem 1.25rem;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .btn-cyber::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-magenta), var(--accent-cyan));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-cyber:hover::before {
+            opacity: 0.3;
+        }
+
+        .btn-cyber.magenta {
+            background: var(--accent-magenta);
+            color: var(--bg-primary);
+        }
+        .btn-cyber.magenta:hover {
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+        }
+
+        .btn-cyber.cyan {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+        .btn-cyber.cyan:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+        }
+
+        .btn-cyber.amber {
+            background: var(--accent-amber);
+            color: var(--bg-primary);
+        }
+        .btn-cyber.amber:hover {
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.4);
+        }
+
+        .btn-cyber.green {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+        }
+        .btn-cyber.green:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.4);
+        }
+
+        /* Card styles */
+        .card-cyber {
+            background: rgba(26, 26, 46, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Section styles */
+        .section-cyber {
+            position: relative;
+            z-index: 10;
+        }
+
+        .section-cyber::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, var(--accent-magenta), var(--accent-cyan), var(--accent-magenta));
+            opacity: 0.5;
+        }
+
+        /* Text utilities */
+        .text-neon-magenta {
+            text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+        }
+        .text-neon-cyan {
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        .text-neon-amber {
+            text-shadow: 0 0 20px rgba(255, 140, 0, 0.5);
+        }
+        .text-neon-green {
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        /* Focus ring */
+        .focus-ring:focus {
+            outline: 2px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
-<body class="bg-dark-900 text-slate-200 font-sans antialiased selection:bg-brand-500 selection:text-white min-h-screen">
+<body class="bg-cyber-900 text-cyber-100 font-sans antialiased selection:bg-cyber-800 selection:text-cyber-200 min-h-screen neon-overlay">
 
     <!-- Top Navigation -->
     <header class="sticky top-0 z-50 backdrop-blur-md bg-dark-900/80 border-b border-slate-800">
@@ -93,7 +267,7 @@
                 </div>
                 <div>
                     <div class="flex items-center space-x-2">
-                        <span class="font-bold text-lg text-white tracking-tight">CodeRabbit Clone Architecture</span>
+                        <span class="font-bold text-lg text-white tracking-tight">Git-Fix Clone Architecture</span>
                         <span class="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/30 px-2 py-0.5 rounded-full font-mono">v1.0-REPLICA</span>
                     </div>
                     <p class="text-xs text-slate-400 hidden sm:block">Deep Technical System Blueprint & Milestone Roadmap</p>
@@ -131,7 +305,7 @@
                     AST-Grounded Semantic Code Review Engine
                 </div>
                 <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                    Engineering Blueprints for Replicating <span class="bg-gradient-to-r from-brand-400 via-accent-violet to-accent-cyan bg-clip-text text-transparent">CodeRabbit AI</span>
+                    Engineering Blueprints for Replicating <span class="bg-gradient-to-r from-brand-400 via-accent-violet to-accent-cyan bg-clip-text text-transparent">Git-Fix AI</span>
                 </h1>
                 <p class="mt-4 text-slate-300 text-base sm:text-lg leading-relaxed">
                     A comprehensive, implementation-ready reverse-engineering guide. Learn how to construct an automated Pull Request review engine featuring <strong class="text-white">Tree-sitter AST parsing</strong>, deterministic context retrieval, multi-turn conversational agents, and high-signal, zero-hallucination inline code comments.
@@ -872,7 +1046,7 @@
                         <h3 class="text-lg font-bold text-white font-mono">.coderabbit.yaml Specification</h3>
                     </div>
                     <p class="text-xs text-slate-400 mb-4 leading-relaxed">
-                        Replicate CodeRabbit’s per-repository rule tuning. Your replica must read and parse this YAML schema from the root of target repositories to configure review profiles.
+                        Replicate Git-Fix’s per-repository rule tuning. Your replica must read and parse this YAML schema from the root of target repositories to configure review profiles.
                     </p>
                     <div class="relative code-preview rounded-xl p-4 font-mono text-xs text-slate-300 overflow-x-auto">
                         <pre><span class="text-slate-500"># Schema for automated PR review replica</span>
@@ -937,7 +1111,7 @@ knowledge_base:
                         <h3 class="text-lg font-bold text-white font-mono">Replica Tech Stack Selection</h3>
                     </div>
                     <p class="text-xs text-slate-400 mb-4 leading-relaxed">
-                        Carefully chosen open-source tools matching CodeRabbit’s performance profiles and context retention guarantees.
+                        Carefully chosen open-source tools matching Git-Fix’s performance profiles and context retention guarantees.
                     </p>
 
                     <div class="space-y-3">
@@ -991,7 +1165,7 @@ knowledge_base:
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
             <div class="flex items-center space-x-2">
                 <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
-                <span class="text-slate-300 font-semibold">CodeRabbit AI Engineering Blueprint</span>
+                <span class="text-slate-300 font-semibold">Git-Fix AI Engineering Blueprint</span>
                 <span>• Clean-room system design spec</span>
             </div>
             <div class="flex items-center gap-4">
@@ -1277,7 +1451,7 @@ knowledge_base:
                 code: `{
   "commit_id": "9ef31048c",
   "event": "COMMENT",
-  "body": "## CodeRabbit Replica Walkthrough\\n\\nIdentified 1 critical security finding.",
+  "body": "## Git-Fix Walkthrough\n\nIdentified 1 critical security finding.",
   "comments": [
     {
       "path": "internal/db/users.go",

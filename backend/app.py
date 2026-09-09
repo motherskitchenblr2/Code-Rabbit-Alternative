@@ -324,7 +324,7 @@ def github_review():
     # Single review dispatch via POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
     review_payload = {
         "event": "COMMENT",
-        "body": f"## CodeRabbit Replica Walkthrough\n\nIdentified {len(comments)} finding(s) in this PR.",
+        "body": f"## Git-Fix Walkthrough\n\nIdentified {len(comments)} finding(s) in this PR.",
         "comments": comments,
     }
 
