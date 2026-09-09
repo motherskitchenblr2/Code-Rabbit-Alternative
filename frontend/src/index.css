@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #1a1a2e;
+    --bg-tertiary: #16213e;
+    --fg-primary: #e0e0f0;
+    --fg-muted: #6a6a8a;
+    --accent-magenta: #ff00ff;
+    --accent-cyan: #00ffff;
+    --accent-amber: #ff8c00;
+    --accent-green: #00ff00;
+    --glow-intensity: 0.8;
+  }
+
+  * {
+    @apply border-cyber-700;
+  }
+
+  body {
+    @apply bg-cyber-900 text-cyber-100 font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-cyber-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-cyber-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neon-magenta/50;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-neon-magenta text-cyber-900;
+  }
+
+  /* Focus */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-neon-cyan ring-offset-2 ring-offset-cyber-900;
+  }
+}
+
+@layer components {
+  .btn-cyber {
+    @apply px-4 py-2 rounded-lg font-mono font-medium transition-all duration-200
+           focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-cyber-magenta {
+    @apply btn-cyber bg-neon-magenta text-cyber-900 hover:shadow-[0_0_20px_rgba(255,0,255,0.5)] hover:bg-neon-magenta/90;
+  }
+
+  .btn-cyber-cyan {
+    @apply btn-cyber bg-neon-cyan text-cyber-900 hover:shadow-[0_0_20px_rgba(0,255,255,0.5)] hover:bg-neon-cyan/90;
+  }
+
+  .btn-cyber-amber {
+    @apply btn-cyber bg-neon-amber text-cyber-900 hover:shadow-[0_0_20px_rgba(255,140,0,0.5)] hover:bg-neon-amber/90;
+  }
+
+  .btn-cyber-ghost {
+    @apply btn-cyber bg-transparent border border-cyber-600 text-cyber-200 hover:bg-cyber-800 hover:border-neon-magenta;
+  }
+
+  .card-cyber {
+    @apply bg-cyber-800/80 backdrop-blur-sm border border-cyber-700/50 rounded-xl
+           shadow-[0_0_20px_rgba(0,0,0,0.5)] hover:border-neon-magenta/30 transition-all duration-300;
+  }
+
+  .card-cyber-glow {
+    @apply card-cyber shadow-[0_0_30px_rgba(255,0,255,0.15)] hover:shadow-[0_0_40px_rgba(0,255,255,0.3)];
+  }
+
+  .input-cyber {
+    @apply w-full px-4 py-3 rounded-lg bg-cyber-900/50 border border-cyber-700/50
+           text-cyber-100 placeholder-cyber-500
+           focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 focus:outline-none
+           transition-all duration-200;
+  }
+
+  .label-cyber {
+    @apply block text-sm font-medium text-cyber-300 mb-2 font-mono;
+  }
+
+  .badge-cyber {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium;
+  }
+
+  .badge-critical {
+    @apply badge-cyber bg-red-900/50 text-red-300 border border-red-500/30;
+  }
+  .badge-high {
+    @apply badge-cyber bg-orange-900/50 text-orange-300 border border-orange-500/30;
+  }
+  .badge-medium {
+    @apply badge-cyber bg-amber-900/50 text-amber-300 border border-amber-500/30;
+  }
+  .badge-low {
+    @apply badge-cyber bg-green-900/50 text-green-300 border border-green-500/30;
+  }
+
+  .glow-magenta {
+    @apply shadow-[0_0_20px_rgba(255,0,255,0.4)];
+  }
+
+  .glow-cyan {
+    @apply shadow-[0_0_20px_rgba(0,255,255,0.4)];
+  }
+
+  .glow-amber {
+    @apply shadow-[0_0_20px_rgba(255,140,0,0.4)];
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-neon-magenta via-neon-cyan to-neon-amber bg-clip-text text-transparent;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .neon-border {
+    @apply relative before:absolute before:inset-0 before:rounded-xl before:border before:border-neon-magenta/30 before:opacity-0 hover:before:opacity-100 before:transition-opacity;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 255, 255, 0.5); }
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

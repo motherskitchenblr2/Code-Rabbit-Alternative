@@ -1,16 +1,86 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import json
 import hashlib
 import hmac
 import base64
 import time
+import os
+import logging
+import secrets
 from datetime import datetime
+from functools import wraps
+from typing import Optional, Dict, Any
+
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    RATE_LIMITER_AVAILABLE = True
+except ImportError:
+    RATE_LIMITER_AVAILABLE = False
+
+try:
+    from flask_talisman import Talisman
+    TALISMAN_AVAILABLE = True
+except ImportError:
+    TALISMAN_AVAILABLE = False
+
+try:
+    from pydantic import BaseModel, Field, ValidationError
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
 
 app = Flask(__name__)
-CORS(app)
 
-# Pipeline state management
+# Security Configuration
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY', secrets.token_hex(32)),
+    MAX_CONTENT_LENGTH=int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)),  # 16MB
+    JSON_SORT_KEYS=False,
+)
+
+# CORS Configuration - Restrict to specific origins in production
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+CORS(app, origins=CORS_ORIGINS, supports_credentials=True, allow_headers=['Content-Type', 'Authorization'])
+
+# Security Headers with Talisman
+if TALISMAN_AVAILABLE:
+    Talisman(
+        app,
+        force_https=os.environ.get('FORCE_HTTPS', 'false').lower() == 'true',
+        strict_transport_security=True,
+        session_cookie_secure=True,
+        content_security_policy={
+            'default-src': "'self'",
+            'script-src': "'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com",
+            'style-src': "'self' 'unsafe-inline' https://fonts.googleapis.com",
+            'font-src': "'self' https://fonts.gstatic.com",
+            'img-src': "'self' data: https:",
+            'connect-src': "'self' ws: wss:",
+        },
+        force_https_permanent=True,
+    )
+
+# Rate Limiter
+if RATE_LIMITER_AVAILABLE:
+    limiter = Limiter(
+        key_func=get_remote_address,
+        app=app,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri=os.environ.get('REDIS_URL', 'memory://'),
+    )
+else:
+    limiter = None
+
+# Structured Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+)
+logger = logging.getLogger(__name__)
+
+# Pipeline state management (use Redis in production)
 pipeline_state = {
     "current_stage": 0,
     "events_processed": 0,
@@ -18,45 +88,134 @@ pipeline_state = {
     "reviews_created": 0,
 }
 
-# Secret for HMAC validation (matching GitHub App setup)
-GITHUB_WEBHOOK_SECRET = "code-rabbit-alternative-secret-key"
+# Security: Secret from environment only
+GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET')
+if not GITHUB_WEBHOOK_SECRET:
+    logger.warning("GITHUB_WEBHOOK_SECRET not set! Using fallback for development only.")
+    GITHUB_WEBHOOK_SECRET = secrets.token_hex(32)
 
+# Request ID middleware for tracing
+@app.before_request
+def before_request():
+    g.request_id = request.headers.get('X-Request-ID', secrets.token_hex(8))
+    g.start_time = time.time()
+    logger.info(
+        f"Request started",
+        extra={
+            'request_id': g.request_id,
+            'method': request.method,
+            'path': request.path,
+            'remote_addr': request.remote_addr,
+        }
+    )
 
-# ── Stage 1: Webhook Ingestion ──────────────────────────────────────────────
-@app.route("/api/v1/webhook", methods=["POST"])
-def webhook():
-    """Receive and validate GitHub pull_request webhooks."""
-    payload = request.get_json()
-    if not payload:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+@app.after_request
+def after_request(response):
+    duration = time.time() - g.start_time if hasattr(g, 'start_time') else 0
+    logger.info(
+        f"Request completed",
+        extra={
+            'request_id': g.request_id,
+            'status': response.status_code,
+            'duration_ms': round(duration * 1000, 2),
+        }
+    )
+    # Add security headers
+    response.headers['X-Request-ID'] = g.request_id
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
-    # HMAC signature validation
-    signature = request.headers.get("X-Hub-Signature-256")
-    if not signature or not validate_signature(payload, signature):
-        return jsonify({"error": "Invalid signature"}), 401
-
-    # Discard bot author events to prevent feedback loops
-    if is_bot_author(payload):
-        return jsonify({"status": "ignored", "reason": "bot_author"}), 202
-
-    # Generate idempotency key
-    repo_id = payload.get("repository", {}).get("id", 0)
-    pr_number = payload.get("pull_request", {}).get("number", 0)
-    head_sha = payload.get("pull_request", {}).get("head", {}).get("sha", "")
-    idempotency_key = f"{repo_id}:{pr_number}:{head_sha}"
-
-    # Enqueue for processing (simulate Redis-backed queue)
-    pipeline_state["events_processed"] += 1
-
+# Error handlers
+@app.errorhandler(400)
+def bad_request(e):
     return jsonify({
-        "status": "accepted",
-        "event_id": idempotency_key,
-        "diff_metadata": extract_diff_metadata(payload),
-    }), 202
+        "error": "Bad Request",
+        "message": str(e.description) if hasattr(e, 'description') else "Invalid request",
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 400
+
+@app.errorhandler(401)
+def unauthorized(e):
+    return jsonify({
+        "error": "Unauthorized",
+        "message": "Authentication required",
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 401
+
+@app.errorhandler(403)
+def forbidden(e):
+    return jsonify({
+        "error": "Forbidden",
+        "message": "Insufficient permissions",
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 403
+
+@app.errorhandler(413)
+def payload_too_large(e):
+    return jsonify({
+        "error": "Payload Too Large",
+        "message": f"Maximum payload size is {app.config['MAX_CONTENT_LENGTH']} bytes",
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 413
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    return jsonify({
+        "error": "Rate Limit Exceeded",
+        "message": "Too many requests. Please try again later.",
+        "retry_after": e.retry_after if hasattr(e, 'retry_after') else 60,
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 429
+
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error(f"Internal server error: {e}", exc_info=True)
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": "An unexpected error occurred",
+        "request_id": g.request_id if hasattr(g, 'request_id') else None
+    }), 500
 
 
-def validate_signature(payload, signature):
-    """Validate X-Hub-Signature-256 HMAC-SHA256."""
+# ── Pydantic Models for Input Validation ──────────────────────────────────────
+
+if PYDANTIC_AVAILABLE:
+    class WebhookPayload(BaseModel):
+        event: str = Field(..., pattern=r"^pull_request$")
+        action: str = Field(..., pattern=r"^(opened|synchronize|reopened|closed)$")
+        repository: Dict[str, Any]
+        pull_request: Dict[str, Any]
+        installation: Dict[str, Any]
+
+    class ASTSliceRequest(BaseModel):
+        diff: str = Field(..., min_length=1, max_length=100000)
+
+    class RAGRequest(BaseModel):
+        scope: Dict[str, Any]
+
+    class CritiqueRequest(BaseModel):
+        findings: list = Field(..., min_items=1)
+
+    class GitHubReviewRequest(BaseModel):
+        pr_number: int = Field(..., gt=0)
+        findings: list = Field(..., min_items=1)
+
+    class ChatReplyRequest(BaseModel):
+        comment_id: str = Field(..., min_length=1)
+
+    class YAMLConfigRequest(BaseModel):
+        config: str = Field(..., min_length=1)
+
+
+# ── Helper Functions ──────────────────────────────────────────────────────────
+
+def validate_signature(payload: bytes, signature: str) -> bool:
+    """Validate X-Hub-Signature-256 HMAC-SHA256 with constant-time comparison."""
+    if not signature or not signature.startswith('sha256='):
+        return False
     mac = hmac.new(
         GITHUB_WEBHOOK_SECRET.encode(),
         msg=payload,
@@ -66,13 +225,13 @@ def validate_signature(payload, signature):
     return hmac.compare_digest(expected, signature)
 
 
-def is_bot_author(payload):
+def is_bot_author(payload: dict) -> bool:
     """Check if the PR author is an automated bot."""
     user = payload.get("pull_request", {}).get("user", {})
     return user.get("type") == "Bot"
 
 
-def extract_diff_metadata(payload):
+def extract_diff_metadata(payload: dict) -> dict:
     """Extract structured diff metadata from the webhook payload."""
     pr = payload.get("pull_request", {})
     return {
@@ -84,16 +243,93 @@ def extract_diff_metadata(payload):
     }
 
 
+def generate_idempotency_key(payload: dict) -> str:
+    """Generate cryptographically secure idempotency key."""
+    repo_id = payload.get("repository", {}).get("id", 0)
+    pr_number = payload.get("pull_request", {}).get("number", 0)
+    head_sha = payload.get("pull_request", {}).get("head", {}).get("sha", "")
+    # Add random component to prevent prediction
+    return f"{repo_id}:{pr_number}:{head_sha}:{secrets.token_hex(8)}"
+
+
+# ── Stage 1: Webhook Ingestion ──────────────────────────────────────────────
+
+@app.route("/api/v1/webhook", methods=["POST"])
+@limiter.limit("100 per minute") if limiter else lambda f: f
+def webhook():
+    """Receive and validate GitHub pull_request webhooks."""
+    # Validate content type
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
+
+    # Get raw payload for HMAC validation
+    payload_bytes = request.get_data()
+    payload = request.get_json()
+
+    if not payload:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    # HMAC signature validation
+    signature = request.headers.get("X-Hub-Signature-256")
+    if not signature or not validate_signature(payload_bytes, signature):
+        logger.warning(f"Invalid webhook signature", extra={'request_id': g.request_id})
+        return jsonify({"error": "Invalid signature"}), 401
+
+    # Validate payload structure
+    if PYDANTIC_AVAILABLE:
+        try:
+            WebhookPayload(**payload)
+        except ValidationError as e:
+            return jsonify({"error": "Invalid payload structure", "details": e.errors()}), 400
+
+    # Discard bot author events to prevent feedback loops
+    if is_bot_author(payload):
+        return jsonify({"status": "ignored", "reason": "bot_author"}), 202
+
+    # Generate idempotency key
+    idempotency_key = generate_idempotency_key(payload)
+
+    # Enqueue for processing (simulate Redis-backed queue)
+    pipeline_state["events_processed"] += 1
+
+    logger.info(f"Webhook accepted", extra={
+        'request_id': g.request_id,
+        'event_id': idempotency_key,
+        'repo': payload.get("repository", {}).get("full_name"),
+        'pr_number': payload.get("pull_request", {}).get("number"),
+    })
+
+    return jsonify({
+        "status": "accepted",
+        "event_id": idempotency_key,
+        "diff_metadata": extract_diff_metadata(payload),
+    }), 202
+
+
 # ── Stage 2: Tree-sitter AST Diff Slicing ───────────────────────────────────
+
 @app.route("/api/v1/ast-slice", methods=["POST"])
+@limiter.limit("50 per minute") if limiter else lambda f: f
 def ast_slice():
     """Parse unified diff into Tree-sitter AST scopes."""
-    data = request.get_json()
-    if not data or "diff" not in data:
-        return jsonify({"error": "Missing 'diff' field"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
 
-    unified_diff = data["diff"]
-    # Simulate Tree-sitter AST parsing
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated = ASTSliceRequest(**data)
+            unified_diff = validated.diff
+        except ValidationError as e:
+            return jsonify({"error": "Invalid request", "details": e.errors()}), 400
+    else:
+        unified_diff = data.get("diff")
+        if not unified_diff:
+            return jsonify({"error": "Missing 'diff' field"}), 400
+
     slices = simulate_ast_parsing(unified_diff)
 
     return jsonify({
@@ -103,40 +339,38 @@ def ast_slice():
     })
 
 
-def simulate_ast_parsing(unified_diff):
+def simulate_ast_parsing(unified_diff: str) -> list:
     """Simulate Tree-sitter-based AST scope extraction from unified diff."""
-    # In a real implementation, this would use tree-sitter WASM grammars
-    # For the prototype, we parse hunk headers and identify modified line ranges
     lines = unified_diff.split("\n")
     hunks = []
     current_hunk = None
 
     for line in lines:
         if line.startswith("@@"):
-            # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
             parts = line.split(" ")
-            old_info = parts[1].lstrip("-").split(",")
-            new_info = parts[2].lstrip("+").split(",")
-            old_start = int(old_info[0])
-            old_count = int(old_info[1]) if len(old_info) > 1 else 1
-            current_hunk = {
-                "old_start": old_start,
-                "old_count": old_count,
-                "modified_lines": [],
-            }
-            hunks.append(current_hunk)
+            if len(parts) >= 3:
+                try:
+                    old_info = parts[1].lstrip("-").split(",")
+                    new_info = parts[2].lstrip("+").split(",")
+                    old_start = int(old_info[0])
+                    old_count = int(old_info[1]) if len(old_info) > 1 else 1
+                    current_hunk = {
+                        "old_start": old_start,
+                        "old_count": old_count,
+                        "modified_lines": [],
+                    }
+                    hunks.append(current_hunk)
+                except (ValueError, IndexError):
+                    continue
         elif current_hunk and line.startswith("+"):
-            # Added line - track line number offset
-            # Simplified: just track that it's modified
             line_num = current_hunk["old_start"] + len(current_hunk["modified_lines"])
             current_hunk["modified_lines"].append(line_num)
 
-    # Group consecutive modified lines into scope units
     scopes = []
     for hunk in hunks:
         if hunk["modified_lines"]:
             scopes.append({
-                "file_path": "unknown",  # Would be extracted from context
+                "file_path": "unknown",
                 "scope_type": "function_definition",
                 "name": "unknown_function",
                 "start_line": hunk["old_start"],
@@ -148,14 +382,29 @@ def simulate_ast_parsing(unified_diff):
 
 
 # ── Stage 3: Contextual RAG & Caller Graphs ─────────────────────────────────
+
 @app.route("/api/v1/rag", methods=["POST"])
+@limiter.limit("30 per minute") if limiter else lambda f: f
 def rag():
     """Inject contextual codebase information into LLM prompts."""
-    data = request.get_json()
-    if not data or "scope" not in data:
-        return jsonify({"error": "Missing 'scope' field"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
 
-    scope = data["scope"]
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated = RAGRequest(**data)
+            scope = validated.scope
+        except ValidationError as e:
+            return jsonify({"error": "Invalid request", "details": e.errors()}), 400
+    else:
+        scope = data.get("scope")
+        if not scope:
+            return jsonify({"error": "Missing 'scope' field"}), 400
+
     context = generate_contextual_knowledge(scope)
 
     return jsonify({
@@ -167,7 +416,7 @@ def rag():
     })
 
 
-def generate_contextual_knowledge(scope):
+def generate_contextual_knowledge(scope: dict) -> dict:
     """Generate contextual knowledge for an AST scope."""
     file_path = scope.get("file_path", "unknown")
     name = scope.get("name", "unknown_function")
@@ -185,7 +434,6 @@ def generate_contextual_knowledge(scope):
         associated_tests = [f"tests/test_{name.lower()}.py:test_{name.lower()}_changed"]
 
     repo_rules = {}
-    # Read .coderabbit.yaml if available
     try:
         with open(".coderabbit.yaml", "r") as f:
             import yaml
@@ -207,15 +455,30 @@ def generate_contextual_knowledge(scope):
 
 
 # ── Stage 4: Multi-Agent Critic Ensemble ────────────────────────────────────
+
 @app.route("/api/v1/critique", methods=["POST"])
+@limiter.limit("20 per minute") if limiter else lambda f: f
 def critique():
     """Run multi-agent LLM review on diff context."""
-    data = request.get_json()
-    if not data or "findings" not in data:
-        return jsonify({"error": "Missing 'findings' field"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
 
-    # Simulate multi-agent parallel critique
-    structured_findings = simulate_critique_ensemble(data["findings"])
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated = CritiqueRequest(**data)
+            findings = validated.findings
+        except ValidationError as e:
+            return jsonify({"error": "Invalid request", "details": e.errors()}), 400
+    else:
+        findings = data.get("findings")
+        if not findings:
+            return jsonify({"error": "Missing 'findings' field"}), 400
+
+    structured_findings = simulate_critique_ensemble(findings)
 
     return jsonify({
         "status": "success",
@@ -224,7 +487,7 @@ def critique():
     })
 
 
-def simulate_critique_ensemble(initial_findings):
+def simulate_critique_ensemble(initial_findings: list) -> list:
     """Simulate specialized LLM critics: Security, Logic, Test Oracle."""
     findings = []
 
@@ -286,7 +549,7 @@ def simulate_critique_ensemble(initial_findings):
     return findings
 
 
-def generate_patch_for_line(line_num, patch_type):
+def generate_patch_for_line(line_num: int, patch_type: str) -> str:
     """Generate a code patch suggestion for a given line number."""
     patches = {
         "parameterize_input": 'row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", params)',
@@ -296,15 +559,30 @@ def generate_patch_for_line(line_num, patch_type):
 
 
 # ── Stage 5: GitHub API Post & Conversational Bot ───────────────────────────
+
 @app.route("/api/v1/github/review", methods=["POST"])
+@limiter.limit("10 per minute") if limiter else lambda f: f
 def github_review():
     """Dispatch consolidated review comments to GitHub PR."""
-    data = request.get_json()
-    if not data or "findings" not in data or "pr_number" not in data:
-        return jsonify({"error": "Missing required fields"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
 
-    pr_number = data["pr_number"]
-    findings = data["findings"]
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated = GitHubReviewRequest(**data)
+            pr_number = validated.pr_number
+            findings = validated.findings
+        except ValidationError as e:
+            return jsonify({"error": "Invalid request", "details": e.errors()}), 400
+    else:
+        if "findings" not in data or "pr_number" not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+        pr_number = data["pr_number"]
+        findings = data["findings"]
 
     # Filter to high-confidence findings only
     high_confidence = [f for f in findings if f.get("confidence", 0) >= 0.85]
@@ -321,7 +599,6 @@ def github_review():
         }
         comments.append(comment)
 
-    # Single review dispatch via POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
     review_payload = {
         "event": "COMMENT",
         "body": f"## Git-Fix Walkthrough\n\nIdentified {len(comments)} finding(s) in this PR.",
@@ -330,6 +607,12 @@ def github_review():
 
     pipeline_state["reviews_created"] += 1
     pipeline_state["comments_dispatched"] += len(comments)
+
+    logger.info(f"GitHub review dispatched", extra={
+        'request_id': g.request_id,
+        'pr_number': pr_number,
+        'findings_count': len(comments),
+    })
 
     return jsonify({
         "status": "review_dispatched",
@@ -342,26 +625,53 @@ def github_review():
 
 
 # ── Conversational reply handler ────────────────────────────────────────────
+
 @app.route("/api/v1/chat/reply", methods=["POST"])
+@limiter.limit("30 per minute") if limiter else lambda f: f
 def chat_reply():
     """Handle conversational follow-ups when developers reply to bot comments."""
-    data = request.get_json()
-    if not data or "comment_id" not in data:
-        return jsonify({"error": "Missing 'comment_id' field"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
 
-    # In a real implementation, this would restore thread context from Redis
-    # and generate a contextual response
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated = ChatReplyRequest(**data)
+            comment_id = validated.comment_id
+        except ValidationError as e:
+            return jsonify({"error": "Invalid request", "details": e.errors()}), 400
+    else:
+        comment_id = data.get("comment_id")
+        if not comment_id:
+            return jsonify({"error": "Missing 'comment_id' field"}), 400
+
     return jsonify({
         "status": "reply_queued",
-        "comment_id": data["comment_id"],
+        "comment_id": comment_id,
         "response": "I can help regenerate that suggestion or answer follow-up questions about the change.",
     })
 
 
 # ── Health & status endpoints ───────────────────────────────────────────────
+
 @app.route("/api/v1/health", methods=["GET"])
 def health():
-    return jsonify({"status": "healthy", "pipeline_stage": pipeline_state["current_stage"]})
+    """Health check endpoint with dependency checks."""
+    checks = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+        "checks": {
+            "webhook_secret": "configured" if GITHUB_WEBHOOK_SECRET != "code-rabbit-alternative-secret-key" else "using_fallback",
+            "rate_limiter": "enabled" if limiter else "disabled",
+            "security_headers": "enabled" if TALISMAN_AVAILABLE else "disabled",
+            "input_validation": "enabled" if PYDANTIC_AVAILABLE else "disabled",
+        }
+    }
+    return jsonify(checks)
 
 
 @app.route("/api/v1/status", methods=["GET"])
@@ -369,6 +679,22 @@ def status():
     return jsonify(pipeline_state)
 
 
+@app.route("/api/v1/metrics", methods=["GET"])
+def metrics():
+    """Prometheus-style metrics endpoint."""
+    return jsonify({
+        "pipeline_events_processed": pipeline_state["events_processed"],
+        "pipeline_comments_dispatched": pipeline_state["comments_dispatched"],
+        "pipeline_reviews_created": pipeline_state["reviews_created"],
+        "uptime_seconds": time.time() - app.start_time if hasattr(app, 'start_time') else 0,
+    })
+
+
 # ── Run the app ────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.start_time = time.time()
+    # Only enable debug in development
+    debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)

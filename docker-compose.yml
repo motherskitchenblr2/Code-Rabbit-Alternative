@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: gitfix-postgres
+    environment:
+      POSTGRES_DB: gitfix
+      POSTGRES_USER: gitfix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gitfix_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitfix -d gitfix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitfix-network
+
+  # Redis for caching, sessions, rate limiting, Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: gitfix-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitfix-network
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: gitfix-qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitfix-network
+
+  # Git-Fix API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gitfix-api
+    environment:
+      - FLASK_DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gitfix_dev_password}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://gitfix:${POSTGRES_PASSWORD:-gitfix_dev_password}@postgres:5432/gitfix
+      - QDRANT_URL=http://qdrant:6333
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+      - FORCE_HTTPS=false
+      - FLASK_DEBUG=true
+      - PORT=5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/backend/__pycache__
+    networks:
+      - gitfix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - gitfix-network
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gitfix-worker
+    command: celery -A app.celery worker --loglevel=info --concurrency=4
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gitfix_dev_password}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://gitfix:${POSTGRES_PASSWORD:-gitfix_dev_password}@postgres:5432/gitfix
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    networks:
+      - gitfix-network
+    restart: unless-stopped
+
+  # Celery Beat (Scheduler)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gitfix-scheduler
+    command: celery -A app.celery beat --loglevel=info
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - gitfix-network
+    restart: unless-stopped
+
+  # Flower (Celery Monitoring)
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gitfix-flower
+    command: celery -A app.celery flower --port=5555
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - gitfix-network
+
+  # Frontend Development Server (React/Vite)
+  frontend:
+    image: node:20-alpine
+    container_name: gitfix-frontend
+    working_dir: /app/frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000
+      - VITE_WS_URL=ws://localhost:5000
+    networks:
+      - gitfix-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+
+networks:
+  gitfix-network:
+    driver: bridge

@@ -1,0 +1,64 @@
+# Git-Fix Python Dependencies
+# Core Framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Security
+flask-limiter>=3.5.0
+flask-talisman>=1.1.0
+pyyaml>=6.0.1
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+psycopg2-binary>=2.9.0
+redis>=5.0.0
+
+# Async Processing
+celery>=5.3.0
+flower>=2.0.0
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# Authentication
+python-jose>=3.3.0
+passlib>=1.7.4
+bcrypt>=4.1.0
+
+# HTTP Client
+httpx>=0.25.0
+requests>=2.31.0
+
+# GitHub Integration
+pygithub>=2.1.0
+githubkit>=1.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+rich>=13.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+httpx>=0.25.0
+
+# Code Quality
+ruff>=0.1.0
+black>=23.0.0
+mypy>=1.5.0
+pre-commit>=3.5.0
+
+# Type Stubs
+types-requests>=2.31.0
+types-PyYAML>=6.0.12
+
+# Development
+ipython>=8.15.0
