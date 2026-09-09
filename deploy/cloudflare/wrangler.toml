@@ -1,0 +1,78 @@
+# =============================================================================
+# Cloudflare Pages / Workers Configuration for Git-Fix
+# =============================================================================
+# Deploy with: wrangler pages deploy frontend/dist
+# Workers: wrangler deploy
+# =============================================================================
+
+name = "git-fix"
+main = "src/worker/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Build configuration
+[build]
+command = "npm run build"
+watch_dir = "frontend"
+destination = "frontend/dist"
+
+# Environment variables (set via wrangler secret put or dashboard)
+[vars]
+VITE_API_URL = "https://api.gitfix.io"
+VITE_WS_URL = "wss://api.gitfix.io"
+VITE_APP_NAME = "Git-Fix"
+VITE_APP_VERSION = "1.0.0"
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "frontend"
+
+# Site configuration for Pages
+[site]
+bucket = "./frontend/dist"
+entry-point = "index.html"
+
+# KV Namespaces for caching
+[[kv_namespaces]]
+binding = "CACHE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+# D1 Database (if using Cloudflare D1)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "gitfix"
+# database_id = "your-database-id"
+
+# R2 Bucket for storage
+# [[r2_buckets]]
+# binding = "STORAGE"
+# bucket_name = "gitfix-storage"
+
+# Durable Objects (for WebSocket connections)
+# [[durable_objects.bindings]]
+# name = "WEBSOCKET"
+# class_name = "WebSocketDurableObject"
+
+# Service bindings
+# [[services]]
+# binding = "API"
+# service = "git-fix-api"
+
+# Environment-specific configuration
+[env.production]
+vars = { ENVIRONMENT = "production" }
+routes = [
+  { pattern = "gitfix.io/*", zone_name = "gitfix.io" },
+  { pattern = "www.gitfix.io/*", zone_name = "gitfix.io" }
+]
+
+[env.staging]
+vars = { ENVIRONMENT = "staging" }
+routes = [
+  { pattern = "staging.gitfix.io/*", zone_name = "gitfix.io" }
+]
+
+[env.development]
+vars = { ENVIRONMENT = "development" }

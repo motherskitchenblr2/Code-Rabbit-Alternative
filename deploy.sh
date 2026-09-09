@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/data/data/com.termux/files/usr/glibc/bin/bash
 # =============================================================================
 # Git-Fix 1-Click Local Deployment Script
 # =============================================================================
