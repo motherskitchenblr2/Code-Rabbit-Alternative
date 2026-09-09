@@ -1,0 +1,65 @@
+# =============================================================================
+# Qdrant Configuration
+# =============================================================================
+
+storage:
+  storage_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+
+service:
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+  max_request_size_mb: 32
+  max_workers: 0
+  enable_cors: true
+  cors_allowed_origins: ["*"]
+
+log_level: INFO
+
+telemetry_disabled: false
+
+# Performance tuning
+performance:
+  max_search_threads: 0
+  max_optimization_threads: 0
+
+# Storage optimizer
+optimizer:
+  deleted_threshold: 0.2
+  vacuum_min_vector_number: 1000
+  default_segment_number: 0
+  max_segment_size: 20000
+  memmap_threshold: 50000
+  indexing_threshold: 20000
+  flush_interval_sec: 5
+  max_optimization_threads: 1
+
+# HNSW Index defaults
+hnsw_index:
+  m: 16
+  ef_construct: 100
+  full_scan_threshold: 10000
+  on_disk: false
+  payload_m: 16
+
+# Collections defaults
+collections:
+  default_vector_params:
+    size: 768
+    distance: Cosine
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+      full_scan_threshold: 10000
+      on_disk: false
+  default_hnsw_config:
+    m: 16
+    ef_construct: 100
+    full_scan_threshold: 10000
+    on_disk: false
+
+# Experimental features
+experimental:
+  shard_selector: true
+  multitenancy: false

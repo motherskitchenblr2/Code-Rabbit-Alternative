@@ -1,81 +1,145 @@
+# =============================================================================
+# Git-Fix Docker Compose - Local Development & Production
+# =============================================================================
+# Usage:
+#   docker compose up -d                    # Start all services
+#   docker compose --profile dev up -d      # Dev services only
+#   docker compose --profile full up -d     # All services including monitoring
+# =============================================================================
+
 version: '3.8'
 
 services:
+  # =============================================================================
+  # INFRASTRUCTURE SERVICES
+  # =============================================================================
+
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: gitfix-postgres
     environment:
-      POSTGRES_DB: gitfix
-      POSTGRES_USER: gitfix
+      POSTGRES_DB: ${POSTGRES_DB:-gitfix}
+      POSTGRES_USER: ${POSTGRES_USER:-gitfix}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gitfix_dev_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gitfix -d gitfix"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gitfix} -d ${POSTGRES_DB:-gitfix}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - gitfix-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
 
   # Redis for caching, sessions, rate limiting, Celery broker
   redis:
     image: redis:7-alpine
     container_name: gitfix-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - gitfix-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-backlog 511
 
   # Qdrant Vector Database
   qdrant:
-    image: qdrant/qdrant:v1.7.0
+    image: qdrant/qdrant:v1.8.0
     container_name: gitfix-qdrant
     volumes:
       - qdrant_data:/qdrant/storage
+      - ./qdrant-config:/qdrant/config:ro
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     networks:
       - gitfix-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # =============================================================================
+  # APPLICATION SERVICES
+  # =============================================================================
 
   # Git-Fix API Server
   api:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: gitfix-api
     environment:
-      - FLASK_DEBUG=true
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - FLASK_DEBUG=${FLASK_DEBUG:-true}
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - SECRET_KEY=${SECRET_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gitfix_dev_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://gitfix:${POSTGRES_PASSWORD:-gitfix_dev_password}@postgres:5432/gitfix
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
       - QDRANT_URL=http://qdrant:6333
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-      - FORCE_HTTPS=false
-      - FLASK_DEBUG=true
-      - PORT=5000
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - FORCE_HTTPS=${FORCE_HTTPS:-false}
+      - PORT=${PORT:-5000}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
+      - QDRANT_URL=http://qdrant:6333
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     ports:
-      - "5000:5000"
+      - "${API_PORT:-5000}:5000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,6 +150,7 @@ services:
     volumes:
       - .:/app
       - /app/backend/__pycache__
+      - ./logs:/app/logs
     networks:
       - gitfix-network
     healthcheck:
@@ -93,24 +158,39 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
     restart: unless-stopped
     networks:
       - gitfix-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    profiles:
+      - core
+      - dev
+      - full
 
   # Celery Worker
   worker:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: gitfix-worker
-    command: celery -A app.celery worker --loglevel=info --concurrency=4
+    command: celery -A app.celery worker --loglevel=info --concurrency=4 --pool=prefork
     environment:
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - SECRET_KEY=${SECRET_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gitfix_dev_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://gitfix:${POSTGRES_PASSWORD:-gitfix_dev_password}@postgres:5432/gitfix
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
       - QDRANT_URL=http://qdrant:6333
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - PYTHONUNBUFFERED=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,40 +203,67 @@ services:
     networks:
       - gitfix-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    profiles:
+      - worker
+      - full
 
   # Celery Beat (Scheduler)
   scheduler:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: gitfix-scheduler
-    command: celery -A app.celery beat --loglevel=info
+    command: celery -A app.celery beat --loglevel=info --scheduler celery.beat.PersistentScheduler
     environment:
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - SECRET_KEY=${SECRET_KEY}
       - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
     depends_on:
       redis:
         condition: service_healthy
+    volumes:
+      - ./celerybeat-schedule:/app/celerybeat-schedule
     networks:
       - gitfix-network
     restart: unless-stopped
+    profiles:
+      - worker
+      - full
 
   # Flower (Celery Monitoring)
   flower:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: gitfix-flower
-    command: celery -A app.celery flower --port=5555
+    command: celery -A app.celery flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
     ports:
-      - "5555:5555"
+      - "${FLOWER_PORT:-5555}:5555"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - gitfix-network
+    restart: unless-stopped
+    profiles:
+      - worker
+      - full
+
+  # =============================================================================
+  # FRONTEND DEVELOPMENT
+  # =============================================================================
 
   # Frontend Development Server (React/Vite)
   frontend:
@@ -165,21 +272,180 @@ services:
     working_dir: /app/frontend
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     volumes:
       - ./frontend:/app/frontend
-      - /app/frontend/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
     environment:
-      - VITE_API_URL=http://localhost:5000
-      - VITE_WS_URL=ws://localhost:5000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
+      - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:5000}
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     networks:
       - gitfix-network
+    profiles:
+      - dev
+      - full
 
+  # =============================================================================
+  # MONITORING & OBSERVABILITY (Optional)
+  # =============================================================================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: gitfix-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - gitfix-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: gitfix-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - gitfix-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+
+  # Jaeger (Distributed Tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:1.48
+    container_name: gitfix-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - jaeger_data:/var/lib/jaeger
+    networks:
+      - gitfix-network
+    profiles:
+      - monitoring
+      - full
+
+  # =============================================================================
+  # DEVELOPMENT TOOLS
+  # =============================================================================
+
+  # Mailhog (Email Testing)
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: gitfix-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - gitfix-network
+    profiles:
+      - dev
+      - full
+
+  # MinIO (S3-compatible storage for backups)
+  minio:
+    image: minio/minio:RELEASE.2023-10-14T19-39-20Z
+    container_name: gitfix-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - gitfix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - dev
+      - full
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   qdrant_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  jaeger_data:
+    driver: local
+  minio_data:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  celerybeat_schedule:
+    driver: local
 
+# =============================================================================
+# NETWORKS
+# =============================================================================
 networks:
   gitfix-network:
     driver: bridge
+    name: gitfix-network
+    # Enable IPv6 for future compatibility
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# EXTENSIONS
+# =============================================================================
+# x-logging: &default-logging
+#   driver: "json-file"
+#   options:
+#     max-size: "10m"
+#     max-file: "3"
+#     labels: "service={{.Name}}"
+
+# x-default-deploy: &default-deploy
+#   resources:
+#     limits:
+#       memory: 1G
+#     reservations:
+#       memory: 256M
