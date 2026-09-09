@@ -1,0 +1,22 @@
+# Schema for automated PR review replica
+version: "2.0"
+language: "en-US"
+reviews:
+  profile: "assertive" # chill | assertive | security-first
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+      - "Draft"
+path_filters:
+  - "!**/*.min.js"
+  - "!**/vendor/**"
+  - "!package-lock.json"
+chat:
+  auto_reply: true
+knowledge_base:
+  opt_out: false
+  learnings: true

@@ -799,6 +799,9 @@
                         <button onclick="runSimulationStep()" id="sim-run-btn" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition">
                             <i data-lucide="play" class="w-3.5 h-3.5"></i> Run AI Inspection
                         </button>
+                        <button onclick="apiInspection()" id="sim-api-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i> via API
+                        </button>
                     </div>
                 </div>
 
@@ -895,6 +898,36 @@
   <span class="text-brand-400">opt_out</span>: <span class="text-accent-cyan">false</span>
   <span class="text-brand-400">learnings</span>: <span class="text-accent-cyan">true</span></pre>
                     </div>
+                    <div class="mt-4 p-4 rounded-xl bg-dark-800/60 border border-slate-800/50">
+                        <h4 class="text-sm font-bold text-slate-300 mb-2">Validate Your Config</h4>
+                        <p class="text-xs text-slate-400 mb-3">Paste your repository's .coderabbit.yaml below to validate against the schema.</p>
+                        <textarea id="yaml-validator" class="w-full p-3 rounded-xl bg-dark-900 border border-slate-700 font-mono text-sm text-slate-100 resize-y min-h-24" spellcheck="false"># Schema for automated PR review replica
+version: "2.0"
+language: "en-US"
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+      - "Draft"
+path_filters:
+  - "!**/*.min.js"
+  - "!**/vendor/**"
+  - "!package-lock.json"
+chat:
+  auto_reply: true
+knowledge_base:
+  opt_out: false
+  learnings: true</textarea>
+                        <div class="mt-3 flex items-center justify-between">
+                            <button onclick="validateYamlConfig()" class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">Validate</button>
+                            <span id="validate-status" class="text-xs text-slate-400 font-mono"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right: Production Tech Stack Comparison Matrix -->
@@ -929,7 +962,7 @@
                                 <span class="text-xs font-bold text-white block">LLM Reasoning Router</span>
                                 <span class="text-[11px] text-slate-400">LiteLLM Proxy + Claude 3.5 Sonnet / R1</span>
                             </div>
-                            <span class="text-xs font-mono text-accent-emerald bg-accent-emerald/10 px-2.5 py-1 rounded">Cost / SLA Optimizer</span>
+                            <span class="text-xs font-mono text.accent-emerald bg-accent-emerald/10 px-2.5 py-1 rounded">Cost / SLA Optimizer</span>
                         </div>
 
                         <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
@@ -970,6 +1003,163 @@
 
     <!-- Interactive Logic -->
     <script>
+        // YAML Schema validator for .coderabbit.yaml
+        const yamlSchema = {
+            version: { required: true, pattern: /^"?\\d+\\.\\d+"?$/ },
+            language: { required: true, pattern: /^"?[a-zA-Z-]+(")?$/ },
+            reviews: {
+                profile: { required: true, enum: ["chill", "assertive", "security-first"] },
+                request_changes_workflow: { required: true, boolean: true },
+                high_level_summary: { required: true, boolean: true },
+                poem: { required: true, boolean: true },
+                auto_review: {
+                    enabled: { required: true, boolean: true },
+                    ignore_title_keywords: { type: "array", items: { pattern: /^\".+\"$|'[^']+'$/ } },
+                },
+            },
+            path_filters: { type: "array", items: { pattern: /^!".+"$|!'[^']+'$/ } },
+            chat: {
+                auto_reply: { required: true, boolean: true },
+            },
+            knowledge_base: {
+                opt_out: { required: true, boolean: true },
+                learnings: { required: true, boolean: true },
+            },
+        }
+
+        function validateYamlConfig() {
+            const textarea = document.getElementById("yaml-validator")
+            const status = document.getElementById("validate-status")
+            let config = textarea.value.trim()
+
+            // Basic YAML parse check
+            let parsed
+            try {
+                parsed = parseYaml(config)
+                status.textContent = "✓ YAML syntax valid"
+                status.className = "text-emerald-400 font-mono"
+            } catch (e) {
+                status.textContent = `✗ YAML parse error: ${e.message}`
+                status.className = "text-red-400 font-mono"
+                return
+            }
+
+            // Schema validation
+            const errors = []
+            function validateObject(obj, schema, path = "") {
+                for (const [key, rules] of Object.entries(schema)) {
+                    const fullPath = path ? `${path}.${key}` : key
+                    if (rules.required && obj[key] === undefined) {
+                        errors.push(`Missing required field: ${fullPath}`)
+                        continue
+                    }
+                    if (obj[key] === undefined) continue
+
+                    if (rules.enum && !rules.enum.includes(obj[key])) {
+                        errors.push(`Invalid value for ${fullPath}: "${obj[key]}", expected one of ${rules.enum.join(", ")}`)
+                    }
+                    if (rules.boolean && typeof obj[key] !== "boolean") {
+                        errors.push(`Field ${fullPath} must be boolean, got ${typeof obj[key]}`)
+                    }
+                    if (rules.pattern && typeof obj[key] === "string" && !rules.pattern.test(obj[key])) {
+                        errors.push(`Field ${fullPath} does not match pattern`)
+                    }
+                    if (rules.type && typeof obj[key] !== rules.type) {
+                        errors.push(`Field ${fullPath} must be of type ${rules.type}`)
+                    }
+                    if (rules.items && Array.isArray(obj[key])) {
+                        obj[key].forEach((item, i) => {
+                            if (rules.items.pattern && typeof item === "string" && !rules.items.pattern.test(item)) {
+                                errors.push(`Field ${fullPath}[${i}] does not match pattern`)
+                            }
+                        })
+                    }
+                    if (rules.nested && obj[key] && typeof obj[key] === "object") {
+                        validateObject(obj[key], rules.nested, fullPath)
+                    }
+                }
+            }
+
+            try {
+                validateObject(parsed, yamlSchema)
+            } catch (e) {
+                errors.push(e.message)
+            }
+
+            if (errors.length === 0) {
+                status.textContent = "✓ Configuration is valid"
+                status.className = "text-emerald-400 font-mono"
+            } else {
+                status.textContent = `✗ ${errors.join(" · ")}`
+                status.className = "text-red-400 font-mono"
+            }
+        }
+
+        // Simple YAML parser for the schema fields we care about
+        function parseYaml(text) {
+            const lines = text.split("\n")
+            const parsed = {}
+            let currentSection = parsed
+            let currentKeyPath = []
+
+            for (const line of lines) {
+                const trimmed = line.trim()
+                if (!trimmed || trimmed.startsWith("#")) continue
+
+                // Top-level key: key: value
+                const topLevelMatch = trimmed.match(/^([^:]+):\s*(.*)$/)
+                if (topLevelMatch && !trimmed.startsWith(" ") && !trimmed.startsWith("\t")) {
+                    const key = topLevelMatch[1].trim().replace(/["']/g, "").trim()
+                    const value = topLevelMatch[2].trim().replace(/["']/g, "").trim()
+                    currentSection[key] = parseValue(value)
+                    currentKeyPath = [key]
+                    continue
+                }
+
+                // Nested under reviews: or other sections
+                const sectionMatch = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/)
+                if (sectionMatch) {
+                    const sectionName = sectionMatch[1].trim()
+                    const value = sectionMatch[2].trim()
+                    // Ensure reviews object exists
+                    if (!parsed[sectionName]) {
+                        parsed[sectionName] = {}
+                    }
+                    currentSection = parsed[sectionName]
+                    // Parse nested key-value
+                    const nestedMatch = value.match(/^([^:]+):\s*(.*)$/)
+                    if (nestedMatch) {
+                        const key = nestedMatch[1].trim().replace(/["']/g, "").trim()
+                        const val = nestedMatch[2].trim().replace(/["']/g, "").trim()
+                        currentSection[key] = parseValue(val)
+                    }
+                    continue
+                }
+
+                // Array items (path_filters)
+                const arrayMatch = trimmed.match(/^\- (.+)$/)
+                if (arrayMatch && currentKeyPath.length > 0) {
+                    const item = arrayMatch[1].trim().replace(/["']/g, "").trim()
+                    if (!Array.isArray(currentSection[currentKeyPath[currentKeyPath.length - 1]])) {
+                        currentSection[currentKeyPath[currentKeyPath.length - 1]] = []
+                    }
+                    currentSection[currentKeyPath[currentKeyPath.length - 1]].push(parseValue(item))
+                    continue
+                }
+            }
+
+            return parsed
+        }
+
+        function parseValue(val) {
+            if (val.toLowerCase() === "true") return true
+            if (val.toLowerCase() === "false") return false
+            if (!isNaN(Number(val)) && val !== "") return Number(val)
+            if (val.startsWith('"') && val.endsWith('"')) return val.slice(1, -1)
+            if (val.startsWith("'") && val.endsWith("'")) return val.slice(1, -1)
+            return val
+        }
+    </script>
         // Initialize Lucide icons
         lucide.createIcons();
 
@@ -1155,15 +1345,15 @@
         }
 
         // Live Simulation Logic
-        const samples = {
+const samples = {
             sql: {
                 file: "internal/db/users.go",
                 diff: `<span class="text-slate-500">@@ -53,6 +53,8 @@ func GetUserByEmail(email string) (*User, error) {</span><br>
-<span class="text-slate-400">   var user User</span><br>
-<span class="text-red-400 bg-red-950/40 block">-  row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+  query := fmt.Sprintf("SELECT id, name FROM users WHERE email = '%s'", email)</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+  row := db.QueryRow(query)</span>
-<span class="text-slate-400">   err := row.Scan(&user.ID, &user.Name)</span>`,
+ <span class="text-slate-400">   var user User</span><br>
+ <span class="text-red-400 bg-red-950/40 block">-  row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  query := fmt.Sprintf("SELECT id, name FROM users WHERE email = '%s'", email)</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  row := db.QueryRow(query)</span>
+ <span class="text-slate-400">   err := row.Scan(&user.ID, &user.Name)</span>`,
                 explanation: `<p><strong>Potential SQL Injection:</strong> Direct string formatting with <code class="text-brand-300 bg-dark-900 px-1 py-0.5 rounded font-mono">fmt.Sprintf</code> concatenates unescaped user input directly into the raw database query statement.</p>`,
                 suggestion: `// Parameterize input to prevent query tampering\nrow := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)`,
                 agent: "Security-Critic-v2",
@@ -1173,11 +1363,11 @@
             auth: {
                 file: "lib/auth/jwt.ts",
                 diff: `<span class="text-slate-500">@@ -19,4 +19,6 @@ export function verifyToken(req: Request) {</span><br>
-<span class="text-slate-400">   const token = req.headers.authorization;</span><br>
-<span class="text-red-400 bg-red-950/40 block">-  return jwt.verify(token, process.env.JWT_SECRET!);</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+  // DEBUG: logging full token for troubleshooting</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+  console.log("Incoming user bearer token:", token);</span>
-<span class="text-slate-400">   return jwt.verify(token, process.env.JWT_SECRET!);</span>`,
+ <span class="text-slate-400">   const token = req.headers.authorization;</span><br>
+ <span class="text-red-400 bg-red-950/40 block">-  return jwt.verify(token, process.env.JWT_SECRET!);</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  // DEBUG: logging full token for troubleshooting</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  console.log("Incoming user bearer token:", token);</span>
+ <span class="text-slate-400">   return jwt.verify(token, process.env.JWT_SECRET!);</span>`,
                 explanation: `<p><strong>Credential Exposure in Application Logs:</strong> Logging authentication headers and raw bearer tokens exposes confidential session credentials to internal log collectors and analytics services.</p>`,
                 suggestion: `// Avoid persisting raw bearer tokens in standard output\nlogger.debug("Verifying authorization header", { present: Boolean(token) });`,
                 agent: "Privacy-Auditor",
@@ -1187,15 +1377,66 @@
             race: {
                 file: "workers/inventory.py",
                 diff: `<span class="text-slate-500">@@ -88,3 +88,6 @@ def deduct_stock(product_id, qty):</span><br>
-<span class="text-slate-400">   stock = get_stock(product_id)</span><br>
-<span class="text-emerald-400 bg-emerald-950/40 block">+  if stock >= qty:</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+      time.sleep(0.01) # artificial async gap</span>
-<span class="text-emerald-400 bg-emerald-950/40 block">+      set_stock(product_id, stock - qty)</span>`,
+ <span class="text-slate-400">   stock = get_stock(product_id)</span><br>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  if stock >= qty:</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+      time.sleep(0.01) # artificial async gap</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+      set_stock(product_id, stock - qty)</span>`,
                 explanation: `<p><strong>Time-of-Check to Time-of-Use (TOCTOU) Race Condition:</strong> Stock level is queried and later updated without atomic database transactions or row-level locking (<code class="text-brand-300 bg-dark-900 px-1 py-0.5 rounded font-mono">SELECT FOR UPDATE</code>), enabling inventory overbooking under concurrent requests.</p>`,
                 suggestion: `with db.transaction():\n    product = db.query(Product).filter_by(id=product_id).with_for_update().one()\n    product.stock -= qty`,
                 agent: "Concurrency-Oracle",
                 confidence: "91.8%",
                 severity: "High Severity"
+            },
+            useafterfree: {
+                file: "core/memory.cpp",
+                diff: `<span class="text-slate-500">@@ -38,4 +38,5 @@ void process_buffer(Buffer *b) {</span><br>
+ <span class="text-slate-400">   free(b->data);</span><br>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  use(b->data);  // UAF: data already freed</span>
+ <span class="text-slate-400">   err := some_error;</span>`,
+                explanation: `<p><strong>Use-After-Free (UAF):</strong> Memory is freed and then accessed again without reallocation, allowing arbitrary code execution or crash under specific heap conditions.</p>`,
+                suggestion: `// Allocate new buffer after free\n  b->data = malloc(BUFFER_SIZE);\n  use(b->data);`,
+                agent: "Concurrency-Oracle",
+                confidence: "92.7%",
+                severity: "Critical Severity"
+            },
+            xss: {
+                file: "frontend/components/user-card.tsx",
+                diff: `<span class="text-slate-500">@@ -23,4 +23,5 @@ function UserCard({ user }) {</span><br>
+ <span class="text-slate-400">   return (</span><br>
+ <span class="text-red-400 bg-red-950/40 block">-  <div>{user.name}</div></span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  <div dangerouslySetInnerHTML={{__html: user.name}}></div></span>
+ <span class="text-slate-400">   </div>)`,
+                explanation: `<p><strong>Cross-Site Scripting (XSS):</strong> Rendering user-controlled content via <code>dangerouslySetInnerHTML</code> without sanitization allows script injection.</p>`,
+                suggestion: `<div>{sanitizeHtml(user.name)}</div>`,
+                agent: "Security-Critic-v2",
+                confidence: "96.3%",
+                severity: "High Severity"
+            },
+            deserialization: {
+                file: "services/payload.go",
+                diff: `<span class="text-slate-500">@@ -15,3 +15,4 @@ func handlePayload(data []byte) error {</span><br>
+ <span class="text-slate-400">   var payload UserPayload</span><br>
+ <span class="text-red-400 bg-red-950/40 block">-  json.Unmarshal(data, &payload)</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  if !validatePayloadSchema(data) { return errors.New("invalid schema") }</span>
+ <span class="text-slate-400">   json.Unmarshal(data, &payload)</span>`,
+                explanation: `<p><strong>Insecure Deserialization:</strong> Unvalidated JSON payload can lead to type confusion and remote code execution via malformed struct fields.</p>`,
+                suggestion: `// Validate before unmarshal\nif !validatePayloadSchema(data) { return errors.New("invalid schema") }\njson.Unmarshal(data, &payload)`,
+                agent: "Security-Critic-v2",
+                confidence: "89.5%",
+                severity: "High Severity"
+            },
+            secrets: {
+                file: "config/db.js",
+                diff: `<span class="text-slate-500">@@ -10,3 +10,4 @@</span><br>
+ <span class="text-slate-400">   host: "localhost",</span><br>
+ <span class="text-red-400 bg-red-950/40 block">-  password: "super_secret_pw_123"</span>
+ <span class="text-emerald-400 bg-emerald-950/40 block">+  password: process.env.DB_PASSWORD || "fallback_pw"</span>
+ <span class="text-slate-400">   port: 5432</span>`,
+                explanation: `<p><strong>Hardcoded Credentials:</strong> Database password embedded in source code is exposed in version control and accessible to anyone with repo access.</p>`,
+                suggestion: `password: process.env.DB_PASSWORD || "fallback_pw"`,
+                agent: "Security-Critic-v2",
+                confidence: "97.1%",
+                severity: "Critical Severity"
             }
         };
 
@@ -1234,6 +1475,46 @@
                     lucide.createIcons();
                 }, 1500);
             }, 600);
+        }
+
+        function apiInspection() {
+            const sample = samples[currentSample];
+            const btn = document.getElementById('sim-api-btn');
+            btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Calling pipeline...';
+            lucide.createIcons();
+
+            fetch("http://localhost:5000/api/v1/webhook", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    event: "pull_request",
+                    action: "synchronize",
+                    repository: { id: 8493021, full_name: "test-org/test-repo", private: true },
+                    pull_request: {
+                        number: 142,
+                        base_sha: "b73a90df1",
+                        head_sha: "9ef31048c",
+                        diff_url: "https://api.github.com/repos/.../pulls/142.diff"
+                    },
+                    installation: { id: 482910 }
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Done';
+                lucide.createIcons();
+                alert(`Pipeline stage 1 accepted! Event ID: ${data.event_id}\nDiff metadata extracted successfully.`);
+            })
+            .catch(err => {
+                btn.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5 text-red-400"></i> Error';
+                setTimeout(() => {
+                    btn.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5"></i> via API';
+                    lucide.createIcons();
+                }, 1500);
+                console.error("API error:", err);
+            });
         }
 
         // Initialize with SQL sample
