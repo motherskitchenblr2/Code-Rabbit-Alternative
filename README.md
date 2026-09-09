@@ -15,18 +15,28 @@
 
 <br>
 
-<a href="https://github.com/motherskitchenblr2/git-fix">
-  <img src="https://img.shields.io/badge/Git-Fix-ff00ff?style=for-the-badge&logo=git&logoColor=white" alt="Git-Fix">
-</a>
-<a href="https://github.com/motherskitchenblr2/git-fix/graphs/contributors">
-  <img src="https://img.shields.io/github/contributors/motherskitchenblr2/git-fix?color=00ffff&style=for-the-badge" alt="Contributors">
-</a>
-<a href="https://github.com/motherskitchenblr2/git-fix/issues">
-  <img src="https://img.shields.io/github/issues/motherskitchenblr2/git-fix?color=ff00ff&style=for-the-badge" alt="Issues">
-</a>
-<a href="https://github.com/motherskitchenblr2/git-fix/license">
-  <img src="https://img.shields.io/github/license/motherskitchenblr2/git-fix?color=00aaff&style=for-the-badge" alt="License">
-</a>
+## 🌃 Cyberpunk Theme
+
+**Color Palette:**
+- `#0a0a0f` - Primary background (deep midnight blue)
+- `#1a1a2e` - Secondary panels (techno depth)
+- `#ff00ff` - Accent magenta (glitch core)
+- `#00ffff` - Cyan accent (data stream)
+- `#ff8c00` - Amber warning (system alerts)
+- `#00ff00` - Green status (online/healthy)
+
+**CSS Variables for Theme Consistency:**
+```css
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #1a1a2e;
+  --accent-magenta: #ff00ff;
+  --accent-cyan: #00ffff;
+  --accent-amber: #ff8c00;
+  --text-primary: #e0e0f0;
+  --text-muted: #6a6a8a;
+  --glow-intensity: 0.75;
+}
 ```
 
 <br>
