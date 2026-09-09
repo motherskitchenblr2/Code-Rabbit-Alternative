@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeRabbit AI Replication: Architecture Blueprint & Technical Roadmap</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                        },
+                        dark: {
+                            900: '#090d16',
+                            800: '#0f172a',
+                            750: '#151f38',
+                            700: '#1e293b',
+                            600: '#334155'
+                        },
+                        accent: {
+                            cyan: '#06b6d4',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            violet: '#8b5cf6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Menlo', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom scrollbar and backdrop filter fixes */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .glow-effect {
+            box-shadow: 0 0 35px -5px rgba(217, 70, 239, 0.15);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.2);
+        }
+        .blueprint-grid {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        }
+        .code-preview {
+            background-color: #0b0f19;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-slate-200 font-sans antialiased selection:bg-brand-500 selection:text-white min-h-screen">
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-dark-900/80 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-violet flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                    <i data-lucide="git-pull-request-draft" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg text-white tracking-tight">CodeRabbit Clone Architecture</span>
+                        <span class="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/30 px-2 py-0.5 rounded-full font-mono">v1.0-REPLICA</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Deep Technical System Blueprint & Milestone Roadmap</p>
+                </div>
+            </div>
+
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+                <a href="#overview" class="text-slate-300 hover:text-brand-400 transition">Core Spec</a>
+                <a href="#pipeline" class="text-slate-300 hover:text-brand-400 transition">Interactive Pipeline</a>
+                <a href="#architecture" class="text-slate-300 hover:text-brand-400 transition">System Topology</a>
+                <a href="#roadmap" class="text-slate-300 hover:text-brand-400 transition">Step-by-Step Roadmap</a>
+                <a href="#simulation" class="text-slate-300 hover:text-brand-400 transition">Engine Simulator</a>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="window.print()" class="text-xs px-3 py-1.5 rounded-lg border border-slate-700 bg-dark-800 hover:bg-slate-800 text-slate-300 flex items-center gap-1.5 transition">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Export Spec</span>
+                </button>
+                <a href="#roadmap" class="text-xs px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 font-semibold text-white shadow-md shadow-brand-600/30 transition flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                    <span>Execute Plan</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero / Spec Manifest -->
+    <section id="overview" class="relative blueprint-grid py-14 border-b border-slate-800 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-dark-900/90 to-dark-900 pointer-events-none"></div>
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan text-xs font-mono mb-4">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                    AST-Grounded Semantic Code Review Engine
+                </div>
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                    Engineering Blueprints for Replicating <span class="bg-gradient-to-r from-brand-400 via-accent-violet to-accent-cyan bg-clip-text text-transparent">CodeRabbit AI</span>
+                </h1>
+                <p class="mt-4 text-slate-300 text-base sm:text-lg leading-relaxed">
+                    A comprehensive, implementation-ready reverse-engineering guide. Learn how to construct an automated Pull Request review engine featuring <strong class="text-white">Tree-sitter AST parsing</strong>, deterministic context retrieval, multi-turn conversational agents, and high-signal, zero-hallucination inline code comments.
+                </p>
+                
+                <!-- Quick KPI Badges -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+                    <div class="bg-dark-800/80 border border-slate-800 p-3 rounded-xl">
+                        <span class="text-xs text-slate-400 block font-mono">CORE INFERENCE</span>
+                        <span class="text-sm font-semibold text-slate-100 flex items-center gap-1 mt-1">
+                            <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i> Hybrid LLM (3.5+R1)
+                        </span>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 p-3 rounded-xl">
+                        <span class="text-xs text-slate-400 block font-mono">SYNTAX ENGINE</span>
+                        <span class="text-sm font-semibold text-slate-100 flex items-center gap-1 mt-1">
+                            <i data-lucide="binary" class="w-4 h-4 text-accent-cyan"></i> Tree-sitter AST
+                        </span>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 p-3 rounded-xl">
+                        <span class="text-xs text-slate-400 block font-mono">CONTEXT RETRIEVAL</span>
+                        <span class="text-sm font-semibold text-slate-100 flex items-center gap-1 mt-1">
+                            <i data-lucide="database" class="w-4 h-4 text-accent-emerald"></i> Vector + BM25 Hybrid
+                        </span>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 p-3 rounded-xl">
+                        <span class="text-xs text-slate-400 block font-mono">WEBHOOK TARGET</span>
+                        <span class="text-sm font-semibold text-slate-100 flex items-center gap-1 mt-1">
+                            <i data-lucide="git-branch" class="w-4 h-4 text-accent-amber"></i> GitHub / GitLab App
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Dataflow Pipeline Section -->
+    <section id="pipeline" class="py-16 bg-dark-900 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i data-lucide="workflow" class="w-6 h-6 text-brand-400"></i>
+                        The Unified Review Execution Pipeline
+                    </h2>
+                    <p class="text-slate-400 text-sm mt-1">Interactive end-to-end data processing lifecycle from Webhook arrival to GitHub inline comment dispatch.</p>
+                </div>
+                <div class="text-xs text-slate-400 mt-2 md:mt-0 font-mono">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1"></span>
+                    Click nodes below to inspect internal schemas
+                </div>
+            </div>
+
+            <!-- Pipeline Visualizer Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 relative">
+                <!-- Step 1 -->
+                <button onclick="selectPipelineStep(1)" id="pipe-btn-1" class="pipeline-btn text-left p-4 rounded-xl border border-brand-500/50 bg-brand-500/10 transition duration-200 relative group">
+                    <span class="text-xs font-mono font-bold text-brand-400 flex items-center justify-between">
+                        STAGE 01 <i data-lucide="webhook" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-white text-sm mt-2">Webhook Ingestion</h3>
+                    <p class="text-xs text-slate-400 mt-1">HMAC validation, payload deduplication & Celery queue enqueueing.</p>
+                </button>
+
+                <!-- Step 2 -->
+                <button onclick="selectPipelineStep(2)" id="pipe-btn-2" class="pipeline-btn text-left p-4 rounded-xl border border-slate-800 bg-dark-800 hover:border-slate-700 transition duration-200 relative group">
+                    <span class="text-xs font-mono font-bold text-accent-cyan flex items-center justify-between">
+                        STAGE 02 <i data-lucide="split" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-white text-sm mt-2">AST Diff Slicing</h3>
+                    <p class="text-xs text-slate-400 mt-1">Tree-sitter parse of patch hunks into functional AST scopes.</p>
+                </button>
+
+                <!-- Step 3 -->
+                <button onclick="selectPipelineStep(3)" id="pipe-btn-3" class="pipeline-btn text-left p-4 rounded-xl border border-slate-800 bg-dark-800 hover:border-slate-700 transition duration-200 relative group">
+                    <span class="text-xs font-mono font-bold text-accent-emerald flex items-center justify-between">
+                        STAGE 03 <i data-lucide="layers" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-white text-sm mt-2">Contextual RAG</h3>
+                    <p class="text-xs text-slate-400 mt-1">Dependency graph resolution + semantic vector codebase search.</p>
+                </button>
+
+                <!-- Step 4 -->
+                <button onclick="selectPipelineStep(4)" id="pipe-btn-4" class="pipeline-btn text-left p-4 rounded-xl border border-slate-800 bg-dark-800 hover:border-slate-700 transition duration-200 relative group">
+                    <span class="text-xs font-mono font-bold text-accent-violet flex items-center justify-between">
+                        STAGE 04 <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-white text-sm mt-2">LLM Critic Ensemble</h3>
+                    <p class="text-xs text-slate-400 mt-1">Security, logic bugs, code-style, and test-coverage agents.</p>
+                </button>
+
+                <!-- Step 5 -->
+                <button onclick="selectPipelineStep(5)" id="pipe-btn-5" class="pipeline-btn text-left p-4 rounded-xl border border-slate-800 bg-dark-800 hover:border-slate-700 transition duration-200 relative group">
+                    <span class="text-xs font-mono font-bold text-accent-amber flex items-center justify-between">
+                        STAGE 05 <i data-lucide="message-square-code" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-white text-sm mt-2">Post & Conversation</h3>
+                    <p class="text-xs text-slate-400 mt-1">Multi-comment grouping, summary PR review, and chat reply bot.</p>
+                </button>
+            </div>
+
+            <!-- Dynamic Pipeline Inspector Pane -->
+            <div class="mt-6 p-6 rounded-2xl border border-slate-800 bg-dark-800/90 shadow-2xl" id="pipeline-detail-box">
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="lg:w-1/2">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span id="pipe-badge" class="px-2.5 py-0.5 rounded text-xs font-mono bg-brand-500/20 text-brand-300 border border-brand-500/40">STAGE 01 SPECIFICATION</span>
+                            <span id="pipe-subtext" class="text-xs text-slate-400 font-mono">Latency SLA: &lt; 250ms</span>
+                        </div>
+                        <h4 id="pipe-title" class="text-xl font-bold text-white">Event Hook Verification & Task Buffering</h4>
+                        <p id="pipe-desc" class="text-sm text-slate-300 mt-2 leading-relaxed">
+                            GitHub App sends <code class="text-brand-300 bg-dark-900 px-1.5 py-0.5 rounded font-mono">pull_request.opened</code> or <code class="text-brand-300 bg-dark-900 px-1.5 py-0.5 rounded font-mono">pull_request.synchronize</code> webhooks. The ingress proxy performs crypto-signature verification against the shared secret, discards automated bot author events to prevent feedback loops, and places the serialized diff metadata onto a Redis-backed queue.
+                        </p>
+
+                        <div class="mt-4">
+                            <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Key Implementation Criteria:</span>
+                            <ul id="pipe-checklist" class="mt-2 space-y-1.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> HMAC-SHA256 signature validation before processing body</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Idempotency key generated via <code class="bg-dark-900 px-1 rounded font-mono">repo_id + pr_number + head_sha</code></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Immediate HTTP 202 Accepted return within 300ms window</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Code / Data Schema Output -->
+                    <div class="lg:w-1/2 flex flex-col justify-between">
+                        <div class="text-xs font-mono text-slate-400 flex items-center justify-between pb-2 border-b border-slate-700">
+                            <span id="pipe-schema-label">Ingress Event Contract (JSON Schema)</span>
+                            <span class="text-slate-500">Read-only Spec</span>
+                        </div>
+                        <pre class="mt-2 p-4 rounded-xl code-preview text-xs text-brand-300 font-mono overflow-x-auto h-52 leading-tight" id="pipe-code-block">{
+  "event": "pull_request",
+  "action": "synchronize",
+  "repository": {
+    "id": 8493021,
+    "full_name": "acme-corp/financial-ledger",
+    "private": true
+  },
+  "pull_request": {
+    "number": 142,
+    "base_sha": "b73a90df1",
+    "head_sha": "9ef31048c",
+    "diff_url": "https://api.github.com/repos/.../pulls/142.diff"
+  },
+  "installation": { "id": 482910 }
+}</pre>
+                        <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                            <span>Component: <span class="text-slate-200 font-mono">FastAPI / Go Ingress Proxy</span></span>
+                            <span>Target Engine: <span class="text-slate-200 font-mono">Celery / Redis 7.2</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Full Architecture Topology -->
+    <section id="architecture" class="py-16 bg-dark-800/40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">System Topology & Subsystem Blueprint</h2>
+                <p class="text-slate-400 text-sm mt-2">Six discrete architectural layers required to achieve high speed, AST-grounded precision, and enterprise confidentiality without model training leakage.</p>
+            </div>
+
+            <!-- Architecture Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Subsystem 1 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-brand-500/40 transition">
+                    <div class="h-10 w-10 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-4">
+                        <i data-lucide="git-merge" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">1. VCS Gateway & Webhooks</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Manages authenticated connections to GitHub Apps, GitLab Integrations, and Bitbucket. Responsible for OAuth tokens, webhook secret rotations, rate-limit pooling, and bidirectional commit status checks.
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        Node.js / Go, Probot, Redis Stream, GitHub Octokit SDK
+                    </div>
+                </div>
+
+                <!-- Subsystem 2 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-accent-cyan/40 transition">
+                    <div class="h-10 w-10 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan flex items-center justify-center mb-4">
+                        <i data-lucide="code-2" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">2. Tree-Sitter AST Engine</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Pure diffs are insufficient. Parses modified code into Abstract Syntax Trees (AST). Identifies whether a changed line is inside a signature, logic block, docstring, or test assertion.
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        Tree-sitter WASM / Rust Bindings, UniXcoder, PyTree
+                    </div>
+                </div>
+
+                <!-- Subsystem 3 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-accent-emerald/40 transition">
+                    <div class="h-10 w-10 rounded-lg bg-accent-emerald/10 border border-accent-emerald/20 text-accent-emerald flex items-center justify-center mb-4">
+                        <i data-lucide="network" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">3. Hybrid Contextual RAG</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Extracts referenced symbol definitions across the repository. Combines BM25 keyword search with Qdrant vector retrieval over codebase chunks to inject callers and interfaces into prompts.
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        Qdrant / Milvus, text-embedding-3-small, SCIP / LSIF index
+                    </div>
+                </div>
+
+                <!-- Subsystem 4 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-accent-violet/40 transition">
+                    <div class="h-10 w-10 rounded-lg bg-accent-violet/10 border border-accent-violet/20 text-accent-violet flex items-center justify-center mb-4">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">4. Multi-Agent Critic Framework</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Employs specialized sub-agents: Logic Validator (DeepSeek-R1 / Claude 3.5), Security Auditor (Semgrep AST + OWASP prompts), and Test Oracle (verifies test assertions cover changes).
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        LiteLLM Proxy, LangGraph / Temporal.io, Semantic JSON
+                    </div>
+                </div>
+
+                <!-- Subsystem 5 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-accent-amber/40 transition">
+                    <div class="h-10 w-10 rounded-lg bg-accent-amber/10 border border-accent-amber/20 text-accent-amber flex items-center justify-center mb-4">
+                        <i data-lucide="filter" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">5. Deduplication & Noise Filter</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Prevents "nitpick spam". Heuristically ranks candidate comments against AST diff boundaries. Discards formatting nits handled by linters (Prettier/Ruff) to maintain high dev trust.
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        Confidence Thresholding Classifier, AST scope overlap validator
+                    </div>
+                </div>
+
+                <!-- Subsystem 6 -->
+                <div class="p-6 rounded-2xl bg-dark-800 border border-slate-800 hover:border-brand-400 transition">
+                    <div class="h-10 w-10 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-300 flex items-center justify-center mb-4">
+                        <i data-lucide="lock" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">6. Zero-Retention Sandbox</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        Ensures customer code is never cached or used for fine-tuning. Ephemeral worker nodes process ASTs and vectors in-memory, flushing git checkouts immediately upon job completion.
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-300">
+                        <div class="text-slate-500 text-[11px]">Primary Technologies:</div>
+                        K8s Ephemeral Containers, HashiCorp Vault, PII Redaction
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Step-by-Step Developing Roadmap (Time-agnostic milestones) -->
+    <section id="roadmap" class="py-16 bg-dark-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-10">
+                <div>
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-mono mb-2">
+                        <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i> Execution Sequence
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">Full Developing Roadmap (Step-by-Step)</h2>
+                    <p class="text-slate-400 text-sm mt-1">Granular phase progression without arbitrary time allocations. Move from foundational ingress to enterprise AI multi-agent orchestration.</p>
+                </div>
+
+                <!-- Phase Quick Filter -->
+                <div class="flex items-center gap-2 mt-4 md:mt-0 overflow-x-auto pb-2 md:pb-0">
+                    <button onclick="filterPhase('all')" class="phase-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-brand-600 text-white font-medium" data-phase="all">All Phases</button>
+                    <button onclick="filterPhase('p1')" class="phase-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-dark-800 hover:bg-slate-800 text-slate-300 border border-slate-700" data-phase="p1">Phase 1</button>
+                    <button onclick="filterPhase('p2')" class="phase-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-dark-800 hover:bg-slate-800 text-slate-300 border border-slate-700" data-phase="p2">Phase 2</button>
+                    <button onclick="filterPhase('p3')" class="phase-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-dark-800 hover:bg-slate-800 text-slate-300 border border-slate-700" data-phase="p3">Phase 3</button>
+                    <button onclick="filterPhase('p4')" class="phase-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-dark-800 hover:bg-slate-800 text-slate-300 border border-slate-700" data-phase="p4">Phase 4</button>
+                </div>
+            </div>
+
+            <!-- Roadmap Milestones Timeline Container -->
+            <div class="space-y-8 relative before:absolute before:inset-0 before:left-4 md:before:left-8 before:w-0.5 before:bg-slate-800">
+
+                <!-- PHASE 1: INGESTION & PIPELINE FOUNDATION -->
+                <div class="roadmap-item relative pl-10 md:pl-20" data-phase-group="p1">
+                    <div class="absolute left-1.5 md:left-5.5 top-1 w-5 h-5 rounded-full border-2 border-brand-500 bg-dark-900 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-brand-500"></div>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 rounded-2xl p-6 glow-effect">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded bg-brand-500/20 text-brand-400 font-mono text-xs font-bold">PHASE 01</span>
+                                <h3 class="text-lg font-bold text-white">VCS Ingress Engine & Webhook Orchestration</h3>
+                            </div>
+                            <span class="text-xs font-mono text-accent-cyan bg-accent-cyan/10 px-2 py-0.5 rounded border border-accent-cyan/20">Milestone: Zero-Loss Event Queue</span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2 space-y-3">
+                                <p class="text-sm text-slate-300">
+                                    Establish the fundamental bidirectional gateway to GitHub and GitLab. Set up high-throughput ingress capable of handling bursting PR commits, generating cryptographically verified webhooks, and acquiring authenticated git diff payloads.
+                                </p>
+                                <div class="space-y-2 mt-3">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Detailed Engineering Steps:</h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-brand-400 font-bold">1.1</span>
+                                            <div>
+                                                <strong class="text-slate-200">GitHub App Manifest & Keypair Setup:</strong>
+                                                Configure private key generation, permissions for <code class="text-brand-300 font-mono">pull_requests:write</code>, <code class="text-brand-300 font-mono">issues:write</code>, and <code class="text-brand-300 font-mono">repository_contents:read</code>.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-brand-400 font-bold">1.2</span>
+                                            <div>
+                                                <strong class="text-slate-200">Fast Ingress Gateway:</strong>
+                                                Deploy a lightweight Go/FastAPI proxy. Validate X-Hub-Signature-256 header. Reject unauthorized requests immediately.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-brand-400 font-bold">1.3</span>
+                                            <div>
+                                                <strong class="text-slate-200">Idempotency & Deduplication Filter:</strong>
+                                                Set up Redis keys with TTL based on PR commit SHAs to prevent duplicated parallel jobs on rapid git pushes.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-brand-400 font-bold">1.4</span>
+                                            <div>
+                                                <strong class="text-slate-200">Unified Unified Diff Puller:</strong>
+                                                Stream raw PR unified diff files and parse patch metadata (hunk headers, line offset indices, deleted/added lines).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 1 Deliverables Box -->
+                            <div class="p-4 rounded-xl bg-dark-900 border border-slate-800/80 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs font-mono font-semibold text-slate-400 block mb-2">Phase Deliverable Checklist</span>
+                                    <div class="space-y-1.5 text-xs text-slate-300">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-brand-500 rounded">
+                                            <span>Production GitHub App Manifest</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-brand-500 rounded">
+                                            <span>Redis-backed BullMQ / Celery worker</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-brand-500 rounded">
+                                            <span>Git diff hunk parser module</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-brand-500 rounded">
+                                            <span>Rate-limiting token bucket</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                                    <strong>Exit Criteria:</strong> PR events queue successfully within 200ms and produce structured diff arrays.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHASE 2: TREE-SITTER AST & CONTEXT RETRIEVAL -->
+                <div class="roadmap-item relative pl-10 md:pl-20" data-phase-group="p2">
+                    <div class="absolute left-1.5 md:left-5.5 top-1 w-5 h-5 rounded-full border-2 border-accent-cyan bg-dark-900 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-accent-cyan"></div>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 rounded-2xl p-6 glow-cyan">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded bg-accent-cyan/20 text-accent-cyan font-mono text-xs font-bold">PHASE 02</span>
+                                <h3 class="text-lg font-bold text-white">AST Semantic Diff Parsing & Knowledge Graph (SCIP/RAG)</h3>
+                            </div>
+                            <span class="text-xs font-mono text-accent-emerald bg-accent-emerald/10 px-2 py-0.5 rounded border border-accent-emerald/20">Milestone: Context-Aware Slices</span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2 space-y-3">
+                                <p class="text-sm text-slate-300">
+                                    Raw string diffs produce severe AI hallucinations. Phase 2 binds Tree-sitter parsers across major languages (TypeScript, Python, Go, Rust, Java) to map diff hunks directly to parent functions, classes, and enclosing scopes.
+                                </p>
+                                <div class="space-y-2 mt-3">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Detailed Engineering Steps:</h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-cyan font-bold">2.1</span>
+                                            <div>
+                                                <strong class="text-slate-200">Tree-Sitter Multi-Grammar Pipeline:</strong>
+                                                Compile language grammars. Build a boundary mapper that accepts <code class="text-slate-300 font-mono">(file_path, line_number)</code> and returns the AST enclosing node (e.g. <code class="text-accent-cyan font-mono">function_declaration</code>).
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-cyan font-bold">2.2</span>
+                                            <div>
+                                                <strong class="text-slate-200">Enclosing Scope Expansion:</strong>
+                                                If only 2 lines in a 40-line method changed, grab the method header, parameters, and return signatures to give the LLM full scope context.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-cyan font-bold">2.3</span>
+                                            <div>
+                                                <strong class="text-slate-200">Semantic Code Search Indexing:</strong>
+                                                Compute embeddings using <code class="text-slate-300 font-mono">text-embedding-3-small</code> for all codebase symbols. Store symbol signatures in Qdrant with namespace isolation per repository.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-cyan font-bold">2.4</span>
+                                            <div>
+                                                <strong class="text-slate-200">Dependency & Caller Resolution:</strong>
+                                                Search the vector DB for callers of modified functions to warn developers if a modified signature breaks downstream modules.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 2 Deliverables Box -->
+                            <div class="p-4 rounded-xl bg-dark-900 border border-slate-800/80 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs font-mono font-semibold text-slate-400 block mb-2">Phase Deliverable Checklist</span>
+                                    <div class="space-y-1.5 text-xs text-slate-300">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-cyan rounded">
+                                            <span>Tree-sitter WASM Parser for 6 languages</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-cyan rounded">
+                                            <span>Hunk-to-Scope Boundary Resolver</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-cyan rounded">
+                                            <span>Vector DB Symbol Indexer (Qdrant)</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-cyan rounded">
+                                            <span>Modified Symbol Downstream Caller Graph</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                                    <strong>Exit Criteria:</strong> Given any git diff line, system reliably extracts the enclosing function body and symbol callers.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHASE 3: MULTI-AGENT REVIEW ENGINE & PROMPT ORCHESTRATION -->
+                <div class="roadmap-item relative pl-10 md:pl-20" data-phase-group="p3">
+                    <div class="absolute left-1.5 md:left-5.5 top-1 w-5 h-5 rounded-full border-2 border-accent-violet bg-dark-900 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-accent-violet"></div>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 rounded-2xl p-6">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded bg-accent-violet/20 text-accent-violet font-mono text-xs font-bold">PHASE 03</span>
+                                <h3 class="text-lg font-bold text-white">Multi-Agent LLM Review Orchestration & Deduplication</h3>
+                            </div>
+                            <span class="text-xs font-mono text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">Milestone: High Signal-to-Noise Ratio</span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2 space-y-3">
+                                <p class="text-sm text-slate-300">
+                                    Assemble the intelligence layer. Instead of a single generic prompt, construct a pipeline of specialized critics that review the diff concurrently, output structured JSON findings, and pass through a noise-filtering arbiter.
+                                </p>
+                                <div class="space-y-2 mt-3">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Detailed Engineering Steps:</h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-violet font-bold">3.1</span>
+                                            <div>
+                                                <strong class="text-slate-200">Structured Prompt Schema Enforcement:</strong>
+                                                Force LLM outputs through JSON schema (using Instructor or Pydantic) with fields: <code class="text-slate-300 font-mono">file_path, line_start, line_end, issue_category, confidence_score, explanation, suggested_replacement</code>.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-violet font-bold">3.2</span>
+                                            <div>
+                                                <strong class="text-slate-200">Logic & Bug Agent (Reasoning Model):</strong>
+                                                Run deep reasoning models (DeepSeek-R1 / Claude 3.5 Sonnet) specifically on logic branches, edge cases, off-by-one errors, and race conditions.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-violet font-bold">3.3</span>
+                                            <div>
+                                                <strong class="text-slate-200">Security & Injection Critic:</strong>
+                                                Specialized agent checking SQLi, XSS, unsafe deserialization, missing auth headers, and hardcoded secrets.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-violet font-bold">3.4</span>
+                                            <div>
+                                                <strong class="text-slate-200">Noise Filter & Deduplicator:</strong>
+                                                Drop suggestions with confidence &lt; 0.85. Drop suggestions that merely recommend adding comments or formatting (handled by linters).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 3 Deliverables Box -->
+                            <div class="p-4 rounded-xl bg-dark-900 border border-slate-800/80 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs font-mono font-semibold text-slate-400 block mb-2">Phase Deliverable Checklist</span>
+                                    <div class="space-y-1.5 text-xs text-slate-300">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-violet rounded">
+                                            <span>LiteLLM multi-provider failover routing</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-violet rounded">
+                                            <span>Pydantic JSON schema review validator</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-violet rounded">
+                                            <span>Zero-hallucination line offset sanity checker</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-violet rounded">
+                                            <span>Heuristic confidence threshold gate</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                                    <strong>Exit Criteria:</strong> Model outputs valid, verified line comments without pointing to non-existent lines in the PR diff.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHASE 4: GITHUB INTEGRATION, CONVERSATIONAL BOT & WORKFLOWS -->
+                <div class="roadmap-item relative pl-10 md:pl-20" data-phase-group="p4">
+                    <div class="absolute left-1.5 md:left-5.5 top-1 w-5 h-5 rounded-full border-2 border-accent-amber bg-dark-900 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-accent-amber"></div>
+                    </div>
+                    <div class="bg-dark-800/80 border border-slate-800 rounded-2xl p-6">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded bg-accent-amber/20 text-accent-amber font-mono text-xs font-bold">PHASE 04</span>
+                                <h3 class="text-lg font-bold text-white">Interactive GitHub PR Posting, Follow-up Chat & Configuration</h3>
+                            </div>
+                            <span class="text-xs font-mono text-accent-cyan bg-accent-cyan/10 px-2 py-0.5 rounded border border-accent-cyan/20">Milestone: Full Developer Experience</span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2 space-y-3">
+                                <p class="text-sm text-slate-300">
+                                    Translate raw JSON findings into polished, collapsible GitHub markdown comments. Support multi-line suggestions with native GitHub "Apply Suggestion" blocks and implement conversational chat replies.
+                                </p>
+                                <div class="space-y-2 mt-3">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Detailed Engineering Steps:</h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-amber font-bold">4.1</span>
+                                            <div>
+                                                <strong class="text-slate-200">GitHub Batch Review API Dispatch:</strong>
+                                                Post comments using GitHub’s <code class="text-slate-300 font-mono">POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews</code> endpoint with <code class="text-brand-300 font-mono">EVENT: COMMENT</code> to avoid emailing users on every individual note.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-amber font-bold">4.2</span>
+                                            <div>
+                                                <strong class="text-slate-200">One-Click Suggested Code Blocks:</strong>
+                                                Wrap code fixes in markdown <code class="text-slate-300 font-mono">```suggestion</code> blocks, permitting reviewers to merge fixes directly inside the GitHub interface.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-amber font-bold">4.3</span>
+                                            <div>
+                                                <strong class="text-slate-200">Conversational Reply Bot (@coderabbit clone):</strong>
+                                                Handle <code class="text-slate-300 font-mono">pull_request_review_comment</code> events. If a developer tags the bot, restore thread context and answer follow-up queries or regenerate suggestions.
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800 flex items-start gap-2.5">
+                                            <span class="font-mono text-accent-amber font-bold">4.4</span>
+                                            <div>
+                                                <strong class="text-slate-200">In-Repo Configuration Yaml (<code class="text-slate-300 font-mono">.coderabbit.yaml</code>):</strong>
+                                                Allow development teams to specify custom review tone, path ignores (e.g. <code class="text-slate-300 font-mono">*.lock, tests/**</code>), and custom prompt instructions per repository.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 4 Deliverables Box -->
+                            <div class="p-4 rounded-xl bg-dark-900 border border-slate-800/80 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs font-mono font-semibold text-slate-400 block mb-2">Phase Deliverable Checklist</span>
+                                    <div class="space-y-1.5 text-xs text-slate-300">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-amber rounded">
+                                            <span>High-level Executive PR Walkthrough summary</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-amber rounded">
+                                            <span>Multi-line inline code review dispatcher</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-amber rounded">
+                                            <span>Mention Responder Agent (@bot reply)</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" checked disabled class="accent-accent-amber rounded">
+                                            <span><code class="font-mono text-[10px]">.coderabbit.yaml</code> parser & schema</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                                    <strong>Exit Criteria:</strong> System conducts fully automated end-to-end PR walkthroughs with functioning interactive inline discussions.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive PR Engine Simulator Section -->
+    <section id="simulation" class="py-16 bg-dark-800/50 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl mb-8">
+                <span class="text-xs font-mono text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded border border-brand-500/30">Interactive Simulator</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mt-2">Live Review Pipeline Simulation</h2>
+                <p class="text-slate-400 text-sm mt-1">
+                    Select a vulnerable code diff sample below to trace how the replica pipeline extracts AST context, executes prompts, and constructs the inline GitHub suggestion block.
+                </p>
+            </div>
+
+            <!-- Code Sample Selector Tabs -->
+            <div class="flex items-center gap-2 mb-4">
+                <button onclick="loadSample('sql')" id="sample-btn-sql" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium bg-brand-600 text-white transition">Sample 1: SQL Injection (Go)</button>
+                <button onclick="loadSample('auth')" id="sample-btn-auth" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium bg-dark-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">Sample 2: Token Leak (TypeScript)</button>
+                <button onclick="loadSample('race')" id="sample-btn-race" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium bg-dark-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">Sample 3: Race Condition (Python)</button>
+            </div>
+
+            <!-- Visual Split Arena -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Incoming Unified Diff -->
+                <div class="lg:col-span-6 bg-dark-900 rounded-2xl border border-slate-800 overflow-hidden flex flex-col">
+                    <div class="px-4 py-3 bg-dark-800 border-b border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="file-diff" class="w-4 h-4 text-brand-400"></i>
+                            <span class="text-xs font-mono text-slate-200" id="sim-filename">internal/db/users.go</span>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400">PR #89 Unified Diff</span>
+                    </div>
+                    <div class="p-4 font-mono text-xs overflow-x-auto leading-relaxed flex-1" id="sim-diff-content">
+                        <!-- Filled by JS -->
+                    </div>
+                    <div class="p-3 bg-dark-900 border-t border-slate-800 flex justify-between items-center">
+                        <span class="text-[11px] text-slate-400 font-mono">Tree-sitter status: <span class="text-emerald-400">Scope Resolved</span></span>
+                        <button onclick="runSimulationStep()" id="sim-run-btn" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i data-lucide="play" class="w-3.5 h-3.5"></i> Run AI Inspection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Pipeline Output (Simulated GitHub Review Comment) -->
+                <div class="lg:col-span-6 bg-dark-900 rounded-2xl border border-slate-800 overflow-hidden flex flex-col">
+                    <div class="px-4 py-3 bg-dark-800 border-b border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center text-white text-[10px] font-bold">R</div>
+                            <span class="text-xs font-mono text-slate-200">Generated GitHub Inline Comment</span>
+                        </div>
+                        <span class="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ready
+                        </span>
+                    </div>
+
+                    <div class="p-5 overflow-y-auto flex-1 space-y-4" id="sim-output-content">
+                        <!-- AI Comment Container -->
+                        <div class="border border-brand-500/30 rounded-xl bg-dark-800/60 p-4 relative">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-white">coderabbitai[bot]</span>
+                                    <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Security Reviewer</span>
+                                </div>
+                                <span class="text-[11px] text-red-400 font-mono flex items-center gap-1">
+                                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Critical Severity
+                                </span>
+                            </div>
+
+                            <div class="mt-3 text-xs text-slate-300 space-y-2" id="sim-explanation">
+                                <p><strong>Potential SQL Injection:</strong> Direct string formatting with <code class="text-brand-300 bg-dark-900 px-1 py-0.5 rounded font-mono">fmt.Sprintf</code> concatenates unescaped user input directly into the raw database query statement.</p>
+                            </div>
+
+                            <!-- Suggested Code Change -->
+                            <div class="mt-4">
+                                <div class="text-[11px] font-mono text-slate-400 mb-1 flex items-center justify-between">
+                                    <span>Suggested Change (GitHub One-Click Apply)</span>
+                                </div>
+                                <div class="p-3 bg-[#0a0e17] rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto text-emerald-400" id="sim-suggestion-block">
+                                    <span class="text-slate-500">// Parameterize input to prevent query tampering</span><br>
+                                    row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                                <span>Agent: <strong class="text-slate-200">Security-Critic-v2</strong></span>
+                                <span>Confidence: <strong class="text-emerald-400">98.4%</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-dark-800/60 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                        <span>Status: <span class="text-white font-mono">Dispatched to GitHub API</span></span>
+                        <span class="font-mono text-slate-500">Latency: 840ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Specification Matrix & In-Repo Yaml Spec -->
+    <section class="py-16 bg-dark-900 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <!-- Left: Full Configuration File (.coderabbit.yaml) Blueprint -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="file-cog" class="w-5 h-5 text-brand-400"></i>
+                        <h3 class="text-lg font-bold text-white font-mono">.coderabbit.yaml Specification</h3>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                        Replicate CodeRabbit’s per-repository rule tuning. Your replica must read and parse this YAML schema from the root of target repositories to configure review profiles.
+                    </p>
+                    <div class="relative code-preview rounded-xl p-4 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <pre><span class="text-slate-500"># Schema for automated PR review replica</span>
+<span class="text-brand-400">version</span>: <span class="text-accent-cyan">"2.0"</span>
+<span class="text-brand-400">language</span>: <span class="text-accent-cyan">"en-US"</span>
+<span class="text-brand-400">reviews</span>:
+  <span class="text-brand-400">profile</span>: <span class="text-accent-cyan">"assertive"</span> <span class="text-slate-500"># chill | assertive | security-first</span>
+  <span class="text-brand-400">request_changes_workflow</span>: <span class="text-accent-cyan">false</span>
+  <span class="text-brand-400">high_level_summary</span>: <span class="text-accent-cyan">true</span>
+  <span class="text-brand-400">poem</span>: <span class="text-accent-cyan">false</span>
+  <span class="text-brand-400">auto_review</span>:
+    <span class="text-brand-400">enabled</span>: <span class="text-accent-cyan">true</span>
+    <span class="text-brand-400">ignore_title_keywords</span>:
+      - <span class="text-accent-emerald">"WIP"</span>
+      - <span class="text-accent-emerald">"Draft"</span>
+  <span class="text-brand-400">path_filters</span>:
+    - <span class="text-accent-emerald">"!**/*.min.js"</span>
+    - <span class="text-accent-emerald">"!**/vendor/**"</span>
+    - <span class="text-accent-emerald">"!package-lock.json"</span>
+<span class="text-brand-400">chat</span>:
+  <span class="text-brand-400">auto_reply</span>: <span class="text-accent-cyan">true</span>
+<span class="text-brand-400">knowledge_base</span>:
+  <span class="text-brand-400">opt_out</span>: <span class="text-accent-cyan">false</span>
+  <span class="text-brand-400">learnings</span>: <span class="text-accent-cyan">true</span></pre>
+                    </div>
+                </div>
+
+                <!-- Right: Production Tech Stack Comparison Matrix -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="layers-3" class="w-5 h-5 text-accent-cyan"></i>
+                        <h3 class="text-lg font-bold text-white font-mono">Replica Tech Stack Selection</h3>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                        Carefully chosen open-source tools matching CodeRabbit’s performance profiles and context retention guarantees.
+                    </p>
+
+                    <div class="space-y-3">
+                        <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Syntax Slicing & Parsing</span>
+                                <span class="text-[11px] text-slate-400">Tree-sitter WASM + PyTree-sitter</span>
+                            </div>
+                            <span class="text-xs font-mono text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded">AST Scope Mapping</span>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Vector Knowledge Storage</span>
+                                <span class="text-[11px] text-slate-400">Qdrant Vector DB (In-memory payload)</span>
+                            </div>
+                            <span class="text-xs font-mono text-accent-cyan bg-accent-cyan/10 px-2.5 py-1 rounded">HNSW + Payload Index</span>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">LLM Reasoning Router</span>
+                                <span class="text-[11px] text-slate-400">LiteLLM Proxy + Claude 3.5 Sonnet / R1</span>
+                            </div>
+                            <span class="text-xs font-mono text-accent-emerald bg-accent-emerald/10 px-2.5 py-1 rounded">Cost / SLA Optimizer</span>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Job Worker Scheduling</span>
+                                <span class="text-[11px] text-slate-400">Temporal.io or Redis + Celery</span>
+                            </div>
+                            <span class="text-xs font-mono text-accent-amber bg-accent-amber/10 px-2.5 py-1 rounded">Durable Execution</span>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-dark-800 border border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Data Security & Ephemerality</span>
+                                <span class="text-[11px] text-slate-400">RAM-only checkout mounts, Vault PII masking</span>
+                            </div>
+                            <span class="text-xs font-mono text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded">Zero Data Retention</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark-900 border-t border-slate-800 py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
+                <span class="text-slate-300 font-semibold">CodeRabbit AI Engineering Blueprint</span>
+                <span>• Clean-room system design spec</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-slate-500 font-mono">No external dependencies beyond open standards</span>
+                <a href="#overview" class="text-brand-400 hover:underline">Back to top</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Logic -->
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Pipeline Details Data Dictionary
+        const pipelineSteps = {
+            1: {
+                badge: "STAGE 01 SPECIFICATION",
+                subtext: "Latency SLA: < 250ms",
+                title: "Event Hook Verification & Task Buffering",
+                desc: "GitHub App sends pull_request.opened or pull_request.synchronize webhooks. The ingress proxy performs crypto-signature verification against the shared secret, discards automated bot author events to prevent feedback loops, and places the serialized diff metadata onto a Redis-backed queue.",
+                checklist: [
+                    "HMAC-SHA256 signature validation before processing body",
+                    "Idempotency key generated via repo_id + pr_number + head_sha",
+                    "Immediate HTTP 202 Accepted return within 300ms window"
+                ],
+                schemaLabel: "Ingress Event Contract (JSON Schema)",
+                code: `{
+  "event": "pull_request",
+  "action": "synchronize",
+  "repository": {
+    "id": 8493021,
+    "full_name": "acme-corp/financial-ledger",
+    "private": true
+  },
+  "pull_request": {
+    "number": 142,
+    "base_sha": "b73a90df1",
+    "head_sha": "9ef31048c",
+    "diff_url": "https://api.github.com/repos/.../pulls/142.diff"
+  },
+  "installation": { "id": 482910 }
+}`
+            },
+            2: {
+                badge: "STAGE 02 SPECIFICATION",
+                subtext: "Compute Time: ~80ms per file",
+                title: "Tree-Sitter AST Diff Hunk Slicing",
+                desc: "Raw unified patches are parsed to pinpoint altered lines. Tree-sitter AST nodes map altered lines back to their nearest syntax tree scope (enclosing method, class, or parameter). Whitespace and pure formatting changes are discarded before sending to LLMs.",
+                checklist: [
+                    "Tree-sitter WASM grammars for TS, Go, Python, Java, Rust",
+                    "Boundary extraction: parent function signature & imports",
+                    "Syntactic relevance filter ignores purely stylistic edits"
+                ],
+                schemaLabel: "AST Scope Representation (Internal Model)",
+                code: `{
+  "file_path": "services/auth_service.py",
+  "scope_type": "method_definition",
+  "name": "verify_session_token",
+  "start_line": 42,
+  "end_line": 78,
+  "modified_lines": [55, 56],
+  "imports": ["import jwt", "from redis import Redis"],
+  "ast_fingerprint": "c092a498ff02"
+}`
+            },
+            3: {
+                badge: "STAGE 03 SPECIFICATION",
+                subtext: "Retrieval SLA: < 400ms",
+                title: "Contextual Repository RAG & Caller Graphs",
+                desc: "To avoid reviewing altered methods in isolation, the engine executes semantic vector search and symbol graph lookup across repo embeddings. It retrieves definitions of invoked subroutines and surfaces upstream callers that could break from contract alterations.",
+                checklist: [
+                    "Cross-reference modified symbols in Qdrant Vector Space",
+                    "Inject caller call-sites into LLM prompt background",
+                    "Load user-defined .coderabbit.yaml constraints"
+                ],
+                schemaLabel: "Context Augmentation Object",
+                code: `{
+  "target_symbol": "verify_session_token",
+  "callers": [
+    { "file": "api/v1/routes.py", "line": 104, "sample": "verify_session_token(token)" }
+  ],
+  "associated_tests": [
+    "tests/test_auth.py:test_expired_session"
+  ],
+  "repo_rules": { "strict_types": true, "no_plain_sql": true }
+}`
+            },
+            4: {
+                badge: "STAGE 04 SPECIFICATION",
+                subtext: "Model Latency: 1.5s - 4.5s",
+                title: "Multi-Agent Parallel Critic Ensemble",
+                desc: "Diff context and AST slices are dispatched concurrently to specialized LLM agents. The Security Critic hunts for CWE vulnerabilities, the Logic Critic walks edge cases and nil checks, and the Test Oracle determines if the change requires new unit tests.",
+                checklist: [
+                    "High-reasoning prompt chains with zero-shot CoT",
+                    "Pydantic strict schema validation with retry fallback",
+                    "Arbitration filter drops items with confidence < 0.85"
+                ],
+                schemaLabel: "Structured Critic Output Format",
+                code: `{
+  "findings": [
+    {
+      "category": "security_vulnerability",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "start_line": 56,
+      "end_line": 56,
+      "summary": "Direct parameter interpolation in SQL query",
+      "confidence": 0.98,
+      "code_patch": "row := db.QueryRow(\\"SELECT ... WHERE id = $1\\", id)"
+    }
+  ]
+}`
+            },
+            5: {
+                badge: "STAGE 05 SPECIFICATION",
+                subtext: "Dispatch SLA: < 500ms",
+                title: "Batch GitHub API Comment & Mention Daemon",
+                desc: "Findings are bundled into a cohesive GitHub Pull Request Review to avoid triggering multiple notification emails. Inline suggestions use GitHub markdown syntax for immediate 1-click merging. A webhook listener triggers chat follow-ups when developers reply.",
+                checklist: [
+                    "Single review dispatch via POST /pulls/{n}/reviews",
+                    "Interactive ```suggestion blocks for instantaneous dev patch",
+                    "Conversational reply context buffer via Redis state machine"
+                ],
+                schemaLabel: "GitHub Pull Request Review Payload",
+                code: `{
+  "commit_id": "9ef31048c",
+  "event": "COMMENT",
+  "body": "## CodeRabbit Replica Walkthrough\\n\\nIdentified 1 critical security finding.",
+  "comments": [
+    {
+      "path": "internal/db/users.go",
+      "line": 56,
+      "body": "**Potential SQL Injection**: Use parameterized placeholders."
+    }
+  ]
+}`
+            }
+        };
+
+        function selectPipelineStep(step) {
+            // Update buttons style
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`pipe-btn-${i}`);
+                if (i === step) {
+                    btn.classList.add('border-brand-500/50', 'bg-brand-500/10');
+                    btn.classList.remove('border-slate-800', 'bg-dark-800');
+                } else {
+                    btn.classList.remove('border-brand-500/50', 'bg-brand-500/10');
+                    btn.classList.add('border-slate-800', 'bg-dark-800');
+                }
+            }
+
+            const data = pipelineSteps[step];
+            document.getElementById('pipe-badge').textContent = data.badge;
+            document.getElementById('pipe-subtext').textContent = data.subtext;
+            document.getElementById('pipe-title').textContent = data.title;
+            document.getElementById('pipe-desc').textContent = data.desc;
+            document.getElementById('pipe-schema-label').textContent = data.schemaLabel;
+            document.getElementById('pipe-code-block').textContent = data.code;
+
+            // Render checklist
+            const checkListEl = document.getElementById('pipe-checklist');
+            checkListEl.innerHTML = data.checklist.map(item => `
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> ${item}
+                </li>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Roadmap Filter Logic
+        function filterPhase(phase) {
+            const items = document.querySelectorAll('.roadmap-item');
+            const btns = document.querySelectorAll('.phase-filter-btn');
+
+            btns.forEach(btn => {
+                if (btn.getAttribute('data-phase') === phase) {
+                    btn.classList.add('bg-brand-600', 'text-white');
+                    btn.classList.remove('bg-dark-800', 'text-slate-300', 'border', 'border-slate-700');
+                } else {
+                    btn.classList.remove('bg-brand-600', 'text-white');
+                    btn.classList.add('bg-dark-800', 'text-slate-300', 'border', 'border-slate-700');
+                }
+            });
+
+            items.forEach(item => {
+                if (phase === 'all' || item.getAttribute('data-phase-group') === phase) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Live Simulation Logic
+        const samples = {
+            sql: {
+                file: "internal/db/users.go",
+                diff: `<span class="text-slate-500">@@ -53,6 +53,8 @@ func GetUserByEmail(email string) (*User, error) {</span><br>
+<span class="text-slate-400">   var user User</span><br>
+<span class="text-red-400 bg-red-950/40 block">-  row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+  query := fmt.Sprintf("SELECT id, name FROM users WHERE email = '%s'", email)</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+  row := db.QueryRow(query)</span>
+<span class="text-slate-400">   err := row.Scan(&user.ID, &user.Name)</span>`,
+                explanation: `<p><strong>Potential SQL Injection:</strong> Direct string formatting with <code class="text-brand-300 bg-dark-900 px-1 py-0.5 rounded font-mono">fmt.Sprintf</code> concatenates unescaped user input directly into the raw database query statement.</p>`,
+                suggestion: `// Parameterize input to prevent query tampering\nrow := db.QueryRow("SELECT id, name FROM users WHERE email = $1", email)`,
+                agent: "Security-Critic-v2",
+                confidence: "98.4%",
+                severity: "Critical Severity"
+            },
+            auth: {
+                file: "lib/auth/jwt.ts",
+                diff: `<span class="text-slate-500">@@ -19,4 +19,6 @@ export function verifyToken(req: Request) {</span><br>
+<span class="text-slate-400">   const token = req.headers.authorization;</span><br>
+<span class="text-red-400 bg-red-950/40 block">-  return jwt.verify(token, process.env.JWT_SECRET!);</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+  // DEBUG: logging full token for troubleshooting</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+  console.log("Incoming user bearer token:", token);</span>
+<span class="text-slate-400">   return jwt.verify(token, process.env.JWT_SECRET!);</span>`,
+                explanation: `<p><strong>Credential Exposure in Application Logs:</strong> Logging authentication headers and raw bearer tokens exposes confidential session credentials to internal log collectors and analytics services.</p>`,
+                suggestion: `// Avoid persisting raw bearer tokens in standard output\nlogger.debug("Verifying authorization header", { present: Boolean(token) });`,
+                agent: "Privacy-Auditor",
+                confidence: "94.1%",
+                severity: "Medium Severity"
+            },
+            race: {
+                file: "workers/inventory.py",
+                diff: `<span class="text-slate-500">@@ -88,3 +88,6 @@ def deduct_stock(product_id, qty):</span><br>
+<span class="text-slate-400">   stock = get_stock(product_id)</span><br>
+<span class="text-emerald-400 bg-emerald-950/40 block">+  if stock >= qty:</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+      time.sleep(0.01) # artificial async gap</span>
+<span class="text-emerald-400 bg-emerald-950/40 block">+      set_stock(product_id, stock - qty)</span>`,
+                explanation: `<p><strong>Time-of-Check to Time-of-Use (TOCTOU) Race Condition:</strong> Stock level is queried and later updated without atomic database transactions or row-level locking (<code class="text-brand-300 bg-dark-900 px-1 py-0.5 rounded font-mono">SELECT FOR UPDATE</code>), enabling inventory overbooking under concurrent requests.</p>`,
+                suggestion: `with db.transaction():\n    product = db.query(Product).filter_by(id=product_id).with_for_update().one()\n    product.stock -= qty`,
+                agent: "Concurrency-Oracle",
+                confidence: "91.8%",
+                severity: "High Severity"
+            }
+        };
+
+        let currentSample = 'sql';
+
+        function loadSample(key) {
+            currentSample = key;
+            ['sql', 'auth', 'race'].forEach(k => {
+                const btn = document.getElementById(`sample-btn-${k}`);
+                if (k === key) {
+                    btn.classList.add('bg-brand-600', 'text-white');
+                    btn.classList.remove('bg-dark-800', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-brand-600', 'text-white');
+                    btn.classList.add('bg-dark-800', 'text-slate-300');
+                }
+            });
+
+            const data = samples[key];
+            document.getElementById('sim-filename').textContent = data.file;
+            document.getElementById('sim-diff-content').innerHTML = data.diff;
+            document.getElementById('sim-explanation').innerHTML = data.explanation;
+            document.getElementById('sim-suggestion-block').textContent = data.suggestion;
+        }
+
+        function runSimulationStep() {
+            const btn = document.getElementById('sim-run-btn');
+            btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Inspecting AST...`;
+            lucide.createIcons();
+
+            setTimeout(() => {
+                btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Done`;
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Run AI Inspection`;
+                    lucide.createIcons();
+                }, 1500);
+            }, 600);
+        }
+
+        // Initialize with SQL sample
+        loadSample('sql');
+    </script>
+</body>
+</html>
