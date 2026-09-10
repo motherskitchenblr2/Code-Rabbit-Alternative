@@ -1,0 +1,68 @@
+# =============================================================================
+# CodeQL Python Configuration
+# =============================================================================
+# Custom CodeQL queries and configuration for Python security analysis
+# =============================================================================
+
+name: "Git-Fix Python CodeQL Config"
+version: "1.0.0"
+
+# Disable default queries and use extended security queries
+disable-default-queries: true
+
+queries:
+  # Security-focused query suites
+  - uses: security-and-quality
+  - uses: security-extended
+  
+  # Custom security queries
+  - queries: codeql/python/queries/security
+  - queries: codeql/python/queries/security/cwe-020
+  - queries: codeql/python/queries/security/cwe-079
+  - queries: codeql/python/queries/security/cwe-089
+  - queries: codeql/python/queries/security/cwe-200
+  - queries: codeql/python/queries/security/cwe-352
+  - queries: codeql/python/queries/security/cwe-798
+
+# Path filters
+paths-ignore:
+  - "**/tests/**"
+  - "**/test_*.py"
+  - "**/*_test.py"
+  - "**/__pycache__/**"
+  - "**/venv/**"
+  - "**/.venv/**"
+  - "**/node_modules/**"
+  - "**/.git/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/migrations/**"
+  - "**/frontend/**"
+  - "**/docs/**"
+  - "**/*.md"
+
+# Language-specific settings
+language: python
+
+# Python-specific configuration
+python:
+  # Analyze virtual environments
+  venv: false
+  
+  # Custom paths to analyze
+  paths:
+    - "backend/"
+    - "scripts/"
+
+# Severity thresholds
+thresholds:
+  error: ["critical", "high"]
+  warning: ["medium"]
+  note: ["low", "info"]
+
+# Custom query packs
+packs:
+  - codeql/python-queries@latest
+  - codeql/python-all@latest

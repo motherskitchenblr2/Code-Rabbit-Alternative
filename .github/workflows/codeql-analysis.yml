@@ -1,0 +1,205 @@
+# =============================================================================
+# CodeQL Security Analysis Workflow
+# =============================================================================
+# Performs static code analysis using GitHub's CodeQL engine to detect
+# security vulnerabilities, code quality issues, and best practice violations.
+# Supports Python, JavaScript/TypeScript, and other languages in the project.
+# =============================================================================
+
+name: "CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [main, develop, release/*]
+  pull_request:
+    branches: [main, develop, release/*]
+  schedule:
+    # Run weekly on Mondays at 3 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: 'Comma-separated list of languages to analyze'
+        required: false
+        default: 'python,javascript,typescript'
+        type: choice
+        options:
+          - python
+          - javascript
+          - typescript
+          - go
+          - rust
+          - java
+          - cpp
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - python
+          - javascript
+          - typescript
+          - go
+          - rust
+        include:
+          - language: python
+            build-mode: none
+            config-file: .github/codeql/python-codeql.yml
+          - language: javascript
+            build-mode: none
+            config-file: .github/codeql/javascript-codeql.yml
+          - language: typescript
+            build-mode: none
+            config-file: .github/codeql/typescript-codeql.yml
+          - language: go
+            build-mode: autobuild
+            config-file: .github/codeql/go-codeql.yml
+          - language: rust
+            build-mode: autobuild
+            config-file: .github/codeql/rust-codeql.yml
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ${{ matrix.config-file }}
+          queries: +security-and-quality
+          queries: +security-extended
+
+      # Python-specific setup
+      - name: Set up Python (Python)
+        if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Python dependencies
+        if: matrix.language == 'python'
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # JavaScript/TypeScript setup
+      - name: Set up Node.js
+        if: matrix.language == 'javascript' || matrix.language == 'typescript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Node.js dependencies
+        if: matrix.language == 'javascript' || matrix.language == 'typescript'
+        run: |
+          cd frontend
+          npm ci
+
+      # Go setup
+      - name: Set up Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      # Rust setup
+      - name: Set up Rust
+        if: matrix.language == 'rust'
+        uses: actions/setup-rust@v1
+        with:
+          toolchain: stable
+          cache: true
+
+      # Autobuild for compiled languages
+      - name: Autobuild
+        if: matrix.build-mode == 'autobuild'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+          upload: true
+          upload-to-github: true
+          sarif-category: ${{ matrix.language }}
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codeql-results.sarif
+          category: ${{ matrix.language }}
+
+      - name: Upload CodeQL Database
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-db-${{ matrix.language }}
+          path: /tmp/codeql_databases
+          retention-days: 7
+
+  # =============================================================================
+  # Security Alert Processing
+  # =============================================================================
+  security-alerts:
+    name: Process Security Alerts
+    needs: analyze
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check for new security alerts
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ needs.analyze.outputs.sarif-file }}
+          category: security-alerts
+
+      - name: Create GitHub Issues for High/Critical Findings
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const findings = require('fs').readFileSync('codeql-results.sarif', 'utf8');
+            const sarif = JSON.parse(findings);
+            
+            const highCritical = sarif.runs[0].results?.filter(r => 
+              r.level === 'error' || 
+              (r.properties?.severity === 'critical' || r.properties?.severity === 'high')
+            ) || [];
+            
+            if (highCritical.length > 0) {
+              const issueTitle = `🔒 CodeQL: ${highCritical.length} Critical/High Severity Findings`;
+              const issueBody = `## CodeQL Security Analysis Results\n\nFound **${highCritical.length}** critical/high severity issues:\n\n${highCritical.map(f => 
+                `- **${f.ruleId || 'Unknown'}**: ${f.message?.text || 'No description'}\n  - File: ${f.locations?.[0]?.physicalLocation?.artifactLocation?.uri || 'Unknown'}:${f.locations?.[0]?.physicalLocation?.region?.startLine || '?'}\n  - Severity: ${f.properties?.severity || 'unknown'}`
+              ).join('\n\n')}\n\n---\n*Auto-generated by CodeQL Security Analysis*`;
+              
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['security', 'codeql', 'high-priority'],
+                assignees: ['motherskitchenblr2']
+              });
+            }

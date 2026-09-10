@@ -1,0 +1,75 @@
+# =============================================================================
+# CodeQL JavaScript/TypeScript Configuration
+# =============================================================================
+
+name: "Git-Fix JavaScript/TypeScript CodeQL Config"
+version: "1.0.0"
+
+disable-default-queries: true
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+  - queries: codeql/javascript/queries/security
+  - queries: codeql/javascript/queries/security/cwe-020
+  - queries: codeql/javascript/queries/security/cwe-079
+  - queries: codeql/javascript/queries/security/cwe-079
+  - queries: codeql/javascript/queries/security/cwe-089
+  - queries: codeql/javascript/queries/security/cwe-798
+  - queries: codeql/javascript/queries/security/cwe-798
+
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/.nuxt/**"
+  - "**/coverage/**"
+  - "**/.git/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.test.ts"
+  - "**/test/**"
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.tsx"
+  - "**/cypress/**"
+  - "**/playwright/**"
+  - "**/storybook/**"
+  - "**/*.stories.tsx"
+  - "**/docs/**"
+  - "**/*.md"
+
+language: javascript
+
+javascript:
+  frameworks:
+    - react
+    - nextjs
+    - vue
+    - vue3
+    - angular
+    - express
+    - nestjs
+    - fastify
+    - koa
+    - hapi
+  typescript: true
+  jsx: true
+
+paths:
+  - "frontend/"
+  - "scripts/"
+
+thresholds:
+  error: ["critical", "high"]
+  warning: ["medium"]
+  note: ["low", "info"]
+
+packs:
+  - codeql/javascript-queries@latest
+  - codeql/javascript-all@latest
+  - codeql/typescript-queries@latest

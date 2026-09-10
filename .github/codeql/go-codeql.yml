@@ -1,0 +1,49 @@
+# =============================================================================
+# CodeQL Go Configuration
+# =============================================================================
+
+name: "Git-Fix Go CodeQL Config"
+version: "1.0.0"
+
+disable-default-queries: true
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+  - queries: codeql/go/queries/security
+  - queries: codeql/go/queries/security/cwe-020
+  - queries: codeql/go/queries/security/cwe-079
+  - queries: codeql/go/queries/security/cwe-089
+  - queries: codeql/go/queries/security/cwe-327
+  - queries: codeql/go/queries/security/cwe-327
+
+paths-ignore:
+  - "**/vendor/**"
+  - "**/test/**"
+  - "**/*_test.go"
+  - "**/testdata/**"
+  - "**/vendor/**"
+  - "**/.git/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/bin/**"
+  - "**/cmd/**/main.go"
+
+language: go
+
+go:
+  version: "1.22"
+  modules:
+    - "github.com/motherskitchenblr2/Code-Rabbit-Alternative"
+
+paths:
+  - "."
+
+thresholds:
+  error: ["critical", "high"]
+  warning: ["medium"]
+  note: ["low", "info"]
+
+packs:
+  - codeql/go-queries@latest
+  - codeql/go-all@latest

@@ -1,0 +1,47 @@
+# =============================================================================
+# CodeQL Rust Configuration
+# =============================================================================
+
+name: "Git-Fix Rust CodeQL Config"
+version: "1.0.0"
+
+disable-default-queries: true
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+  - queries: codeql/rust/queries/security
+  - queries: codeql/rust/queries/security/cwe-020
+  - queries: codeql/rust/queries/security/cwe-079
+  - queries: codeql/rust/queries/security/cwe-089
+  - queries: codeql/rust/queries/security/cwe-125
+  - queries: codeql/rust/queries/security/cwe-119
+
+paths-ignore:
+  - "**/target/**"
+  - "**/tests/**"
+  - "**/*_test.rs"
+  - "**/tests/**"
+  - "**/benches/**"
+  - "**/examples/**"
+  - "**/.git/**"
+  - "**/target/**"
+  - "**/Cargo.lock"
+
+language: rust
+
+rust:
+  edition: "2021"
+  features: ["full"]
+
+paths:
+  - "."
+
+thresholds:
+  error: ["critical", "high"]
+  warning: ["medium"]
+  note: ["low", "info"]
+
+packs:
+  - codeql/rust-queries@latest
+  - codeql/rust-all@latest

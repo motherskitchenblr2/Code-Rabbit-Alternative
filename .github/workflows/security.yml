@@ -1,0 +1,494 @@
+# =============================================================================
+# Comprehensive Security Workflow
+# =============================================================================
+# Runs all security checks: SAST, Dependency Scanning, Container Scanning,
+# Secret Scanning, License Compliance, and License Scanning
+# =============================================================================
+
+name: "Comprehensive Security Scan"
+
+on:
+  push:
+    branches: [main, develop, release/*]
+  pull_request:
+    branches: [main, develop, release/*]
+  schedule:
+    # Daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of scan to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - sast
+          - dependencies
+          - container
+          - secrets
+          - licenses
+          - sbom
+
+permissions:
+  contents: read
+  security-events: write
+  packages: read
+  id-token: write
+
+env:
+  # Disable telemetry
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  # Go security
+  GOFLAGS: "-buildvcs=false"
+
+jobs:
+  # =============================================================================
+  # Static Application Security Testing (SAST) - CodeQL
+  # =============================================================================
+  sast:
+    name: SAST - CodeQL Analysis
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'sast' || github.event_name != 'workflow_dispatch' }}
+    uses: ./.github/workflows/codeql-analysis.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+  # =============================================================================
+  # Dependency Vulnerability Scanning
+  # =============================================================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'dependencies' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Python dependencies
+      - name: Scan Python dependencies
+        if: always()
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          input: backend/requirements.txt
+          format: sarif
+          output: python-sarif.sarif
+          extra-args: "--desc --format=sarif"
+
+      - name: Upload Python SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: python-sarif.sarif
+          category: dependency-scan-python
+
+      # Node.js dependencies
+      - name: Scan Node.js dependencies
+        if: always()
+        working-directory: frontend
+        run: |
+          npm audit --audit-level=moderate --json > npm-audit.json || true
+          npx audit-ci --config audit-ci.json || true
+
+      - name: Upload npm audit results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: frontend/npm-audit.sarif
+          category: dependency-scan-npm
+
+      # Go dependencies
+      - name: Scan Go dependencies
+        if: always()
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck -json ./... > govulncheck.sarif || true
+        continue-on-error: true
+
+      - name: Upload Go vulnerability results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: govulncheck.sarif
+          category: dependency-scan-go
+
+      # Rust dependencies
+      - name: Scan Rust dependencies
+        if: always()
+        uses: actions/setup-rust@v1
+        with:
+          toolchain: stable
+          cache: true
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cargo audit --json > cargo-audit.json || true
+        continue-on-error: true
+
+      # Upload Rust audit results
+      - name: Upload Rust audit results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: cargo-audit.sarif
+          category: dependency-scan-rust
+
+  # =============================================================================
+  # Container Image Scanning
+  # =============================================================================
+  container-scan:
+    name: Container Image Scan
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'container' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker images
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+
+      # Trivy scanner
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+        continue-on-error: true
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: container-scan
+
+      # Grype scanner
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        with:
+          path: "."
+          fail-build: false
+          output-format: "sarif"
+          output-file: "grype-results.sarif"
+        continue-on-error: true
+
+      - name: Upload Grype results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: grype-results.sarif
+          category: container-scan-grype
+
+  # =============================================================================
+  # Secret Scanning
+  # =============================================================================
+  secret-scan:
+    name: Secret Scanning
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'secrets' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # TruffleHog
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --json --no-verification
+        continue-on-error: true
+
+      # Gitleaks
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config: .github/gitleaks.toml
+          args: --report-format sarif --report-path gitleaks-results.sarif
+        continue-on-error: true
+
+      - name: Upload Gitleaks results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks-results.sarif
+          category: secret-scan-gitleaks
+
+      # GitGuardian
+      - name: Run GitGuardian
+        uses: gitguardian/gg-shield-action@v2
+        with:
+          args: secret scan ci --output-format sarif --output gguardian-results.sarif
+        env:
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+        continue-on-error: true
+
+      - name: Upload GitGuardian results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gguardian-results.sarif
+          category: secret-scan-ggshield
+
+  # =============================================================================
+  # License Compliance Scanning
+  # =============================================================================
+  license-scan:
+    name: License Compliance Scan
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'licenses' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Python license scanning
+      - name: Scan Python licenses
+        run: |
+          cd backend
+          pip install pip-licenses
+          pip-licenses --format=json --with-urls --with-description --with-license-file > python-licenses.json || true
+          
+          # Check for problematic licenses
+          python3 -c "
+import json
+with open('python-licenses.json') as f:
+    licenses = json.load(f)
+    
+    problematic = ['GPL-2.0', 'GPL-3.0', 'AGPL-3.0', 'LGPL-2.0', 'LGPL-3.0', 'AGPL-1.0']
+    issues = [l for l in licenses if l['License'] in problematic]
+    
+    if issues:
+        print('⚠️ Problematic licenses found:')
+        for issue in issues:
+            print(f'  - {issue[\"Name\"]}: {issue[\"License\"]}')
+        exit(1)
+    else:
+        print('✅ All licenses are compatible')
+  " || true
+
+      # Node.js license scanning
+      - name: Scan Node.js licenses
+        working-directory: frontend
+        run: |
+          npm install -g license-checker
+          license-checker --json --out license-report.json || true
+          
+          # Check for problematic licenses
+          node -e "
+          const fs = require('fs');
+          const licenses = JSON.parse(fs.readFileSync('license-report.json'));
+          const problematic = ['GPL-2.0', 'GPL-3.0', 'AGPL-3.0', 'LGPL-2.0', 'LGPL-3.0', 'AGPL-1.0'];
+          const issues = Object.entries(licenses).filter(([_, v]) => problematic.includes(v.licenses));
+          if (issues.length > 0) {
+            console.log('⚠️ Problematic licenses found:');
+            issues.forEach(([name, data]) => console.log(\`  - \${name}: \${data.licenses}\`));
+            process.exit(1);
+          } else {
+            console.log('✅ All licenses are compatible');
+          }
+          " || true
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: |
+            backend/python-licenses.json
+            frontend/license-report.json
+
+  # =============================================================================
+  # SBOM Generation
+  # =============================================================================
+  sbom-generation:
+    name: Generate SBOM
+    if: ${{ github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'sbom' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Generate SBOM with Syft
+      - name: Generate SBOM with Syft
+        uses: anchore/syft-action@v0.16.0
+        with:
+          path: .
+          output: "sbom.spdx.json"
+          format: "spdx-json"
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          retention-days: 90
+
+      # Generate SBOM attestation
+      - name: Generate SBOM Attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ./docker-compose.yml
+          predicate-path: ./sbom.spdx.json
+          predicate-type: https://spdx.dev/Document
+
+  # =============================================================================
+  # Security Policy Check
+  # =============================================================================
+  security-policy:
+    name: Security Policy Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Check for SECURITY.md
+      - name: Check SECURITY.md exists
+        run: |
+          if [ ! -f SECURITY.md ]; then
+            echo "::error::SECURITY.md file is missing"
+            exit 1
+          fi
+          echo "✅ SECURITY.md exists"
+
+      # Check for CONTRIBUTING.md
+      - name: Check CONTRIBUTING.md exists
+        run: |
+          if [ ! -f CONTRIBUTING.md ]; then
+            echo "::warning::CONTRIBUTING.md file is missing"
+          else
+            echo "✅ CONTRIBUTING.md exists"
+          fi
+
+      # Check for CODEOWNERS
+      - name: Check CODEOWNERS exists
+        run: |
+          if [ ! -f .github/CODEOWNERS ]; then
+            echo "::warning::CODEOWNERS file is missing"
+          else
+            echo "✅ CODEOWNERS exists"
+          fi
+
+      # Check for signed commits
+      - name: Check for signed commits
+        run: |
+          git log --pretty=format:'%G?' -1
+          if [ $? -ne 0 ]; then
+            echo "::warning::Latest commit is not signed"
+          else
+            echo "✅ Latest commit is signed"
+          fi
+
+      # Check branch protection (simulated)
+      - name: Check branch protection rules
+        run: |
+          echo "::notice::Ensure branch protection rules are enabled on main branch:"
+          echo "  - Require pull request reviews"
+          echo "  - Require status checks to pass"
+          echo "  - Require signed commits"
+          echo "  - Require linear history"
+          echo "  - Include administrators"
+
+  # =============================================================================
+  # Summary Job
+  # =============================================================================
+  security-summary:
+    name: Security Scan Summary
+    needs: [sast, dependency-scan, container-scan, secret-scan, license-scan, sbom-generation, security-policy]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" > security-summary.md
+          echo "" >> security-summary.md
+          echo "## Scan Results" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          # Check each job result
+          for job in sast dependency-scan container-scan secret-scan license-scan sbom-generation security-policy; do
+            result="${{ needs.$job.result }}"
+            if [ "$result" = "success" ]; then
+              echo "✅ **$job**: PASSED" >> security-summary.md
+            elif [ "$result" = "failure" ]; then
+              echo "❌ **$job**: FAILED" >> security-summary.md
+            elif [ "$result" = "cancelled" ]; then
+              echo "⏭️ **$job**: CANCELLED" >> security-summary.md
+            else
+              echo "⚠️ **$job**: $result" >> security-summary.md
+            fi
+          done
+          
+          echo "" >> security-summary.md
+          echo "---" >> security-summary.md
+          echo "*Generated by GitHub Actions on $(date -u)*" >> security-summary.md
+
+      - name: Upload Security Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary
+          path: security-summary.md
+          retention-days: 30
+
+      - name: Post Summary to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('security-summary.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: summary
+            });

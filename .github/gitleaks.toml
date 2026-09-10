@@ -1,0 +1,340 @@
+# =============================================================================
+# Gitleaks Configuration for Git-Fix
+# =============================================================================
+# Secret detection configuration for Gitleaks
+# =============================================================================
+
+title = "Git-Fix Gitleaks Configuration"
+
+[allow]
+# Allowlist for false positives
+description = "Allowlist for false positives"
+regexes = [
+    # Example patterns that might trigger false positives
+    "example.*secret",
+    "test.*api.*key",
+    "mock.*secret",
+    "dummy.*password",
+    "placeholder.*token",
+]
+
+[allowlist]
+paths = [
+    "**/*.md",
+    "**/*.txt",
+    "**/*.rst",
+    "**/CHANGELOG*",
+    "**/LICENSE*",
+    "**/README*",
+    "**/SECURITY*",
+    "**/*.example",
+    "**/*.sample",
+    "**/*.template",
+    "**/test/**",
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/mocks/**",
+    "**/fixtures/**",
+    "**/mocks/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/mocks/**",
+    "**/fixtures/**",
+]
+
+[allowlist]
+regexes = [
+    "(?i)example.*",
+    "(?i)test.*",
+    "(?i)mock.*",
+    "(?i)dummy.*",
+    "(?i)placeholder.*",
+    "(?i)sample.*",
+    "(?i)test.*key",
+    "(?i)test.*secret",
+    "(?i)fake.*",
+    "(?i)dummy.*",
+]
+
+[rule]
+id = "generic-api-key"
+description = "Generic API Key pattern"
+regex = "(?i)(api[_-]?key|api[_-]?secret)[\"']?\\s*[:=]\\s*[\"']?([a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["key", "api"]
+secret-group = 2
+
+[rule]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = "(A3T[A-Z0-9]{3}|AKIA[A-Z0-9]{16}|ASIA[A-Z0-9]{16}|ANVA[A-Z0-9]{16}|ANPA[A-Z0-9]{16}|AIDA[A-Z0-9]{16}|AROA[A-Z0-9]{16}|ASCA[A-Z0-9]{16})"
+tags = ["aws", "key"]
+secret-group = 0
+
+[rule]
+id = "aws-secret-key"
+description = "AWS Secret Access Key"
+regex = "(?i)aws[_-]?secret[_-]?access[_-]?key[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9/+=]{40})[\"']?"
+tags = ["aws", "secret"]
+secret-group = 1
+
+[rule]
+id = "github-token"
+description = "GitHub Personal Access Token"
+regex = "(?i)github[_-]?token[\"']?\\s*[:=]\\s*[\"']?(ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|ghu_[a-zA-Z0-9]{36}|ghs_[a-zA-Z0-9]{36}|ghr_[a-zA-Z0-9]{36})[\"']?"
+tags = ["github", "token"]
+secret-group = 1
+
+[rule]
+id = "gitlab-token"
+description = "GitLab Personal Access Token"
+regex = "(?i)gitlab[_-]?token[\"']?\\s*[:=]\\s*[\"']?(glpat-[a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["gitlab", "token"]
+secret-group = 1
+
+[rule]
+id = "slack-token"
+description = "Slack API Token"
+regex = "(?i)slack[_-]?(api[_-]?)?token[\"']?\\s*[:=]\\s*[\"']?(xox[baprs]-[a-zA-Z0-9\\-]{10,})[\"']?"
+tags = ["slack", "token"]
+secret-group = 1
+
+[rule]
+id = "slack-webhook"
+description = "Slack Webhook URL"
+regex = "https://hooks\\.slack\\.com/services/[A-Za-z0-9/]+"
+tags = ["slack", "webhook"]
+secret-group = 0
+
+[rule]
+id = "discord-token"
+description = "Discord Bot Token"
+regex = "(?i)discord[_-]?token[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9\\-_]{59,})[\"']?"
+tags = ["discord", "token"]
+secret-group = 1
+
+[rule]
+id = "docker-password"
+description = "Docker Registry Password"
+regex = "(?i)docker[_-]?(password|password[_-]?token)[\"']?\\s*[:=]\\s*[\"']?([^\"']+)[\"']?"
+tags = ["docker", "password"]
+secret-group = 2
+
+[rule]
+id = "npm-token"
+description = "NPM Token"
+regex = "(?i)npm[_-]?token[\"']?\\s*[:=]\\s*[\"']?([a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["npm", "token"]
+secret-group = 1
+
+[rule]
+id = "pypi-token"
+description = "PyPI Token"
+regex = "(?i)pypi[_-]?token[\"']?\\s*[:=]\\s*[\"']?(pypi-[a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["pypi", "token"]
+secret-group = 1
+
+[rule]
+id = "sendgrid-key"
+description = "SendGrid API Key"
+regex = "(?i)sendgrid[_-]?key[\"']?\\s*[:=]\\s*[\"']?(SG\\.[a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["sendgrid", "key"]
+secret-group = 1
+
+[rule]
+id = "twilio-sid"
+description = "Twilio Account SID"
+regex = "AC[a-zA-Z0-9]{32}"
+tags = ["twilio", "sid"]
+secret-group = 0
+
+[rule]
+id = "twilio-token"
+description = "Twilio Auth Token"
+regex = "(?i)twilio[_-]?(auth[_-]?)?token[\"']?\\s*[:=]\\s*[\"']?([a-zA-Z0-9]{32})[\"']?"
+tags = ["twilio", "token"]
+secret-group = 1
+
+[rule]
+id = "stripe-key"
+description = "Stripe API Key"
+regex = "(?i)stripe[_-]?(secret[_-]?)?key[\"']?\\s*[:=]\\s*[\"']?(sk_live_[a-zA-Z0-9]{24,})[\"']?"
+tags = ["stripe", "key"]
+secret-group = 1
+
+[rule]
+id = "stripe-publishable-key"
+description = "Stripe Publishable Key"
+regex = "(?i)stripe[_-]?publishable[_-]?key[\"']?\\s*[:=]\\s*[\"']?(pk_live_[a-zA-Z0-9]{24,})[\"']?"
+tags = ["stripe", "key"]
+secret-group = 1
+
+[rule]
+id = "square-token"
+description = "Square Access Token"
+regex = "(?i)square[_-]?(access[_-]?)?token[\"']?\\s*[:=]\\s*[\"']?(sq0atp-[a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["square", "token"]
+secret-group = 1
+
+[rule]
+id = "google-api-key"
+description = "Google API Key"
+regex = "AIza[a-zA-Z0-9\\-_]{35}"
+tags = ["google", "api-key"]
+secret-group = 0
+
+[rule]
+id = "google-oauth-token"
+description = "Google OAuth Token"
+regex = "(?i)google[_-]?oauth[_-]?token[\"']?\\s*[:=]\\s*[\"']?(ya29\\.[a-zA-Z0-9\\-_]{20,})[\"']?"
+tags = ["google", "oauth"]
+secret-group = 1
+
+[rule]
+id = "aws-session-token"
+description = "AWS Session Token"
+regex = "(?i)aws[_-]?session[_-]?token[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9/+=]{100,})[\"']?"
+tags = ["aws", "session-token"]
+secret-group = 1
+
+[rule]
+id = "jwt-token"
+description = "JWT Token"
+regex = "eyJ[a-zA-Z0-9\\-_=]+\\.[a-zA-Z0-9\\-_=]+\\.[a-zA-Z0-9\\-_=]+"
+tags = ["jwt", "token"]
+secret-group = 0
+
+[rule]
+id = "ssh-private-key"
+description = "SSH Private Key"
+regex = "-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----[\\s\\S]*?-----END (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----"
+tags = ["ssh", "private-key"]
+secret-group = 0
+
+[rule]
+id = "pgp-private-key"
+description = "PGP Private Key"
+regex = "-----BEGIN PGP PRIVATE KEY BLOCK-----[\\s\\S]*?-----END PGP PRIVATE KEY BLOCK-----"
+tags = ["pgp", "private-key"]
+secret-group = 0
+
+[rule]
+id = "private-key"
+description = "Generic Private Key"
+regex = "-----BEGIN (RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY-----[\\s\\S]*?-----END (RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY-----"
+tags = ["private-key"]
+secret-group = 0
+
+[rule]
+id = "database-connection-string"
+description = "Database Connection String"
+regex = "(?i)(postgres|mysql|mongodb|redis|sqlserver|oracle)://[^\\s\"']+"
+tags = ["database", "connection-string"]
+secret-group = 0
+
+[rule]
+id = "mongodb-uri"
+description = "MongoDB Connection URI"
+regex = "mongodb(\\+srv)?://[^\\s\"']+"
+tags = ["mongodb", "connection-string"]
+secret-group = 0
+
+[rule]
+id = "redis-uri"
+description = "Redis Connection URI"
+regex = "redis://[^\\s\"']+"
+tags = ["redis", "connection-string"]
+secret-group = 0
+
+[rule]
+id = "generic-password"
+description = "Generic Password Pattern"
+regex = "(?i)(password|passwd|pwd)[\"']?\\s*[:=]\\s*[\"']?([^\"'\\s]{8,})[\"']?"
+tags = ["password"]
+secret-group = 2
+
+[rule]
+id = "generic-secret"
+description = "Generic Secret Pattern"
+regex = "(?i)(secret|token|key)[\"']?\\s*[:=]\\s*[\"']?([a-zA-Z0-9\\-_=]{20,})[\"']?"
+tags = ["secret", "key", "token"]
+secret-group = 2
+
+[rule]
+id = "private-rsa-key"
+description = "RSA Private Key"
+regex = "-----BEGIN RSA PRIVATE KEY-----[\\s\\S]*?-----END RSA PRIVATE KEY-----"
+tags = ["rsa", "private-key"]
+secret-group = 0
+
+[rule]
+id = "private-dsa-key"
+description = "DSA Private Key"
+regex = "-----BEGIN DSA PRIVATE KEY-----[\\s\\S]*?-----END DSA PRIVATE KEY-----"
+tags = ["dsa", "private-key"]
+secret-group = 0
+
+[rule]
+id = "private-ec-key"
+description = "EC Private Key"
+regex = "-----BEGIN EC PRIVATE KEY-----[\\s\\S]*?-----END EC PRIVATE KEY-----"
+tags = ["ec", "private-key"]
+secret-group = 0
+
+[rule]
+id = "openssh-private-key"
+description = "OpenSSH Private Key"
+regex = "-----BEGIN OPENSSH PRIVATE KEY-----[\\s\\S]*?-----END OPENSSH PRIVATE KEY-----"
+tags = ["openssh", "private-key"]
+secret-group = 0
+
+# Allowlist for common false positives
+[allowlist]
+description = "Common false positives in test files"
+paths = [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/test/**",
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/mocks/**",
+    "**/fixtures/**",
+    "**/mocks/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/mocks/**",
+    "**/fixtures/**",
+]
+regexes = [
+    "(?i)example.*",
+    "(?i)test.*",
+    "(?i)mock.*",
+    "(?i)dummy.*",
+    "(?i)placeholder.*",
+    "(?i)sample.*",
+    "(?i)fake.*",
+    "(?i)test.*key",
+    "(?i)test.*secret",
+    "(?i)test.*token",
+]
+
+[allowlist]
+paths = [
+    "**/*.md",
+    "**/*.txt",
+    "**/*.rst",
+    "**/CHANGELOG*",
+    "**/LICENSE*",
+    "**/README*",
+    "**/SECURITY*",
+    "**/*.example",
+    "**/*.sample",
+    "**/*.template",
+]

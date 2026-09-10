@@ -1,0 +1,199 @@
+# =============================================================================
+# Dependabot Configuration - Automatic Dependency Updates
+# =============================================================================
+# This file configures Dependabot to automatically create PRs for dependency updates
+# across all package ecosystems used in the Git-Fix project.
+# =============================================================================
+
+version: 2
+updates:
+  # =============================================================================
+  # Python Dependencies (Backend)
+  # =============================================================================
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore major version updates for breaking changes
+      - dependency-name: "numpy"
+        update-type: "version-update:semver-major"
+      - dependency-name: "pandas"
+        update-type: "version-update:semver-major"
+      - dependency-name: "torch"
+        update-type: "version-update:semver-major"
+    commit-message:
+      prefix: "[deps] "
+      prefix-development: "[deps-dev] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"
+
+  # =============================================================================
+  # Node.js Dependencies (Frontend)
+  # =============================================================================
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore major version updates for breaking changes
+      - dependency-name: "react"
+        update-type: "version-update:semver-major"
+      - dependency-name: "react-dom"
+        update-type: "version-update:semver-major"
+      - dependency-name: "next"
+        update-type: "version-update:semver-major"
+      - dependency-name: "typescript"
+        update-type: "version-update:semver-major"
+      - dependency-name: "vite"
+        update-type: "version-update:semver-major"
+      - dependency-name: "eslint"
+        update-type: "version-update:semver-major"
+    commit-message:
+      prefix: "[deps] "
+      prefix-development: "[deps-dev] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "frontend"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"
+
+  # =============================================================================
+  # Docker Dependencies
+  # =============================================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+    commit-message:
+      prefix: "[deps] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "infrastructure"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"
+
+  # =============================================================================
+  # GitHub Actions Dependencies
+  # =============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "[deps] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"
+
+  # =============================================================================
+  # Rust Dependencies (Cargo)
+  # =============================================================================
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore major version updates for breaking changes
+      - dependency-name: "tokio"
+        update-type: "version-update:semver-major"
+      - dependency-name: "serde"
+        update-type: "version-update:semver-major"
+    commit-message:
+      prefix: "[deps] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"
+
+  # =============================================================================
+  # Go Dependencies (if any Go modules exist)
+  # =============================================================================
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    commit-message:
+      prefix: "[deps] "
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+      - "security"
+    reviewers:
+      - "motherskitchenblr2"
+    assignees:
+      - "motherskitchenblr2"
+    milestone: "Dependencies"

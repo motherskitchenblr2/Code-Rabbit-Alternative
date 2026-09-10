@@ -1,0 +1,60 @@
+# =============================================================================
+# CodeQL TypeScript Configuration
+# =============================================================================
+
+name: "Git-Fix TypeScript CodeQL Config"
+version: "1.0.0"
+
+disable-default-queries: true
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+  - queries: codeql/typescript/queries/security
+  - queries: codeql/typescript/queries/security/cwe-020
+  - queries: codeql/typescript/queries/security/cwe-079
+  - queries: codeql/typescript/queries/security/cwe-089
+  - queries: codeql/typescript/queries/security/cwe-798
+
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/.nuxt/**"
+  - "**/coverage/**"
+  - "**/.git/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.test.ts"
+  - "**/test/**"
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.tsx"
+  - "**/cypress/**"
+  - "**/playwright/**"
+  - "**/storybook/**"
+  - "**/*.stories.tsx"
+  - "**/docs/**"
+  - "**/*.md"
+
+language: typescript
+
+typescript:
+  tsconfig: "frontend/tsconfig.json"
+  jsx: true
+
+paths:
+  - "frontend/"
+
+thresholds:
+  error: ["critical", "high"]
+  warning: ["medium"]
+  note: ["low", "info"]
+
+packs:
+  - codeql/typescript-queries@latest
+  - codeql/javascript-queries@latest
