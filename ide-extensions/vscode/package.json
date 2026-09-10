@@ -1,0 +1,272 @@
+{
+  "name": "git-fix",
+  "displayName": "Git-Fix",
+  "description": "Cyberpunk Code Review Engine - AI-powered code review in your editor",
+  "version": "1.0.0",
+  "publisher": "git-fix",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/motherskitchenblr2/Code-Rabbit-Alternative"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "code-review",
+    "security",
+    "ai",
+    "static-analysis",
+    "vulnerability"
+  ],
+  "icon": "assets/icon.png",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:.gitfix.yaml",
+    "onLanguage:python",
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:java",
+    "onLanguage:cpp"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Git-Fix",
+      "properties": {
+        "gitfix.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Git-Fix code review"
+        },
+        "gitfix.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:5000",
+          "description": "Git-Fix API server URL"
+        },
+        "gitfix.wsUrl": {
+          "type": "string",
+          "default": "ws://localhost:5000",
+          "description": "Git-Fix WebSocket URL for real-time updates"
+        },
+        "gitfix.autoReview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically review on save"
+        },
+        "gitfix.severityThreshold": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"],
+          "default": "medium",
+          "description": "Minimum severity to show"
+        },
+        "gitfix.showInlineAnnotations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline annotations for findings"
+        },
+        "gitfix.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show status bar item"
+        },
+        "gitfix.realtimeUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time updates via WebSocket"
+        },
+        "gitfix.languages": {
+          "type": "array",
+          "default": ["python", "typescript", "javascript", "go", "rust", "java", "cpp"],
+          "description": "Languages to enable Git-Fix for"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "gitfix.scanFile",
+        "title": "Git-Fix: Scan Current File",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.scanWorkspace",
+        "title": "Git-Fix: Scan Workspace",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.openDashboard",
+        "title": "Git-Fix: Open Dashboard",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.showFindings",
+        "title": "Git-Fix: Show Findings Panel",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.applyFix",
+        "title": "Git-Fix: Apply Suggested Fix",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.dismissFinding",
+        "title": "Git-Fix: Dismiss Finding",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.configure",
+        "title": "Git-Fix: Configure Settings",
+        "category": "Git-Fix"
+      },
+      {
+        "command": "gitfix.viewReport",
+        "title": "Git-Fix: View Full Report",
+        "category": "Git-Fix"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gitfix.scanFile",
+          "when": "editorTextFocus",
+          "group": "gitfix"
+        },
+        {
+          "command": "gitfix.applyFix",
+          "when": "editorTextFocus && gitfix.hasFix",
+          "group": "gitfix"
+        },
+        {
+          "command": "gitfix.dismissFinding",
+          "when": "editorTextFocus && gitfix.hasFinding",
+          "group": "gitfix"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "gitfix.scanFile",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gitfix.scanWorkspace",
+          "when": "explorerResourceIsFolder",
+          "group": "gitfix"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "gitfix.scanFile",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "gitfix.scanWorkspace"
+        },
+        {
+          "command": "gitfix.openDashboard"
+        },
+        {
+          "command": "gitfix.showFindings"
+        },
+        {
+          "command": "gitfix.configure"
+        }
+      ]
+    },
+    "views": {
+      "gitfix": [
+        {
+          "id": "gitfix.findings",
+          "name": "Findings",
+          "icon": "assets/bug.svg"
+        },
+        {
+          "id": "gitfix.pipeline",
+          "name": "Pipeline",
+          "icon": "assets/zap.svg"
+        },
+        {
+          "id": "gitfix.repositories",
+          "name": "Repositories",
+          "icon": "assets/git-branch.svg"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitfix",
+          "title": "Git-Fix",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "gitfix.scanFile",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "gitfix.scanWorkspace",
+        "key": "ctrl+shift+alt+g",
+        "mac": "cmd+shift+alt+g"
+      },
+      {
+        "command": "gitfix.openDashboard",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d"
+      },
+      {
+        "command": "gitfix.applyFix",
+        "key": "ctrl+.",
+        "mac": "cmd+.",
+        "when": "editorTextFocus && gitfix.hasFix"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "gitfix-cyberpunk",
+        "label": "Git-Fix Cyberpunk",
+        "path": "./assets/icon-theme.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "jest",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "eslint": "^8.50.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.0",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0",
+    "vscode-jsonrpc": "^8.0.0",
+    "ws": "^8.14.0",
+    "axios": "^1.6.0"
+  }
+}
