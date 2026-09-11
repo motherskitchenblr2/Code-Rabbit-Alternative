@@ -14,6 +14,15 @@
     --accent-amber: #ff8c00;
     --accent-green: #00ff00;
     --glow-intensity: 0.8;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   * {
@@ -23,6 +32,9 @@
   body {
     @apply bg-cyber-900 text-cyber-100 font-sans antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior-y: none;
   }
 
   /* Custom scrollbar */
@@ -49,13 +61,31 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-neon-cyan ring-offset-2 ring-offset-cyber-900;
   }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
   .btn-cyber {
     @apply px-4 py-2 rounded-lg font-mono font-medium transition-all duration-200
            focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-900
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           disabled:opacity-50 disabled:cursor-not-allowed
+           min-h-[44px] min-w-[44px] cursor-pointer;
+  }
+
+  .btn-cyber-sm {
+    @apply px-3 py-1.5 rounded-lg font-mono font-medium text-sm transition-all duration-200
+           focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-900
+           disabled:opacity-50 disabled:cursor-not-allowed
+           min-h-[44px] min-w-[44px] cursor-pointer;
   }
 
   .btn-cyber-magenta {
@@ -87,7 +117,8 @@
     @apply w-full px-4 py-3 rounded-lg bg-cyber-900/50 border border-cyber-700/50
            text-cyber-100 placeholder-cyber-500
            focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 focus:outline-none
-           transition-all duration-200;
+           transition-all duration-200
+           min-h-[44px];
   }
 
   .label-cyber {
@@ -159,5 +190,20 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Mobile-safe padding that respects bottom nav + safe area */
+  .pb-mobile-nav {
+    padding-bottom: calc(64px + var(--safe-area-bottom, 0px));
+  }
+
+  /* Horizontal scroll snap for mobile tabs */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-snap-start {
+    scroll-snap-align: start;
   }
 }

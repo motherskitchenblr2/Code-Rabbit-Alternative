@@ -77,10 +77,11 @@ export default function Repositories() {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="btn-cyber-magenta flex items-center gap-2"
+          className="btn-cyber-magenta flex items-center gap-2 self-start"
         >
           <Plus className="w-4 h-4" />
-          Add Repository
+          <span className="hidden md:inline">Add Repository</span>
+          <span className="md:hidden">Add Repo</span>
         </button>
       </div>
 
@@ -129,8 +130,62 @@ export default function Repositories() {
         </div>
       </div>
 
-      {/* Repositories Table */}
-      <div className="card-cyber overflow-hidden">
+      {/* Mobile repository cards */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {filteredRepos.map((repo) => (
+          <div key={repo.id} className="card-cyber p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center flex-shrink-0">
+                <GitBranch className="w-5 h-5 text-neon-cyan" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <Link to={`/repositories/${repo.id}`} className="block">
+                  <p className="font-medium text-white truncate">{repo.name}</p>
+                  <p className="text-xs text-cyber-400 font-mono flex items-center gap-1 mt-0.5">
+                    {repo.private ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                    {repo.full_name}
+                  </p>
+                </Link>
+                <p className="text-xs text-cyber-300 mt-2 line-clamp-2">{repo.description}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="text-xs px-2 py-1 bg-cyber-800 rounded text-cyber-300 font-mono">{repo.language}</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono ${
+                    repo.status === 'active' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' :
+                    repo.status === 'idle' ? 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30' :
+                    'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}>
+                    {repo.status.charAt(0).toUpperCase() + repo.status.slice(1)}
+                  </span>
+                  <span className="text-xs text-cyber-400 font-mono">{repo.last_scan}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-cyber-700/50">
+              <Link to={`/repositories/${repo.id}`} className="btn-cyber-sm flex-1 flex items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50 transition-colors">
+                <Eye className="w-4 h-4" />
+                View
+              </Link>
+              <Link to={`/repositories/${repo.id}/settings`} className="btn-cyber-sm flex-1 flex items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50 transition-colors">
+                <Settings className="w-4 h-4" />
+                Configure
+              </Link>
+            </div>
+          </div>
+        ))}
+        {filteredRepos.length === 0 && (
+          <div className="card-cyber p-10 text-center">
+            <GitBranch className="w-16 h-16 mx-auto mb-4 text-cyber-700" />
+            <h3 className="text-lg font-medium text-cyber-300 mb-2">No repositories found</h3>
+            <p className="text-cyber-500 mb-4">Try adjusting your search or filters</p>
+            <button className="btn-cyber-magenta" onClick={() => { setSearch(''); setFilter('all'); }}>
+              Clear Filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop repositories table */}
+      <div className="card-cyber overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

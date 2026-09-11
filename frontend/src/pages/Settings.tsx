@@ -16,6 +16,9 @@ import {
   Database,
   Plus,
   Bug,
+  Trash2,
+  Moon,
+  Sun,
 } from 'lucide-react'
 
 export default function Settings() {
@@ -46,9 +49,9 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
+          <h1 className="text-2xl md:text-3xl font-bold font-display text-white flex items-center gap-3">
             <span className="text-neon-magenta">{'>_'}</span> Settings
           </h1>
           <p className="text-cyber-400 mt-1">Configure your Git-Fix experience</p>
@@ -56,7 +59,7 @@ export default function Settings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="btn-cyber-magenta flex items-center gap-2"
+          className="btn-cyber-magenta flex items-center gap-2 self-start"
         >
           {saving ? (
             <span className="flex items-center gap-2">
@@ -80,8 +83,8 @@ export default function Settings() {
       )}
 
       <div className="card-cyber overflow-hidden">
-        {/* Sidebar Navigation */}
-        <div className="flex">
+        {/* Sidebar Navigation — desktop */}
+        <div className="hidden md:flex">
           <nav className="w-56 border-r border-cyber-700/50 p-4 space-y-1" aria-label="Settings sections">
             {sections.map((section) => {
               const Icon = section.icon
@@ -89,7 +92,7 @@ export default function Settings() {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id as any)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm font-medium transition-all min-h-[44px] cursor-pointer ${
                     activeSection === section.id
                       ? 'bg-neon-magenta/20 text-neon-magenta border-r-2 border-neon-magenta'
                       : 'text-cyber-400 hover:text-cyber-200 hover:bg-cyber-800/50'
@@ -112,6 +115,37 @@ export default function Settings() {
             {activeSection === 'advanced' && <AdvancedSection />}
           </div>
         </div>
+
+        {/* Mobile: horizontal scroll tabs + stacked content */}
+        <div className="md:hidden">
+          <div className="scroll-snap-x flex gap-1.5 overflow-x-auto px-2 py-3 border-b border-cyber-700/50 scrollbar-hide">
+            {sections.map((section) => {
+              const Icon = section.icon
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id as any)}
+                  className={`scroll-snap-start flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-medium transition-all min-h-[56px] min-w-[72px] cursor-pointer flex-shrink-0 ${
+                    activeSection === section.id
+                      ? 'bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/30'
+                      : 'text-cyber-400 hover:text-cyber-200 hover:bg-cyber-800/50 border border-transparent'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {section.label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="p-4 sm:p-6">
+            {activeSection === 'profile' && <ProfileSection user={user} />}
+            {activeSection === 'security' && <SecuritySection />}
+            {activeSection === 'notifications' && <NotificationsSection />}
+            {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} />}
+            {activeSection === 'integrations' && <IntegrationsSection />}
+            {activeSection === 'advanced' && <AdvancedSection />}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -121,13 +155,13 @@ export default function Settings() {
 function ProfileSection({ user }: { user: any }) {
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-6">
-        <div className="w-24 h-24 rounded-xl bg-gradient-to-tr from-neon-magenta to-neon-cyan flex items-center justify-center text-cyber-900 font-bold text-2xl">
+      <div className="flex items-center gap-4 md:gap-6">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gradient-to-tr from-neon-magenta to-neon-cyan flex items-center justify-center text-cyber-900 font-bold text-2xl flex-shrink-0">
           {user?.username?.charAt(0).toUpperCase() || 'U'}
         </div>
-        <div>
-          <h3 className="text-2xl font-bold font-display text-white">{user?.username}</h3>
-          <p className="text-cyber-400">{user?.email}</p>
+        <div className="min-w-0">
+          <h3 className="text-xl md:text-2xl font-bold font-display text-white truncate">{user?.username}</h3>
+          <p className="text-cyber-400 text-sm truncate">{user?.email}</p>
           <span className="badge-cyber bg-cyber-700 text-cyber-300 capitalize mt-2 inline-block">{user?.role}</span>
         </div>
       </div>
@@ -173,8 +207,8 @@ function ProfileSection({ user }: { user: any }) {
 
       <div className="card-cyber p-6 border-t border-cyber-700/50">
         <h3 className="text-lg font-bold font-display text-white mb-4">Danger Zone</h3>
-        <button className="btn-cyber-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30">
-          <span className="w-4 h-4 mr-2">🗑</span>
+        <button className="btn-cyber-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30 flex items-center">
+          <Trash2 className="w-4 h-4 mr-2" />
           Delete Account
         </button>
       </div>
@@ -402,7 +436,7 @@ function AppearanceSection({ theme, setTheme }: { theme: 'dark' | 'light'; setTh
                   ? 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)'
                   : 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)'
               }}>
-                <span className="text-3xl">{t === 'dark' ? '🌙' : '☀️'}</span>
+                {t === 'dark' ? <Moon className="w-8 h-8 text-cyber-300" /> : <Sun className="w-8 h-8 text-amber-500" />}
               </div>
               <p className="font-medium text-white capitalize">{t}</p>
               <p className="text-xs text-cyber-400 mt-1">
@@ -418,7 +452,7 @@ function AppearanceSection({ theme, setTheme }: { theme: 'dark' | 'light'; setTh
           <Sparkles className="w-5 h-5 text-neon-magenta" />
           Accent Color
         </h3>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { name: 'Magenta', value: '#ff00ff', css: 'neon-magenta' },
             { name: 'Cyan', value: '#00ffff', css: 'neon-cyan' },
