@@ -1,32 +1,6 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useWebSocket } from '../contexts/WebSocketContext'
-import {
-  GitBranch,
-  Lock,
-  Globe,
-  Clock,
-  AlertTriangle,
-  CheckCircle,
-  Bug,
-  Code,
-  Shield,
-  Settings,
-  ArrowLeft,
-  Play,
-  Pause,
-  RefreshCw,
-  ExternalLink,
-  Download,
-  Filter,
-  Search,
-  ChevronRight,
-  Terminal,
-  Zap,
-  Activity,
-  BarChart3,
-} from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 // Types
 interface Repository {
@@ -45,29 +19,7 @@ interface Repository {
   default_branch: string
 }
 
-interface Finding {
-  id: string
-  type: 'security' | 'logic' | 'style' | 'test'
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  file: string
-  line: number
-  message: string
-  confidence: number
-  timestamp: string
-  code_snippet?: string
-  suggested_fix?: string
-}
 
-interface PipelineRun {
-  id: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  started_at: string
-  completed_at?: string
-  duration?: number
-  findings_count: number
-  critical_count: number
-  trigger: 'webhook' | 'manual' | 'scheduled'
-}
 
 const mockRepo: Repository = {
   id: '1',
@@ -116,8 +68,7 @@ const SEVERITY_ICONS = {
 }
 
 export default function RepositoryDetail() {
-  const { id } = useParams<{ id: string }>()
-  const { isConnected, events } = useWebSocket()
+  useParams()
   const [activeTab, setActiveTab] = useState<'overview' | 'findings' | 'pipeline' | 'settings'>('overview')
   const [selectedFinding, setSelectedFinding] = useState<any>(null)
 
@@ -207,12 +158,6 @@ export default function RepositoryDetail() {
 
 // Sub-components
 function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    'neon-cyan': 'bg-neon-cyan/10 text-neon-cyan',
-    'neon-magenta': 'bg-neon-magenta/10 text-neon-magenta',
-    'neon-amber': 'bg-neon-amber/10 text-neon-amber',
-    red: 'bg-red-500/10 text-red-400',
-  }
   return (
     <div className="card-cyber p-6">
       <div className="flex items-center justify-between">
@@ -228,6 +173,20 @@ function StatCard({ title, value, icon, color }: { title: string; value: string 
         }[color] || 'bg-neon-magenta/10'}`}>
           <span className="text-2xl">{icon}</span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MetricCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <div className="card-cyber p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-mono text-cyber-400 uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-2xl font-bold font-display text-white">{value}</p>
+        </div>
+        <div className="w-10 h-10 rounded-lg bg-neon-magenta/10 flex items-center justify-center text-xl">{icon}</div>
       </div>
     </div>
   )
@@ -277,7 +236,7 @@ function OverviewTab({ repo }: { repo: any }) {
               <Line type="monotone" dataKey="scans" stroke="#ff00ff" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="issues" stroke="#00ffff" strokeWidth={2} dot={false} />
             </LineChart>
-          </div>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
@@ -345,7 +304,7 @@ function FindingsTab({ findings, selectedFinding, onSelect }: { findings: any[];
           <div className="card-cyber-glow w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
             <div className="p-6 border-b border-cyber-700/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className={`badge-cyber ${SEVERITY_COLORS[selectedFinding.severity]}`}>{selectedFinding.severity.toUpperCase()}</span>
+                <span className={`badge-cyber ${SEVERITY_COLORS[selectedFinding.severity as keyof typeof SEVERITY_COLORS]}`}>{selectedFinding.severity.toUpperCase()}</span>
                 <span className="badge-cyber bg-cyber-700 text-cyber-300">{selectedFinding.type}</span>
                 <span className="text-xs text-cyber-400 font-mono">{selectedFinding.confidence}%</span>
               </div>
@@ -382,10 +341,10 @@ function FindingCard({ finding, selected, onClick }: { finding: any; selected: b
       className={`p-4 cursor-pointer transition-colors ${selected ? 'bg-neon-magenta/10 border-l-4 border-neon-magenta' : 'hover:bg-cyber-800/30'}`}
     >
       <div className="flex items-start gap-3">
-        <span className="text-2xl">{SEVERITY_ICONS[finding.severity]}</span>
+        <span className="text-2xl">{SEVERITY_ICONS[finding.severity as keyof typeof SEVERITY_ICONS]}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`badge-cyber ${SEVERITY_COLORS[finding.severity]}`}>{finding.severity.toUpperCase()}</span>
+            <span className={`badge-cyber ${SEVERITY_COLORS[finding.severity as keyof typeof SEVERITY_COLORS]}`}>{finding.severity.toUpperCase()}</span>
             <span className="badge-cyber bg-cyber-700 text-cyber-300">{finding.type}</span>
             <span className="text-xs text-cyber-400 font-mono">{finding.confidence}%</span>
           </div>
@@ -507,4 +466,3 @@ function SettingsTab() {
   )
 }
 
-export default RepositoryDetail

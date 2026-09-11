@@ -3,36 +3,23 @@ import { Link } from 'react-router-dom'
 import { useWebSocket } from '../contexts/WebSocketContext'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  GitBranch,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Zap,
   Terminal,
   GitBranch as GitBranchIcon,
-  BarChart3,
   Activity,
   ChevronRight,
-  ExternalLink,
-  RefreshCw,
   Shield,
   Bug,
-  Code,
-  Search,
-  Filter,
-  Download,
-  Settings,
   Plus,
   Eye,
-  Trash2,
-  Edit,
-  Copy,
+  Download,
   AlertCircle,
   CheckCircle2,
-  Clock as ClockIcon,
   Zap as ZapIcon,
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 // Types
 interface Repository {
@@ -129,8 +116,6 @@ export default function Dashboard() {
     setLoading(false)
   }, [])
 
-  const recentEvents = events.slice(0, 10)
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -148,7 +133,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
-            <span className="text-neon-magenta">>_</span> Dashboard
+            <span className="text-neon-magenta">{'>_'}</span> Dashboard
           </h1>
           <p className="text-cyber-400 mt-1">Welcome back, {user?.username || 'Operator'}. System status: <span className="text-neon-green font-mono">OPERATIONAL</span></p>
         </div>
@@ -184,7 +169,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Critical Issues"
-          value={stats.critical_issues}
+          value={stats.critical_issues.toLocaleString()}
           icon={Shield}
           color="red"
           trend="-12%"
@@ -260,9 +245,9 @@ export default function Dashboard() {
                   activeDot={{ r: 6, fill: '#00ffff' }}
                 />
               </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        </div>
 
         {/* Issues by Severity */}
         <div className="card-cyber p-6">
@@ -301,12 +286,13 @@ export default function Dashboard() {
                   }}
                 />
               </PieChart>
+              </ResponsiveContainer>
             </div>
             <div className="flex flex-wrap justify-center gap-4 mt-4">
               {[
                 { label: 'Critical', color: '#ff3333' },
                 { label: 'High', color: '#ff8c00' },
-                { name: 'Medium', color: '#ff8c00' },
+                { label: 'Medium', color: '#ff8c00' },
                 { label: 'Low', color: '#00ff00' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -317,7 +303,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Recent Repositories & Findings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -449,14 +434,14 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="p-6 max-h-64 overflow-y-auto font-mono text-sm">
-          {useWebSocket().events.length === 0 ? (
+          {events.length === 0 ? (
             <div className="text-center py-8 text-cyber-500">
               <Terminal className="w-12 h-12 mx-auto mb-4 text-cyber-700" />
               <p>No live events yet. Trigger a webhook to see live pipeline activity.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {useWebSocket().events.slice(0, 20).map((event, i) => (
+              {events.slice(0, 20).map((event, i) => (
                 <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-cyber-800/50 border border-cyber-700/30">
                   <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
                   <span className="text-cyber-500 font-mono text-xs">[{new Date().toLocaleTimeString()}]</span>
@@ -525,4 +510,3 @@ function generateChartData(range: string) {
   return data
 }
 
-export default Dashboard

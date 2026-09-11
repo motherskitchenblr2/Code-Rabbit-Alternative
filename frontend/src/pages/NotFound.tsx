@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles, Terminal, Home, Search, GitBranch, RefreshCw, ExternalLink } from 'lucide-react'
 
@@ -49,9 +48,8 @@ export default function NotFound() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyber-500" />
                 <input
                   type="text"
-                  placeholder="Search sectors..."
-                  className="input-cyber pl-10"
                   placeholder="Enter sector coordinates..."
+                  className="input-cyber pl-10"
                 />
               </div>
               <button type="submit" className="btn-cyber-magenta">
@@ -103,7 +101,7 @@ export default function NotFound() {
                 <p className="text-xs text-cyber-400">Uptime</p>
               </div>
               <div className="p-3 rounded-lg bg-cyber-800/50">
-                <p className="text-2xl font-bold font-display text-neon-cyan"><50ms</p>
+                <p className="text-2xl font-bold font-display text-neon-cyan">{'<50ms'}</p>
                 <p className="text-xs text-cyber-400">Latency</p>
               </div>
               <div className="p-3 rounded-lg bg-cyber-800/50">
@@ -147,4 +145,3 @@ export default function NotFound() {
   )
 }
 
-export default NotFound

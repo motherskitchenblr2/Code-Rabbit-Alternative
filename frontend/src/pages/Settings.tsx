@@ -1,30 +1,26 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { useWebSocket } from '../contexts/WebSocketContext'
 import {
   User,
   Shield,
   Bell,
   Palette,
   Globe,
-  Key,
   Terminal,
   Save,
   CheckCircle,
-  AlertCircle,
   Sparkles,
   GitBranch,
   Server,
   Database,
-  Wifi,
-  WifiOff,
+  Plus,
+  Bug,
 } from 'lucide-react'
 
 export default function Settings() {
-  const { user, logout } = useAuth()
-  const { theme, toggleTheme, setTheme } = useTheme()
-  const { isConnected } = useWebSocket()
+  const { user } = useAuth()
+  const { theme, setTheme } = useTheme()
 
   const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'notifications' | 'appearance' | 'integrations' | 'advanced'>('profile')
   const [saving, setSaving] = useState(false)
@@ -53,7 +49,7 @@ export default function Settings() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
-            <span className="text-neon-magenta">>_</span> Settings
+            <span className="text-neon-magenta">{'>_'}</span> Settings
           </h1>
           <p className="text-cyber-400 mt-1">Configure your Git-Fix experience</p>
         </div>
@@ -123,16 +119,6 @@ export default function Settings() {
 
 // Profile Section
 function ProfileSection({ user }: { user: any }) {
-  const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    fullName: '',
-    bio: '',
-    company: '',
-    location: '',
-    website: '',
-  })
-
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-6">
@@ -199,7 +185,7 @@ function ProfileSection({ user }: { user: any }) {
 // Security Section
 function SecuritySection() {
   const [twoFA, setTwoFA] = useState(false)
-  const [sessions, setSessions] = useState([
+  const [sessions] = useState([
     { id: '1', device: 'Chrome on macOS', location: 'San Francisco, US', current: true, lastActive: 'Now' },
     { id: '2', device: 'Firefox on Linux', location: 'New York, US', current: false, lastActive: '2 days ago' },
     { id: '3', device: 'Safari on iOS', location: 'London, UK', current: false, lastActive: '1 week ago' },
@@ -243,7 +229,7 @@ function SecuritySection() {
             Active Sessions
           </h3>
           <button className="btn-cyber-ghost text-sm">Revoke All</button>
-        </h3>
+        </div>
         <div className="space-y-3">
           {sessions.map((session) => (
             <div key={session.id} className="flex items-center justify-between p-4 rounded-lg bg-cyber-800/50 border border-cyber-700/50">
@@ -295,10 +281,6 @@ function NotificationsSection() {
     dailyDigest: true,
     weeklyReport: false,
   })
-
-  const toggle = (key: string) => {
-    setPrefs(prev => ({ ...prev, [key]: !prev[key] }))
-  }
 
   return (
     <div className="space-y-8">
@@ -589,4 +571,3 @@ function AdvancedSection() {
   )
 }
 
-export default Settings

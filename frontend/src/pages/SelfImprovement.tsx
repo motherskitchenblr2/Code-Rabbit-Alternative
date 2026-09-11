@@ -120,15 +120,6 @@ const TYPE_COLORS: Record<string, string> = {
   procedural: 'bg-neon-green',
 }
 
-function formatUptime(seconds: number): string {
-  const d = Math.floor(seconds / 86400)
-  const h = Math.floor((seconds % 86400) / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (d > 0) return `${d}d ${h}h ${m}m`
-  if (h > 0) return `${h}h ${m}m ${seconds % 60}s`
-  return `${m}m ${seconds % 60}s`
-}
-
 function skillProgress(skill: Skill): number {
   const tiers = [0, 25, 50, 100]
   const idx = LEVEL_ORDER[skill.level] ?? 0

@@ -8,7 +8,6 @@ import Settings from './pages/Settings'
 import SelfImprovement from './pages/SelfImprovement'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
-import { useAuth } from './contexts/AuthContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()

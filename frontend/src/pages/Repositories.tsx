@@ -1,25 +1,17 @@
-import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Plus,
   Search,
-  Filter,
   GitBranch,
   Lock,
   Globe,
   ChevronDown,
   ChevronUp,
-  PlusCircle,
   Settings,
   Eye,
-  Trash2,
-  Copy,
   ExternalLink,
 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
 
 // Types
 interface Repository {
@@ -47,12 +39,11 @@ const repositories: Repository[] = [
 ]
 
 export default function Repositories() {
-  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'idle' | 'error'>('all')
   const [sortBy, setSortBy] = useState<'name' | 'last_scan' | 'stars' | 'open_prs'>('last_scan')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [, setShowAddModal] = useState(false)
 
   const filteredRepos = repositories
     .filter(repo => {
@@ -65,14 +56,13 @@ export default function Repositories() {
       return true
     })
     .sort((a, b) => {
-      let aVal = a[sortBy]
-      let bVal = b[sortBy]
-      if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase()
-        bVal = bVal.toLowerCase()
-      }
-      if (sortOrder === 'asc') return aVal > bVal ? 1 : -1
-      return aVal < bVal ? 1 : -1
+      const aVal = a[sortBy]
+      const bVal = b[sortBy]
+      const cmp =
+        typeof aVal === 'number' && typeof bVal === 'number'
+          ? aVal - bVal
+          : String(aVal).localeCompare(String(bVal))
+      return sortOrder === 'asc' ? cmp : -cmp
     })
 
   return (
@@ -81,7 +71,7 @@ export default function Repositories() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
-            <span className="text-neon-magenta">>_</span> Repositories
+            <span className="text-neon-magenta">{'>_'}</span> Repositories
           </h1>
           <p className="text-cyber-400 mt-1">Manage and monitor your code repositories</p>
         </div>
@@ -105,7 +95,6 @@ export default function Repositories() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input-cyber pl-10"
-              placeholder="Search repositories..."
             />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -250,4 +239,3 @@ export default function Repositories() {
   )
 }
 
-export default Repositories

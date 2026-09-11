@@ -1,30 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useState } from 'react'
 import {
   Shield,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
   FileText,
   Download,
   Calendar,
-  TrendingUp,
-  Target,
-  Search,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Zap,
-  BarChart3,
-  PieChart,
   Users,
-  Shield as ShieldIcon,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
 
 interface ComplianceStandard {
   id: string
@@ -115,11 +96,6 @@ const mockComplianceData: ComplianceStandard[] = [
       { id: 'a.12.1', title: 'Operational Procedures', description: 'Documented operating procedures', status: 'met', evidence: ['runbooks/', 'playbooks/'], responsible: 'Morgan Lee', dueDate: '2024-12-31' },
     ],
     evidence: [],
-    lastAudit: '2024-01-10',
-    nextAudit: '2025-01-10',
-    lastUpdated: '2024-01-18',
-    requirements: [],
-    evidence: [],
   },
   {
     id: 'gdpr',
@@ -130,11 +106,6 @@ const mockComplianceData: ComplianceStandard[] = [
     findings: 12,
     criticalFindings: 1,
     highFindings: 4,
-    lastAudit: '2024-01-08',
-    nextAudit: '2024-07-08',
-    lastUpdated: '2024-01-16',
-    requirements: [],
-    evidence: [],
     lastAudit: '2024-01-08',
     nextAudit: '2024-07-08',
     lastUpdated: '2024-01-16',
@@ -155,11 +126,6 @@ const mockComplianceData: ComplianceStandard[] = [
     lastUpdated: '2024-01-19',
     requirements: [],
     evidence: [],
-    lastAudit: '2024-01-12',
-    nextAudit: '2025-01-12',
-    lastUpdated: '2024-01-19',
-    requirements: [],
-    evidence: [],
   },
   {
     id: 'pci-dss',
@@ -170,11 +136,6 @@ const mockComplianceData: ComplianceStandard[] = [
     findings: 8,
     criticalFindings: 0,
     highFindings: 3,
-    lastAudit: '2024-01-05',
-    nextAudit: '2024-07-05',
-    lastUpdated: '2024-01-14',
-    requirements: [],
-    evidence: [],
     lastAudit: '2024-01-05',
     nextAudit: '2024-07-05',
     lastUpdated: '2024-01-14',
@@ -195,19 +156,12 @@ const mockComplianceData: ComplianceStandard[] = [
     lastUpdated: '2024-01-19',
     requirements: [],
     evidence: [],
-    lastAudit: '2024-01-14',
-    nextAudit: '2025-01-14',
-    lastUpdated: '2024-01-19',
-    requirements: [],
-    evidence: [],
   },
 ]
 
 export default function ComplianceReport() {
-  const { user } = useAuth()
   const [selectedStandard, setSelectedStandard] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'overview' | 'detail' | 'evidence' | 'requirements'>('overview')
-  const [filter, setFilter] = useState({ status: '', search: '' })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -228,12 +182,6 @@ export default function ComplianceReport() {
       default: return 'bg-cyber-700/20 text-cyber-400 border-cyber-700/30'
     }
   }
-
-  const filteredStandards = mockComplianceData.filter(s => {
-    if (filter.status && s.status !== filter.status) return false
-    if (filter.search && !s.name.toLowerCase().includes(filter.search.toLowerCase()) && !s.description.toLowerCase().includes(filter.search.toLowerCase())) return false
-    return true
-  })
 
   if (viewMode === 'detail' && selectedStandard) {
     const standard = mockComplianceData.find(s => s.id === selectedStandard)!
@@ -301,23 +249,16 @@ export default function ComplianceReport() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     )
   }
 }
 
 function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    'neon-cyan': 'bg-neon-cyan/10 text-neon-cyan',
-    'neon-magenta': 'bg-neon-magenta/10 text-neon-magenta',
-    'neon-amber': 'bg-neon-amber/10 text-neon-amber',
-    'neon-green': 'bg-neon-green/10 text-neon-green',
-    'red': 'bg-red-500/10 text-red-400',
-  }
   return (
     <div className="card-cyber p-6">
       <div className="flex items-center justify-between">
@@ -338,5 +279,3 @@ function StatCard({ title, value, icon, color }: { title: string; value: string 
     </div>
   )
 }
-
-export default ComplianceReport

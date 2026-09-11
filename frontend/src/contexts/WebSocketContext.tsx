@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 interface PipelineEvent {
   id: string
@@ -17,7 +17,7 @@ interface WebSocketContextType {
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
 
-export function WebSocketProvider({ children }: { children: React.ReactNode }) {
+export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
   const [events, setEvents] = useState<PipelineEvent[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)

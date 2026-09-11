@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,12 +10,9 @@ import {
   LogOut,
   Sun,
   Moon,
-  Wifi,
-  WifiOff,
   Menu,
   X,
   ChevronDown,
-  User,
   Terminal,
   Sparkles,
   Brain,
@@ -60,7 +57,6 @@ export default function Layout() {
             <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
               {navItems.map((item) => {
                 const Icon = item.icon
-                const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
                 return (
                   <NavLink
                     key={item.path}
@@ -157,7 +153,7 @@ export default function Layout() {
               <nav className="py-2 space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
+                  const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
                   return (
                     <NavLink
                       key={item.path}

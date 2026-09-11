@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../contexts/AuthContext'
-import { GitBranch, Lock, Mail, AlertCircle, Eye, EyeOff, Sparkles, Terminal } from 'lucide-react'
+import { Lock, Mail, AlertCircle, Eye, EyeOff, Sparkles, Terminal } from 'lucide-react'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -84,7 +84,7 @@ export default function Login() {
                   <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.email.message}
-                  )
+                  </p>
                 )}
               </div>
             </div>
@@ -167,4 +167,3 @@ export default function Login() {
   )
 }
 
-export default Login
