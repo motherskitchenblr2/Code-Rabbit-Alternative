@@ -21,7 +21,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gitfix}
       POSTGRES_USER: ${POSTGRES_USER:-gitfix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gitfix_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -48,13 +48,22 @@ services:
   redis:
     image: redis:7-alpine
     container_name: gitfix-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-backlog 511
+      --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env (see .env.example)}
     volumes:
       - redis_data:/data
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,15 +77,6 @@ services:
           memory: 512M
         reservations:
           memory: 128M
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
-      --save 900 1
-      --save 300 10
-      --save 60 10000
-      --tcp-backlog 511
 
   # Qdrant Vector Database
   qdrant:
@@ -122,20 +122,22 @@ services:
     environment:
       - FLASK_DEBUG=${FLASK_DEBUG:-true}
       - FLASK_ENV=${FLASK_ENV:-development}
-      - SECRET_KEY=${SECRET_KEY}
-      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - APP_ENV=${APP_ENV:-development}
+      - AUTH_ENABLED=${AUTH_ENABLED:-false}
+      - GITFIX_ADMIN_USERNAME=${GITFIX_ADMIN_USERNAME:-admin}
+      - GITFIX_ADMIN_PASSWORD=${GITFIX_ADMIN_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env (see .env.example)}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET:?Set GITHUB_WEBHOOK_SECRET in .env (see .env.example)}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
       - QDRANT_URL=http://qdrant:6333
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       - FORCE_HTTPS=${FORCE_HTTPS:-false}
       - PORT=${PORT:-5000}
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
-      - QDRANT_URL=http://qdrant:6333
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
     ports:
@@ -151,8 +153,6 @@ services:
       - .:/app
       - /app/backend/__pycache__
       - ./logs:/app/logs
-    networks:
-      - gitfix-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
       interval: 30s
@@ -185,11 +185,12 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_URL=postgresql://${POSTGRES_USER:-gitfix}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gitfix}
       - QDRANT_URL=http://qdrant:6333
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
       - PYTHONUNBUFFERED=1
     depends_on:
       postgres:
@@ -223,9 +224,10 @@ services:
     command: celery -A app.celery beat --loglevel=info --scheduler celery.beat.PersistentScheduler
     environment:
       - SECRET_KEY=${SECRET_KEY}
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
     depends_on:
       redis:
         condition: service_healthy
@@ -245,10 +247,11 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: gitfix-flower
-    command: celery -A app.celery flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+    command: celery -A app.celery flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:?Set FLOWER_PASSWORD in .env (see .env.example)}
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
     ports:
       - "${FLOWER_PORT:-5555}:5555"
     depends_on:
@@ -317,8 +320,8 @@ services:
     image: grafana/grafana:10.1.0
     container_name: gitfix-grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env (see .env.example)}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
@@ -379,8 +382,8 @@ services:
     container_name: gitfix-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?Set MINIO_PASSWORD in .env (see .env.example)}
     ports:
       - "9000:9000"
       - "9001:9001"

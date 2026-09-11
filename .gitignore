@@ -28,6 +28,9 @@ build/
 htmlcov/
 .pytest_cache/
 
+# Throwaway local scanner scripts (may contain sample secrets — never commit)
+/test_regex*.py
+
 # IDE & OS
 .vscode/
 .idea/

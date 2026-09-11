@@ -12,16 +12,23 @@ import json
 import time
 import logging
 import traceback
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from dataclasses import asdict
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, g
 
+from backend.security import rate_limit, require_admin
 from .orchestrator import SelfImprovementEngine
 from .error_handling.core import ErrorHandler, ErrorSeverity, RecoveryStrategy, ReflexRule
 from .learning.core import FeedbackSignal
 from .development.core import GoalStatus
+
+try:
+    from pydantic import BaseModel, Field, ValidationError
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +38,61 @@ self_improvement_bp = Blueprint(
 )
 
 _engine: Optional[SelfImprovementEngine] = None
+
+
+if PYDANTIC_AVAILABLE:
+    class MemoryStoreRequest(BaseModel):
+        key: str = Field(..., min_length=1, max_length=500)
+        content: str = Field(..., min_length=1, max_length=50000)
+        type: str = Field("episodic", max_length=50)
+        metadata: Optional[Dict[str, Any]] = None
+        importance: int = Field(2, ge=0, le=10)
+        tags: Optional[List[str]] = Field(None, max_length=50)
+
+    class FeedbackRequest(BaseModel):
+        event: str = Field(..., min_length=1, max_length=500)
+        outcome: str = Field("pass", max_length=100)
+        context: Dict[str, Any] = {}
+        source: str = Field("api", max_length=100)
+
+    class SkillsTrainRequest(BaseModel):
+        skill: str = Field(..., min_length=1, max_length=200)
+        xp: int = Field(1, ge=0, le=1000)
+        activity: str = Field("", max_length=500)
+
+    class GoalsCreateRequest(BaseModel):
+        name: str = Field(..., min_length=1, max_length=500)
+        description: str = Field(..., max_length=5000)
+        target_skill: str = Field(..., max_length=200)
+        milestones: List[str] = Field(..., min_length=1, max_length=50)
+        deadline: Optional[str] = Field(None, max_length=100)
+
+    class MilestoneRequest(BaseModel):
+        milestone: str = Field(..., min_length=1, max_length=500)
+
+    class ErrorsHandleRequest(BaseModel):
+        source: str = Field("api", max_length=200)
+        error_type: str = Field("RuntimeError", max_length=100)
+        message: str = Field("simulated error", max_length=5000)
+        context: Dict[str, Any] = {}
+
+    class ReflexRegisterRequest(BaseModel):
+        error_type: str = Field(..., min_length=1, max_length=100)
+        strategy: str = Field(..., max_length=50)
+        source_pattern: str = Field("*", max_length=500)
+        max_attempts: int = Field(3, ge=1, le=50)
+        backoff_seconds: float = Field(0.3, ge=0.0, le=3600.0)
+        message: str = Field("", max_length=1000)
+
+
+def _payload(data, model_class):
+    """Validate via Pydantic when available, else return raw data."""
+    if PYDANTIC_AVAILABLE:
+        try:
+            return model_class(**data), None
+        except ValidationError as e:
+            return None, {"error": "Invalid request", "details": e.errors()}
+    return data, None
 
 
 def get_engine() -> SelfImprovementEngine:
@@ -102,9 +164,14 @@ def memory_list():
 
 
 @self_improvement_bp.route("/memory", methods=["POST"])
+@rate_limit(60, 60)
+@require_admin
 def memory_store():
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, MemoryStoreRequest)
+    if err:
+        return jsonify(err), 400
     if not data or "key" not in data or "content" not in data:
         return jsonify({"error": "key and content are required"}), 400
 
@@ -129,6 +196,8 @@ def memory_get(memory_id):
 
 
 @self_improvement_bp.route("/memory/<int:memory_id>", methods=["DELETE"])
+@rate_limit(30, 60)
+@require_admin
 def memory_delete(memory_id):
     engine = get_engine()
     n = engine.memory.forget(memory_id=memory_id)
@@ -141,6 +210,8 @@ def memory_stats():
 
 
 @self_improvement_bp.route("/memory/consolidate", methods=["POST"])
+@rate_limit(10, 60)
+@require_admin
 def memory_consolidate():
     engine = get_engine()
     return jsonify(engine.consolidate())
@@ -151,9 +222,14 @@ def memory_consolidate():
 # ---------------------------------------------------------------------------
 
 @self_improvement_bp.route("/learning/feedback", methods=["POST"])
+@rate_limit(30, 60)
+@require_admin
 def learning_feedback():
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, FeedbackRequest)
+    if err:
+        return jsonify(err), 400
     if not data or "event" not in data:
         return jsonify({"error": "event is required"}), 400
 
@@ -196,9 +272,14 @@ def skills_list():
 
 
 @self_improvement_bp.route("/skills/train", methods=["POST"])
+@rate_limit(30, 60)
+@require_admin
 def skills_train():
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, SkillsTrainRequest)
+    if err:
+        return jsonify(err), 400
     skill  = data.get("skill")
     if not skill:
         return jsonify({"error": "skill is required"}), 400
@@ -214,9 +295,14 @@ def goals_list():
 
 
 @self_improvement_bp.route("/goals", methods=["POST"])
+@rate_limit(20, 60)
+@require_admin
 def goals_create():
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, GoalsCreateRequest)
+    if err:
+        return jsonify(err), 400
     required = ["name", "description", "target_skill", "milestones"]
     missing  = [f for f in required if f not in data]
     if missing:
@@ -234,9 +320,14 @@ def goals_create():
 
 
 @self_improvement_bp.route("/goals/<goal_id>/milestone", methods=["POST"])
+@rate_limit(20, 60)
+@require_admin
 def goals_mark_milestone(goal_id):
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, MilestoneRequest)
+    if err:
+        return jsonify(err), 400
     milestone = data.get("milestone")
     if not milestone:
         return jsonify({"error": "milestone is required"}), 400
@@ -249,10 +340,15 @@ def goals_mark_milestone(goal_id):
 # ---------------------------------------------------------------------------
 
 @self_improvement_bp.route("/errors/handle", methods=["POST"])
+@rate_limit(30, 60)
+@require_admin
 def errors_handle():
     """Simulate/replay an error through the engine for learning."""
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, ErrorsHandleRequest)
+    if err:
+        return jsonify(err), 400
     source = data.get("source", "api")
     error_type = data.get("error_type", "RuntimeError")
     message    = data.get("message", "simulated error")
@@ -289,16 +385,26 @@ def errors_reflexes():
 
 
 @self_improvement_bp.route("/errors/reflexes", methods=["POST"])
+@rate_limit(10, 60)
+@require_admin
 def errors_register_reflex():
     engine = get_engine()
     data   = request.get_json(force=True)
+    validated, err = _payload(data, ReflexRegisterRequest)
+    if err:
+        return jsonify(err), 400
     if not data.get("error_type") or not data.get("strategy"):
         return jsonify({"error": "error_type and strategy are required"}), 400
+
+    try:
+        recovery_strategy = RecoveryStrategy(data["strategy"])
+    except ValueError:
+        return jsonify({"error": f"invalid strategy: {data['strategy']}"}), 400
 
     engine.errors.register_reflex(ReflexRule(
         error_type=data["error_type"],
         source_pattern=data.get("source_pattern", "*"),
-        recovery_strategy=RecoveryStrategy(data["strategy"]),
+        recovery_strategy=recovery_strategy,
         max_attempts=data.get("max_attempts", 3),
         backoff_seconds=data.get("backoff_seconds", 0.3),
         message=data.get("message", ""),

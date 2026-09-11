@@ -12,6 +12,17 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Dict, Any
 
+from backend.security import (
+    init_security,
+    security_ready,
+    AUTH_ENABLED,
+    rate_limit,
+    create_token,
+    verify_token,
+    extract_token,
+    require_admin,
+)
+
 try:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
@@ -39,6 +50,9 @@ app.config.update(
     MAX_CONTENT_LENGTH=int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)),  # 16MB
     JSON_SORT_KEYS=False,
 )
+
+# Shared security helpers (rate limiting + token auth)
+init_security(app.config['SECRET_KEY'])
 
 # CORS Configuration - Restrict to specific origins in production
 CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
@@ -88,11 +102,16 @@ pipeline_state = {
     "reviews_created": 0,
 }
 
-# Security: Secret from environment only
+# Security: Secret from environment only. Fail loud in non-development.
 GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET')
+WEBHOOK_SECRET_IS_FALLBACK = False
 if not GITHUB_WEBHOOK_SECRET:
-    logger.warning("GITHUB_WEBHOOK_SECRET not set! Using fallback for development only.")
     GITHUB_WEBHOOK_SECRET = secrets.token_hex(32)
+    WEBHOOK_SECRET_IS_FALLBACK = True
+    if os.environ.get('APP_ENV', 'development') != 'development':
+        logger.error("GITHUB_WEBHOOK_SECRET must be set in non-development environments")
+        raise RuntimeError("GITHUB_WEBHOOK_SECRET not set")
+    logger.warning("GITHUB_WEBHOOK_SECRET not set! Using random fallback for development only.")
 
 # Request ID middleware for tracing
 @app.before_request
@@ -272,6 +291,7 @@ def generate_idempotency_key(payload: dict) -> str:
 
 @app.route("/api/v1/webhook", methods=["POST"])
 @limiter.limit("100 per minute") if limiter else lambda f: f
+@rate_limit(100, 60)
 def webhook():
     """Receive and validate GitHub pull_request webhooks."""
     # Validate content type
@@ -337,6 +357,7 @@ def webhook():
 
 @app.route("/api/v1/ast-slice", methods=["POST"])
 @limiter.limit("50 per minute") if limiter else lambda f: f
+@rate_limit(50, 60)
 def ast_slice():
     """Parse unified diff into Tree-sitter AST scopes."""
     if not request.is_json:
@@ -412,6 +433,7 @@ def simulate_ast_parsing(unified_diff: str) -> list:
 
 @app.route("/api/v1/rag", methods=["POST"])
 @limiter.limit("30 per minute") if limiter else lambda f: f
+@rate_limit(30, 60)
 def rag():
     """Inject contextual codebase information into LLM prompts."""
     if not request.is_json:
@@ -485,6 +507,7 @@ def generate_contextual_knowledge(scope: dict) -> dict:
 
 @app.route("/api/v1/critique", methods=["POST"])
 @limiter.limit("20 per minute") if limiter else lambda f: f
+@rate_limit(20, 60)
 def critique():
     """Run multi-agent LLM review on diff context."""
     if not request.is_json:
@@ -596,6 +619,8 @@ def generate_patch_for_line(line_num: int, patch_type: str) -> str:
 
 @app.route("/api/v1/github/review", methods=["POST"])
 @limiter.limit("10 per minute") if limiter else lambda f: f
+@rate_limit(10, 60)
+@require_admin
 def github_review():
     """Dispatch consolidated review comments to GitHub PR."""
     if not request.is_json:
@@ -675,6 +700,8 @@ def github_review():
 
 @app.route("/api/v1/chat/reply", methods=["POST"])
 @limiter.limit("30 per minute") if limiter else lambda f: f
+@rate_limit(30, 60)
+@require_admin
 def chat_reply():
     """Handle conversational follow-ups when developers reply to bot comments."""
     if not request.is_json:
@@ -702,6 +729,75 @@ def chat_reply():
     })
 
 
+# ── Authentication ──────────────────────────────────────────────────────────
+
+def _get_admin_credentials() -> tuple:
+    username = os.environ.get("GITFIX_ADMIN_USERNAME", "admin")
+    password = os.environ.get("GITFIX_ADMIN_PASSWORD", "")
+    return username, password
+
+
+def _authed_user_payload(payload: dict) -> dict:
+    return {
+        "id": payload.get("sub"),
+        "username": payload.get("sub"),
+        "email": "",
+        "role": payload.get("role", "viewer"),
+    }
+
+
+@app.route("/api/v1/auth/login", methods=["POST"])
+@rate_limit(10, 60)
+def auth_login():
+    if not security_ready():
+        return jsonify({"error": "Auth not configured", "message": "Missing itsdangerous dependency"}), 503
+    data = request.get_json(force=True, silent=True) or {}
+    username = str(data.get("username") or data.get("email") or "")
+    password = str(data.get("password") or "")
+    admin_user, admin_pass = _get_admin_credentials()
+    if not admin_pass:
+        return jsonify({"error": "Auth not configured", "message": "Set GITFIX_ADMIN_PASSWORD"}), 503
+    if not (hmac.compare_digest(username, admin_user) and hmac.compare_digest(password, admin_pass)):
+        return jsonify({"error": "Unauthorized", "message": "Invalid credentials"}), 401
+    access = create_token(admin_user, role="admin")
+    refresh = create_token(admin_user, role="admin", ttl=604800)
+    return jsonify({
+        "access_token": access,
+        "refresh_token": refresh,
+        "user": {"id": admin_user, "username": admin_user, "email": "", "role": "admin"},
+    })
+
+
+@app.route("/api/v1/auth/refresh", methods=["POST"])
+@rate_limit(10, 60)
+def auth_refresh():
+    if not security_ready():
+        return jsonify({"error": "Auth not configured", "message": "Missing itsdangerous dependency"}), 503
+    data = request.get_json(force=True, silent=True) or {}
+    refresh_token = data.get("refresh_token")
+    payload = verify_token(refresh_token)
+    if not payload:
+        return jsonify({"error": "Unauthorized", "message": "Invalid or expired token"}), 401
+    access = create_token(payload.get("sub", "admin"), role=payload.get("role", "admin"))
+    refresh = create_token(payload.get("sub", "admin"), role=payload.get("role", "admin"), ttl=604800)
+    return jsonify({
+        "access_token": access,
+        "refresh_token": refresh,
+        "user": _authed_user_payload(payload),
+    })
+
+
+@app.route("/api/v1/auth/me", methods=["GET"])
+def auth_me():
+    token = extract_token()
+    payload = verify_token(token) if token else None
+    if payload:
+        return jsonify(_authed_user_payload(payload))
+    if AUTH_ENABLED:
+        return jsonify({"error": "Unauthorized", "message": "Authentication required"}), 401
+    return jsonify({"id": None, "username": "anonymous", "email": "", "role": "viewer"})
+
+
 # ── Health & status endpoints ───────────────────────────────────────────────
 
 @app.route("/api/v1/health", methods=["GET"])
@@ -712,10 +808,11 @@ def health():
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "checks": {
-            "webhook_secret": "configured" if GITHUB_WEBHOOK_SECRET != "code-rabbit-alternative-secret-key" else "using_fallback",
-            "rate_limiter": "enabled" if limiter else "disabled",
+            "webhook_secret": "configured" if not WEBHOOK_SECRET_IS_FALLBACK else "using_fallback",
+            "rate_limiter": "enabled" if limiter else "enabled",
             "security_headers": "enabled" if TALISMAN_AVAILABLE else "disabled",
             "input_validation": "enabled" if PYDANTIC_AVAILABLE else "disabled",
+            "auth": "enabled" if AUTH_ENABLED else "disabled",
         }
     }
     return jsonify(checks)
