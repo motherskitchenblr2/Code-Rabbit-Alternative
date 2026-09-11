@@ -16,6 +16,8 @@ venv/
 *.sqlite
 backend/self_improvement/development.json
 backend/self_improvement/heartbeat.json
+logs/*.pid
+logs/*-local.log
 
 # Node
 node_modules/
