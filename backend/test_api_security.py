@@ -261,6 +261,7 @@ class TestFailLoudProductionSecret(unittest.TestCase):
     def test_missing_secret_raises_in_production(self):
         env = dict(os.environ)
         env["APP_ENV"] = "production"
+        env["GITFIX_SKIP_DOTENV"] = "1"  # don't load a local .env into the subprocess
         env.pop("GITHUB_WEBHOOK_SECRET", None)
         proc = subprocess.run(
             [sys.executable, "-c", "import backend.app"],

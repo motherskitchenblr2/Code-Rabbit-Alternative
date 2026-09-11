@@ -23,12 +23,11 @@ from enum import Enum
 from pathlib import Path
 from collections import Counter
 
+from backend.config import memory_db_path
+
 logger = logging.getLogger(__name__)
 
-MemoryStorePath = os.environ.get(
-    "GITFIX_MEMORY_PATH",
-    os.path.join(Path.home(), ".gitfix", "memory", "memory.db"),
-)
+MemoryStorePath = memory_db_path()
 
 
 class MemoryType(str, Enum):

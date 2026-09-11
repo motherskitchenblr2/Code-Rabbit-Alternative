@@ -19,6 +19,7 @@ from functools import wraps
 from flask import Blueprint, request, jsonify, g
 
 from backend.security import rate_limit, require_admin
+from backend.config import memory_db_path
 from .orchestrator import SelfImprovementEngine
 from .error_handling.core import ErrorHandler, ErrorSeverity, RecoveryStrategy, ReflexRule
 from .learning.core import FeedbackSignal
@@ -98,11 +99,7 @@ def _payload(data, model_class):
 def get_engine() -> SelfImprovementEngine:
     global _engine
     if _engine is None:
-        db_path = os.environ.get(
-            "GITFIX_MEMORY_PATH",
-            os.path.join(os.path.expanduser("~"), ".gitfix", "memory", "memory.db"),
-        )
-        _engine = SelfImprovementEngine(db_path=db_path)
+        _engine = SelfImprovementEngine(db_path=memory_db_path())
     return _engine
 
 
@@ -110,10 +107,7 @@ def init_self_improvement(app, db_path: Optional[str] = None):
     """Initialize the engine and register the blueprint."""
     global _engine
     if db_path is None:
-        db_path = os.environ.get(
-            "GITFIX_MEMORY_PATH",
-            os.path.join(os.path.expanduser("~"), ".gitfix", "memory", "memory.db"),
-        )
+        db_path = memory_db_path()
     _engine = SelfImprovementEngine(db_path=db_path)
 
     # Share the single engine instance with the pipeline integration hooks so

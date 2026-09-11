@@ -13,12 +13,12 @@ import threading
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Callable, Tuple
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from .memory.core import MemorySystem, MemoryType
 from .error_handling.core import ErrorHandler, ReflexRule, RecoveryStrategy, ErrorSeverity
 from .learning.core import LearningEngine, FeedbackSignal
 from .development.core import DevelopmentEngine
+from backend.config import memory_db_path
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class SelfImprovementEngine:
 
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            db_path = os.path.join(Path.home(), ".gitfix", "memory", "memory.db")
+            db_path = memory_db_path()
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
         self.memory = MemorySystem(db_path)

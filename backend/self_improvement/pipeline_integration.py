@@ -21,6 +21,7 @@ from typing import Optional, List, Dict, Any
 from .orchestrator import SelfImprovementEngine
 from .learning.core import FeedbackSignal
 from .error_handling.core import ErrorSeverity
+from backend.config import memory_db_path
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,7 @@ def get_engine() -> SelfImprovementEngine:
     if _engine is None:
         with _engine_lock:
             if _engine is None:
-                db_path = os.environ.get(
-                    "GITFIX_MEMORY_PATH",
-                    os.path.join(os.path.expanduser("~"), ".gitfix", "memory", "memory.db"),
-                )
+                db_path = memory_db_path()
                 _engine = SelfImprovementEngine(db_path=db_path)
     return _engine
 

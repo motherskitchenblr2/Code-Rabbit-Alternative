@@ -22,6 +22,15 @@ from backend.security import (
     extract_token,
     require_admin,
 )
+from backend.config import load_env, log_level, formatter, RequestIdFilter
+import atexit
+from backend.queue import submit, shutdown as shutdown_bg_pool
+
+# Load local .env (never overrides real env) before any config is read.
+load_env()
+
+# Ensure background worker threads drain on exit.
+atexit.register(shutdown_bg_pool)
 
 try:
     from flask_limiter import Limiter
@@ -87,11 +96,15 @@ if RATE_LIMITER_AVAILABLE:
 else:
     limiter = None
 
-# Structured Logging
+# Structured Logging. basicConfig ensures a handler exists; the actual
+# formatter (text or JSON per LOG_FORMAT) is applied below.
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    level=log_level(),
+    format="%(message)s",
 )
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(RequestIdFilter())
+    _handler.setFormatter(formatter())
 logger = logging.getLogger(__name__)
 
 # Pipeline state management (use Redis in production)
@@ -328,14 +341,15 @@ def webhook():
     # Enqueue for processing (simulate Redis-backed queue)
     pipeline_state["events_processed"] += 1
 
-    # Self-improvement: record the event + earn pattern-recognition XP
+    # Self-improvement: record the event + earn pattern-recognition XP.
+    # Run off the request thread via the background pool (falls back to
+    # synchronous execution if the pool is unavailable).
     try:
         if 'record_webhook' in globals():
-            record_webhook(
-                payload.get("repository", {}).get("full_name"),
-                payload.get("pull_request", {}).get("number"),
-                payload.get("action"),
-            )
+            submit(record_webhook,
+                   payload.get("repository", {}).get("full_name"),
+                   payload.get("pull_request", {}).get("number"),
+                   payload.get("action"))
     except Exception as e:
         logging.debug(f"Learning hook skipped: {e}")
 
