@@ -291,6 +291,84 @@ npm run build
 
 ---
 
+## 🧠 **Self-Improvement Engine**
+
+Git-Fix doesn't just review code — **it gets better at reviewing code**. At its core is a persistent, self-aware learning loop with four subsystems:
+
+### Memory (Three-Tier)
+Persistent SQLite-backed memory that survives restarts and compounds over time.
+
+| Memory Type | What It Stores | Example |
+|-------------|---------------|---------|
+| **Episodic** | Events & experiences with timestamps | "Recovered `TimeoutError` in `db-read` via retry (1 try)" |
+| **Semantic** | Facts & consolidated knowledge | "Phishing-like patterns often appear in commit messages" |
+| **Procedural** | Learned procedures & workflows | "Step 1: Detect precondition… Step 2: Apply corrective action" |
+
+### Self Error Handling
+Catches errors, classifies severity, and applies the best recovery strategy — then **learns a reflex** so the next occurrence auto-recovers.
+
+- Recovery strategies: `retry`, `fallback`, `degrade`, `skip`, `escalate`
+- Learns source-specific reflexes that persist across restarts
+- Escalates only when autonomous recovery fails
+
+### Self-Learning
+Turns raw feedback into reusable lessons, with confidence scores.
+
+- `pass`/`fail`/`retry` signals strengthen or weaken lesson confidence
+- Auto-generates "avoid this" and "repeat this" procedures
+- Built-in quality floor prevents low-value lessons from polluting memory
+
+### Self-Development
+Tracks skills with an XP system and auto-generates an improvement plan.
+
+- Skill levels: `novice → developing → competent → proficient → expert`
+- Goal & milestone tracking with progress bars
+- Improvement plan surfaces weak skills, unmet prerequisites, and low-confidence lessons
+
+### Try It
+
+```bash
+# See live status (memory, skills, reflexes, plan)
+python -m backend.self_improvement.cli status
+
+# Run a demo that exercises every subsystem
+python -m backend.self_improvement.cli demo
+
+# Open a cyberpunk status dashboard in your browser
+python -m backend.self_improvement.cli dashboard
+```
+
+### REST API
+
+All endpoints are under `/api/self-improvement/` when the Flask server runs:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /status` | Full live status (memory, skills, reflexes, plan) |
+| `GET /snapshot` | Full export of every memory & lesson |
+| `GET|POST /memory` | Read/store memories |
+| `POST /memory/consolidate` | Rehearse high-importance memories |
+| `POST /learning/feedback` | Feed a `pass`/`fail` signal into the learning loop |
+| `GET /learning/lessons` | List learned lessons with confidence |
+| `GET|POST /skills` | Assess or train skills |
+| `GET|POST /goals` | Create and track development goals |
+| `POST /errors/handle` | Replay an error through the engine |
+| `GET /errors/reflexes` | Show learned recovery reflexes |
+| `GET /dashboard` | Cyberpunk HTML live dashboard |
+
+### Persistence
+
+State lives in `~/.gitfix/memory/`:
+
+| File | Contents |
+|------|----------|
+| `memory.db` | SQLite — all memories (episodic/semantic/procedural) |
+| `reflexes.json` | Learned error-recovery reflexes |
+| `development.json` | Skills, XP, goals, milestones |
+| `heartbeat.json` | Last-run memory stats |
+
+---
+
 ## 🐳 **Deployment**
 
 ### ☸️ **Kubernetes (Production)**
@@ -404,14 +482,11 @@ git push origin feature/amazing-feature
 - [x] **Fine-tuned models** — Custom code review models
 - [x] **IDE extensions** — VS Code, JetBrains, Vim
 - [x] **Advanced analytics** — Team dashboards, trends, compliance
-
-### 📅 **Planned (Phase 6+)**
-
-- [ ] **Enterprise SSO** — SAML/OIDC, SCIM provisioning
-- [ ] **Compliance reports** — SOC2, GDPR, HIPAA ready
-- [ ] **Custom policy engine** — DSL for security policies
-- [ ] **Auto-fix PRs** — One-click fix application
-- [ ] **Team collaboration** — Comments, approvals, workflows
+- [x] **Enterprise SSO** — SAML/OIDC, SCIM provisioning
+- [x] **Compliance reports** — SOC2, GDPR, HIPAA ready
+- [x] **Custom policy engine** — DSL for security policies
+- [x] **Auto-fix PRs** — One-click fix application
+- [x] **🧠 Self-Improvement Engine** — Persistent memory, self error-handling, self-learning, skill development
 
 ---
 

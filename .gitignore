@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Runtime state
+~/.gitfix/
+*.db
+*.sqlite
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+
+# GitHub Actions scratch
+.DS_Store

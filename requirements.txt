@@ -36,7 +36,7 @@ requests>=2.31.0
 
 # GitHub Integration
 pygithub>=2.1.0
-githubkit>=1.0.0
+githubkit>=0.16.0
 
 # Utilities
 python-dotenv>=1.0.0

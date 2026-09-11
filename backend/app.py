@@ -690,6 +690,15 @@ def metrics():
     })
 
 
+# ── Self-Improvement API ──────────────────────────────────────────────────
+
+try:
+    from backend.self_improvement.api import self_improvement_bp, init_self_improvement
+    init_self_improvement(app)
+except ImportError as e:
+    logging.warning(f"Self-improvement module not available: {e}")
+
+
 # ── Run the app ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
