@@ -276,26 +276,80 @@ class PolicyParser:
         except SyntaxError as e:
             raise PolicySyntaxError(f"Invalid policy syntax: {e}")
 
+    # Node types permitted in policy AST evaluation (no imports, no assignments,
+    # no comprehensions, no attribute dunder access).
+    _SAFE_AST_TYPES = frozenset({
+        ast.Expression, ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.IfExp,
+        ast.Compare, ast.Call, ast.Name, ast.Constant, ast.Load,
+        ast.Attribute, ast.Subscript, ast.Slice, ast.Tuple, ast.List,
+        ast.Dict, ast.And, ast.Or, ast.Not, ast.Eq, ast.NotEq, ast.Lt,
+        ast.LtE, ast.Gt, ast.GtE, ast.In, ast.NotIn, ast.Add, ast.Sub,
+        ast.Mult, ast.Div, ast.Mod, ast.Pow, ast.USub, ast.UAdd,
+    })
+
+    # Method names permitted on values inside policy expressions. Anything else
+    # (including every dunder, __class__, __getattribute__, __subclasses__, ...)
+    # is rejected before evaluation.
+    _SAFE_METHODS = frozenset({
+        'startswith', 'endswith', 'contains', 'matches', 'regex_match',
+        'count', 'lower', 'upper', 'strip', 'lstrip', 'rstrip', 'split',
+        'rsplit', 'join', 'replace', 'format', 'find', 'index', 'isdigit',
+        'isalpha', 'isalnum', 'isupper', 'islower',
+    })
+
+    def _validate_ast(self, node: ast.AST) -> None:
+        """Walk the AST and reject any node type or name not in the allowlist."""
+        if type(node) not in self._SAFE_AST_TYPES:
+            raise PolicySyntaxError(
+                f"Unsupported expression node: {type(node).__name__}"
+            )
+        if isinstance(node, ast.Name):
+            if node.id.startswith('__'):
+                raise PolicySyntaxError(f"Reserved name: {node.id}")
+        if isinstance(node, ast.Attribute):
+            if node.attr.startswith('__'):
+                raise PolicySyntaxError(f"Reserved attribute: {node.attr}")
+            if node.attr not in self._SAFE_METHODS:
+                raise PolicySyntaxError(
+                    f"Disallowed method: {node.attr}"
+                )
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id not in self.FUNCTIONS:
+                    raise PolicySyntaxError(f"Unknown function: {node.func.id}")
+            elif isinstance(node.func, ast.Attribute):
+                if node.func.attr.startswith('__'):
+                    raise PolicySyntaxError(
+                        f"Reserved method: {node.func.attr}"
+                    )
+                if node.func.attr not in self._SAFE_METHODS:
+                    raise PolicySyntaxError(
+                        f"Disallowed method: {node.func.attr}"
+                    )
+            else:
+                raise PolicySyntaxError(
+                    "Only direct function/method calls are allowed"
+                )
+        for child in ast.iter_child_nodes(node):
+            self._validate_ast(child)
+
     def evaluate(self, expression: str, context: Dict[str, Any]) -> Any:
-        """Evaluate DSL expression with context"""
+        """Evaluate DSL expression with context (AST-validated, no bare eval)."""
         try:
-            # Prepare safe evaluation environment
-            # Functions and operators need to be in globals for eval to find them
+            tree = self.parse(expression)
+            self._validate_ast(tree)
+
             safe_globals = {
                 "__builtins__": {},
                 **self.FUNCTIONS,
                 **self.OPERATORS,
             }
-            # Context variables go in locals
             safe_locals = {**context}
-            
-            # Parse and compile
-            tree = self.parse(expression)
             code = compile(tree, '<policy>', 'eval')
-            
-            # Evaluate safely with functions in globals
             result = eval(code, safe_globals, safe_locals)
             return result
+        except PolicySyntaxError:
+            raise
         except Exception as e:
             logger.warning(f"Policy evaluation error: {e}")
             return False

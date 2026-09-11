@@ -76,7 +76,7 @@ if TALISMAN_AVAILABLE:
         session_cookie_secure=True,
         content_security_policy={
             'default-src': "'self'",
-            'script-src': "'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com",
+            'script-src': "'self' 'unsafe-inline'",
             'style-src': "'self' 'unsafe-inline' https://fonts.googleapis.com",
             'font-src': "'self' https://fonts.gstatic.com",
             'img-src': "'self' data: https:",

@@ -167,7 +167,6 @@ class SSOManager:
             Destination=config.sso_url,
             AssertionConsumerServiceURL=f"{self.config.get('base_url', '')}/auth/saml/acs",
             ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
-            Version="2.0",
         )
 
         issuer = ET.SubElement(authn_request, "{urn:oasis:names:tc:SAML:2.0:assertion}Issuer")
