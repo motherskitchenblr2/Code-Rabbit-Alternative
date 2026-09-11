@@ -18,7 +18,51 @@
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-left: env(safe-area-inset-left, 0px);
     --safe-area-right: env(safe-area-inset-right, 0px);
+
+    /* Tokenized palette (consumed by tailwind.config.js) */
+    --cyber-900: 10 10 15;     /* page bg            */
+    --cyber-800: 26 26 46;     /* card bg            */
+    --cyber-700: 22 33 62;     /* border / track     */
+    --cyber-600: 15 52 96;     /* hover tint         */
+    --cyber-500: 30 77 146;    /* muted / disabled   */
+    --cyber-400: 42 111 196;   /* secondary text     */
+    --cyber-300: 58 156 255;   /* body text          */
+    --cyber-200: 90 189 255;   /* strong text        */
+    --cyber-100: 138 222 255;  /* headings           */
+    --cyber-50: 198 255 255;   /* brightest          */
+    --accent: 255 0 255;       /* primary neon accent (magenta) */
+    --neon-cyan: 0 255 255;
+    --neon-amber: 255 140 0;
+    --neon-green: 0 255 0;
   }
+
+  /* Non-default accent choices (dark theme) */
+  :root[data-accent="cyan"]  { --accent: 0 255 255; }
+  :root[data-accent="amber"] { --accent: 255 140 0; }
+  :root[data-accent="green"] { --accent: 0 255 0; }
+
+  /* Light theme: re-map the cyber scale so the same classes stay legible */
+  .light {
+    --cyber-900: 244 246 250;  /* page bg   */
+    --cyber-800: 255 255 255;  /* card bg   */
+    --cyber-700: 224 228 238;  /* border    */
+    --cyber-600: 203 209 224;  /* hover tint*/
+    --cyber-500: 141 149 173;  /* muted     */
+    --cyber-400: 94 107 140;   /* secondary */
+    --cyber-300: 74 85 116;    /* body text */
+    --cyber-200: 53 63 94;     /* strong    */
+    --cyber-100: 31 40 71;     /* headings  */
+    --cyber-50: 14 22 52;      /* darkest   */
+    --accent: 162 28 175;      /* fuchsia-700 — AA on light */
+    --neon-cyan: 8 145 178;    /* cyan-600   */
+    --neon-amber: 180 83 9;    /* amber-700  */
+    --neon-green: 22 163 74;   /* green-600  */
+  }
+
+  /* Non-default accent choices (light theme, accessible shades) */
+  .light[data-accent="cyan"]  { --accent: 8 145 178; }
+  .light[data-accent="amber"] { --accent: 180 83 9; }
+  .light[data-accent="green"] { --accent: 22 163 74; }
 
   html {
     scroll-behavior: smooth;
@@ -206,4 +250,18 @@
   .scroll-snap-start {
     scroll-snap-align: start;
   }
+}
+
+/*
+ * Light-theme fixes that the cyber/neon token re-mapping cannot reach:
+ * the app hardcodes `text-white` for headings, which must become dark
+ * on a light background. These are unlayered so they beat Tailwind's
+ * utility layer regardless of source order.
+ */
+.light .text-white {
+  color: rgb(31 40 71);
+}
+
+.light .hover\:text-white:hover {
+  color: rgb(31 40 71);
 }

@@ -49,7 +49,7 @@ async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
 
 export default function Settings() {
   const { user } = useAuth()
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, accent, setAccent } = useTheme()
 
   const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'notifications' | 'appearance' | 'integrations' | 'advanced'>('profile')
   const [saving, setSaving] = useState(false)
@@ -136,7 +136,7 @@ export default function Settings() {
             {activeSection === 'profile' && <ProfileSection user={user} />}
             {activeSection === 'security' && <SecuritySection />}
             {activeSection === 'notifications' && <NotificationsSection />}
-            {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} />}
+{activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} />}
             {activeSection === 'integrations' && <IntegrationsSection />}
             {activeSection === 'advanced' && <AdvancedSection />}
           </div>
@@ -164,10 +164,7 @@ export default function Settings() {
             })}
           </div>
           <div className="p-4 sm:p-6">
-            {activeSection === 'profile' && <ProfileSection user={user} />}
-            {activeSection === 'security' && <SecuritySection />}
-            {activeSection === 'notifications' && <NotificationsSection />}
-            {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} />}
+            {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} />}
             {activeSection === 'integrations' && <IntegrationsSection />}
             {activeSection === 'advanced' && <AdvancedSection />}
           </div>
@@ -438,7 +435,12 @@ function NotificationsSection() {
 }
 
 // Appearance Section
-function AppearanceSection({ theme, setTheme }: { theme: 'dark' | 'light'; setTheme: (t: 'dark' | 'light') => void }) {
+function AppearanceSection({ theme, setTheme, accent, setAccent }: {
+  theme: 'dark' | 'light'
+  setTheme: (t: 'dark' | 'light') => void
+  accent: 'magenta' | 'cyan' | 'amber' | 'green'
+  setAccent: (a: 'magenta' | 'cyan' | 'amber' | 'green') => void
+}) {
   return (
     <div className="space-y-8">
       <div className="card-cyber p-6">
@@ -480,17 +482,23 @@ function AppearanceSection({ theme, setTheme }: { theme: 'dark' | 'light'; setTh
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { name: 'Magenta', value: '#ff00ff', css: 'neon-magenta' },
-            { name: 'Cyan', value: '#00ffff', css: 'neon-cyan' },
-            { name: 'Amber', value: '#ff8c00', css: 'neon-amber' },
-            { name: 'Green', value: '#00ff00', css: 'neon-green' },
+            { name: 'Magenta', value: '#ff00ff', key: 'magenta' },
+            { name: 'Cyan', value: '#00ffff', key: 'cyan' },
+            { name: 'Amber', value: '#ff8c00', key: 'amber' },
+            { name: 'Green', value: '#00ff00', key: 'green' },
           ].map((color) => (
             <button
               key={color.name}
-              className={`p-4 rounded-xl border-2 transition-all ${theme === 'dark' ? 'bg-cyber-800' : 'bg-white'}`}
+              onClick={() => setAccent(color.key as 'magenta' | 'cyan' | 'amber' | 'green')}
+              aria-pressed={accent === color.key}
+              className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                accent === color.key
+                  ? 'border-neon-magenta bg-neon-magenta/10 shadow-[0_0_20px_rgba(255,0,255,0.15)]'
+                  : 'border-cyber-700/50 hover:border-neon-magenta/50'
+              } ${theme === 'dark' ? 'bg-cyber-800' : 'bg-white'}`}
             >
               <div className="w-full h-12 rounded-lg mb-3" style={{ backgroundColor: color.value }} />
-              <p className="font-medium text-white capitalize">{color.name}</p>
+              <p className={`font-medium ${accent === color.key ? 'text-neon-magenta' : 'text-white'} capitalize`}>{color.name}</p>
               <p className="text-xs text-cyber-400 font-mono mt-1">{color.value}</p>
             </button>
           ))}

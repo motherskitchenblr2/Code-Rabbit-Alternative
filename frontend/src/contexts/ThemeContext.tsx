@@ -1,11 +1,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 type Theme = 'dark' | 'light'
+type Accent = 'magenta' | 'cyan' | 'amber' | 'green'
 
 interface ThemeContextType {
   theme: Theme
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
+  accent: Accent
+  setAccent: (accent: Accent) => void
+}
+
+const ACCENTS: Accent[] = ['magenta', 'cyan', 'amber', 'green']
+
+function readStorage<T extends string>(key: string, fallback: T, valid: readonly T[]): T {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(key) as T | null
+    if (stored && valid.includes(stored)) return stored
+  }
+  return fallback
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -20,12 +33,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'dark'
   })
 
+  const [accent, setAccentState] = useState<Accent>(() => readStorage('accent', 'magenta', ACCENTS))
+
   useEffect(() => {
     const root = document.documentElement
     root.classList.remove('dark', 'light')
     root.classList.add(theme)
     localStorage.setItem('theme', theme)
-  }, [theme])
+    root.dataset.accent = accent
+    localStorage.setItem('accent', accent)
+  }, [theme, accent])
 
   const toggleTheme = () => {
     setThemeState(prev => prev === 'dark' ? 'light' : 'dark')
@@ -35,8 +52,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme)
   }
 
+  const setAccent = (newAccent: Accent) => {
+    setAccentState(newAccent)
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   )
