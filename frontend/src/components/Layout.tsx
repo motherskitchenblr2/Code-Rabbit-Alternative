@@ -16,12 +16,14 @@ import {
   Sparkles,
   Brain,
   ShieldCheck,
+  Users,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/repositories', label: 'Repositories', icon: GitBranch },
   { path: '/self-improvement', label: 'Self-Improvement', icon: Brain },
+  { path: '/agents', label: 'AI Agents', icon: Users, adminOnly: true },
   { path: '/admin', label: 'Admin Panel', icon: ShieldCheck, adminOnly: true },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]

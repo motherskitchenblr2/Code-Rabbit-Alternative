@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   GitBranch,
   Brain,
+  Users,
   ShieldCheck,
   Settings,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
   { path: '/repositories', label: 'Repos', icon: GitBranch },
   { path: '/self-improvement', label: 'AI', icon: Brain },
+  { path: '/agents', label: 'Agents', icon: Users, adminOnly: true },
   { path: '/admin', label: 'Admin', icon: ShieldCheck, adminOnly: true },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]

@@ -886,6 +886,15 @@ except ImportError as e:
     logging.warning(f"LLM router API not available: {e}")
 
 
+# ── AI Agent Team API (collaborative agent panel) ───────────────────────────
+
+try:
+    from backend.agents.api import init_agents
+    init_agents(app)
+except ImportError as e:
+    logging.warning(f"AI Agent Team API not available: {e}")
+
+
 # ── Run the app ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

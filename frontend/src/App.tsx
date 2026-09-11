@@ -6,6 +6,7 @@ import Repositories from './pages/Repositories'
 import RepositoryDetail from './pages/RepositoryDetail'
 import Settings from './pages/Settings'
 import SelfImprovement from './pages/SelfImprovement'
+import AgentTeam from './pages/AgentTeam'
 import Admin from './pages/Admin'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
@@ -98,6 +99,7 @@ function App() {
           </AdminOnly>
         } />
         <Route path="/self-improvement" element={<SelfImprovement />} />
+        <Route path="/agents" element={<AgentTeam />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
