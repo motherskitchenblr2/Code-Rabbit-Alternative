@@ -95,6 +95,7 @@ interface ProbeResult {
 
 const KNOWN_PROVIDERS = [
   { id: 'openai', name: 'OpenAI', multimodal: true, url: 'https://api.openai.com/v1', icon: Bot },
+  { id: 'nvidia', name: 'NVIDIA', multimodal: false, url: 'https://integrate.api.nvidia.com/v1', icon: Cpu },
   { id: 'anthropic', name: 'Anthropic', multimodal: true, url: 'https://api.anthropic.com/v1', icon: Brain },
   { id: 'google', name: 'Google Gemini', multimodal: true, url: 'https://generativelanguage.googleapis.com/v1beta', icon: Zap },
   { id: 'groq', name: 'Groq', multimodal: false, url: 'https://api.groq.com/openai/v1', icon: Zap },
@@ -193,7 +194,7 @@ const inputRow = 'flex flex-col gap-1'
 
 // ── Main page ───────────────────────────────────────────────────────────────
 
-type Section = 'overview' | 'providers' | 'mcp' | 'tokens'
+type Section = 'overview' | 'providers' | 'mcp' | 'tokens' | 'router'
 
 export default function Admin() {
   const { user } = useAuth()
@@ -241,6 +242,7 @@ export default function Admin() {
   const sections: { id: Section; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: ShieldCheck },
     { id: 'providers', label: 'AI APIs', icon: Brain },
+    { id: 'router', label: 'AI Router', icon: Zap },
     { id: 'mcp', label: 'MCP Servers', icon: Server },
     { id: 'tokens', label: 'Access Tokens', icon: KeyRound },
   ]
@@ -316,6 +318,9 @@ export default function Admin() {
           {section === 'providers' && (
             <ProvidersSection providers={providers} onChanged={() => setRefreshKey(k => k + 1)} />
           )}
+          {section === 'router' && (
+            <RouterSection />
+          )}
           {section === 'mcp' && (
             <McpSection servers={servers} onChanged={() => setRefreshKey(k => k + 1)} />
           )}
@@ -359,6 +364,154 @@ function OverviewSection({ overview }: { overview: Overview }) {
                 <span className={`w-2 h-2 rounded-full ${item.ok ? 'bg-neon-green' : 'bg-neon-amber'} animate-pulse`} />
                 {item.ok ? item.okText : item.badText}
               </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── AI Router (auto-rotation) ───────────────────────────────────────────────
+
+interface RouterProvider {
+  id: string
+  name: string
+  enabled: boolean
+  configured: boolean
+  multimodal: boolean
+  healthy: boolean
+  failures: number
+  last_error: string | null
+}
+
+interface RouteCandidate {
+  provider: string
+  model: string
+  status: 'prima' | 'fallback' | 'degraded'
+}
+
+interface RouterSnapshot {
+  providers: RouterProvider[]
+  routing: Record<string, { label: string; candidates: RouteCandidate[] }>
+  catalog_providers: { id: string; name: string }[]
+}
+
+function RouterSection() {
+  const [snap, setSnap] = useState<RouterSnapshot | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setErr(null)
+    api<RouterSnapshot>('/api/v1/llm/status')
+      .then((d) => { if (!cancelled) setSnap(d) })
+      .catch((e) => { if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed to load router status') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [refreshKey])
+
+  if (loading) {
+    return (
+      <div className="card-cyber-glow p-8 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-neon-cyan animate-spin" />
+      </div>
+    )
+  }
+
+  if (!snap) {
+    return (
+      <div className="card-cyber-glow p-6">
+        <p className="text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" /> {err || 'Router status unavailable'}
+        </p>
+      </div>
+    )
+  }
+
+  const statusColor = (healthy: boolean, failures: number) => {
+    if (!healthy) return 'bg-red-500/10 border-red-500/30 text-red-300'
+    if (failures > 0) return 'bg-neon-amber/10 border-neon-amber/30 text-neon-amber'
+    return 'bg-neon-green/10 border-neon-green/30 text-neon-green'
+  }
+  const routeColor = (s: string) =>
+    s === 'prima' ? 'text-neon-green'
+      : s === 'degraded' ? 'text-neon-amber'
+      : 'text-cyber-400'
+
+  return (
+    <div className="space-y-6 card-cyber-glow p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-bold font-display text-white flex items-center gap-2">
+            <Zap className="w-5 h-5 text-neon-amber" />
+            Auto-Rotation Router
+          </h3>
+          <p className="text-xs text-cyber-400 mt-1">
+            Every request is routed to the strongest configured provider for its task, with automatic failover on error or rate-limit. Circuit breaker trips after 3 failures (60s cooldown).
+          </p>
+        </div>
+        <button className="btn-cyber-ghost text-sm" onClick={() => setRefreshKey(k => k + 1)}>
+          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+        </button>
+      </div>
+
+      {/* Providers */}
+      <div>
+        <p className="text-xs font-mono uppercase tracking-wider text-cyber-400 mb-3">Connected Providers</p>
+        <div className="space-y-2">
+          {snap.providers.map((p) => (
+            <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-cyber-800/50 border border-cyber-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-cyber-800 flex items-center justify-center">
+                  {(() => {
+                    const Icon = KNOWN_PROVIDERS.find(k => k.id === p.id)?.icon || Cpu
+                    return <Icon className="w-4 h-4 text-neon-cyan" />
+                  })()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white flex items-center gap-2">
+                    {p.name}
+                    {p.multimodal && <span className="badge-cyber text-xs text-neon-cyan bg-neon-cyan/10 border-neon-cyan/30">multimodal</span>}
+                  </p>
+                  <p className="text-xs text-cyber-400 font-mono">{p.id} · {p.configured ? 'key configured' : 'no key'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`badge-cyber text-xs ${statusColor(p.healthy, p.failures)}`}>
+                  {p.healthy ? (p.failures > 0 ? 'degraded' : 'healthy') : 'cooling down'}
+                </span>
+                {!p.enabled && <span className="badge-cyber text-xs bg-cyber-700 text-cyber-400 border-cyber-600">disabled</span>}
+              </div>
+            </div>
+          ))}
+          {snap.providers.length === 0 && (
+            <p className="text-center text-cyber-500 font-mono py-4">No providers configured yet — add an API key under the AI APIs tab.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Routing table */}
+      <div>
+        <p className="text-xs font-mono uppercase tracking-wider text-cyber-400 mb-3">Task Routing (top candidate is served first)</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {Object.entries(snap.routing).map(([task, info]) => (
+            <div key={task} className="p-3 rounded-lg bg-cyber-900/40 border border-cyber-700/50">
+              <p className="text-xs font-mono text-neon-magenta mb-2">{info.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {info.candidates.map((c) => (
+                  <span key={c.provider} className={`badge-cyber text-xs ${routeColor(c.status)}`}>
+                    {c.provider} → <span className="font-mono">{c.model}</span>
+                    {c.status === 'prima' && <span className="ml-1">★</span>}
+                  </span>
+                ))}
+                {info.candidates.length === 0 && (
+                  <span className="badge-cyber text-xs bg-cyber-700 text-cyber-400 border-cyber-600">no provider</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -444,10 +597,11 @@ function ProviderForm({ provider, onDone, onCancel }: { provider: Provider | nul
     setSaving(true)
     setErr(null)
     try {
-      await api('/api/v1/admin/providers', {
+      const res = await api<{ probe?: ProbeResult }>('/api/v1/admin/providers', {
         method: 'POST',
         body: JSON.stringify({ ...form, api_key: apiKey }),
       })
+      if (res.probe) setProbe(res.probe)
       onDone()
       onCancel()
     } catch (e) {
