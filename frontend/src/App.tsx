@@ -6,6 +6,7 @@ import Repositories from './pages/Repositories'
 import RepositoryDetail from './pages/RepositoryDetail'
 import Settings from './pages/Settings'
 import SelfImprovement from './pages/SelfImprovement'
+import Admin from './pages/Admin'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
@@ -51,6 +52,29 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cyber-900">
+        <div className="w-12 h-12 border-4 border-neon-magenta border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-cyber-400 font-mono">Initializing...</p>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 function App() {
   return (
     <Routes>
@@ -68,6 +92,11 @@ function App() {
         <Route path="/repositories" element={<Repositories />} />
         <Route path="/repositories/:id" element={<RepositoryDetail />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/admin" element={
+          <AdminOnly>
+            <Admin />
+          </AdminOnly>
+        } />
         <Route path="/self-improvement" element={<SelfImprovement />} />
       </Route>
       <Route path="*" element={<NotFound />} />

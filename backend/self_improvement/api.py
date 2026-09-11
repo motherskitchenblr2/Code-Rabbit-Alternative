@@ -139,13 +139,20 @@ def snapshot():
 # Memory
 # ---------------------------------------------------------------------------
 
+def _safe_limit(args_key: str = "limit", default: int = 50) -> int:
+    try:
+        return max(1, min(int(request.args.get(args_key, default)), 500))
+    except (TypeError, ValueError):
+        return default
+
+
 @self_improvement_bp.route("/memory", methods=["GET"])
 def memory_list():
     engine = get_engine()
     mtype  = request.args.get("type")
     tags   = request.args.getlist("tag")
     query  = request.args.get("q")
-    limit  = request.args.getint("limit", 50, type=int)
+    limit  = _safe_limit("limit", 50)
 
     kwargs: Dict[str, Any] = {"limit": limit}
     if query:
@@ -408,7 +415,7 @@ def errors_register_reflex():
 
 @self_improvement_bp.route("/errors/recent", methods=["GET"])
 def errors_recent():
-    limit = request.args.getint("limit", 20, type=int)
+    limit = _safe_limit("limit", 20)
     return jsonify({"errors": get_engine().errors.get_recent_events(limit)})
 
 

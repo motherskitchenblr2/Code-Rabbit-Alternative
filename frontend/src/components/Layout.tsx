@@ -16,12 +16,14 @@ import {
   Terminal,
   Sparkles,
   Brain,
+  ShieldCheck,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/repositories', label: 'Repositories', icon: GitBranch },
   { path: '/self-improvement', label: 'Self-Improvement', icon: Brain },
+  { path: '/admin', label: 'Admin Panel', icon: ShieldCheck, adminOnly: true },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -55,7 +57,9 @@ export default function Layout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
-              {navItems.map((item) => {
+              {navItems
+                .filter((item) => !item.adminOnly || user?.role === 'admin')
+                .map((item) => {
                 const Icon = item.icon
                 return (
                   <NavLink
@@ -151,7 +155,9 @@ export default function Layout() {
           {mobileMenuOpen && (
             <div className="md:hidden card-cyber mt-4 animate-in slide-in-from-top-2 duration-200">
               <nav className="py-2 space-y-1">
-                {navItems.map((item) => {
+                {navItems
+                  .filter((item) => !item.adminOnly || user?.role === 'admin')
+                  .map((item) => {
                   const Icon = item.icon
                   const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
                   return (

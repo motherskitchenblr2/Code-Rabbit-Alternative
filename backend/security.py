@@ -41,8 +41,10 @@ AUTH_ENABLED: bool = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
 def init_security(secret_key: Optional[str] = None, auth_enabled: Optional[bool] = None):
     global _security_secret, AUTH_ENABLED
     _security_secret = secret_key
-    if auth_enabled is not None:
-        AUTH_ENABLED = bool(auth_enabled)
+    if auth_enabled is None:
+        # Resolve at init time (after load_env) so .env / exported vars take effect.
+        auth_enabled = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
+    AUTH_ENABLED = bool(auth_enabled)
 
 
 def security_ready() -> bool:

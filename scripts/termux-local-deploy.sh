@@ -30,8 +30,9 @@ cmd_start() {
     echo "backend already running (pid $(cat "$PIDFILE_BACKEND"))"
   else
     echo "starting backend on :${BACKEND_PORT} ..."
+    # DB + auth from repo .env (load_env never overrides real env), but keep
+    # DATABASE_URL pinned to the local sqlite memory store for Termux.
     DATABASE_URL="sqlite:///$MEMDIR/memory.db" \
-    AUTH_ENABLED="${AUTH_ENABLED:-false}" \
     FLASK_DEBUG=false \
     PORT="$BACKEND_PORT" \
     GITFIX_BG_WORKERS="${GITFIX_BG_WORKERS:-4}" \

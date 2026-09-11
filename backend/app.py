@@ -15,13 +15,13 @@ from typing import Optional, Dict, Any
 from backend.security import (
     init_security,
     security_ready,
-    AUTH_ENABLED,
     rate_limit,
     create_token,
     verify_token,
     extract_token,
     require_admin,
 )
+import backend.security as security_mod
 from backend.config import load_env, log_level, formatter, RequestIdFilter
 import atexit
 from backend.queue import submit, shutdown as shutdown_bg_pool
@@ -807,7 +807,7 @@ def auth_me():
     payload = verify_token(token) if token else None
     if payload:
         return jsonify(_authed_user_payload(payload))
-    if AUTH_ENABLED:
+    if security_mod.AUTH_ENABLED:
         return jsonify({"error": "Unauthorized", "message": "Authentication required"}), 401
     return jsonify({"id": None, "username": "anonymous", "email": "", "role": "viewer"})
 
@@ -826,7 +826,7 @@ def health():
             "rate_limiter": "enabled" if limiter else "enabled",
             "security_headers": "enabled" if TALISMAN_AVAILABLE else "disabled",
             "input_validation": "enabled" if PYDANTIC_AVAILABLE else "disabled",
-            "auth": "enabled" if AUTH_ENABLED else "disabled",
+            "auth": "enabled" if security_mod.AUTH_ENABLED else "disabled",
         }
     }
     return jsonify(checks)
@@ -866,6 +866,15 @@ try:
     start_consolidator()
 except ImportError as e:
     logging.warning(f"Self-improvement module not available: {e}")
+
+
+# ── Admin API ──────────────────────────────────────────────────────────────
+
+try:
+    from backend.admin.api import init_admin
+    init_admin(app)
+except ImportError as e:
+    logging.warning(f"Admin API not available: {e}")
 
 
 # ── Run the app ────────────────────────────────────────────────────────────

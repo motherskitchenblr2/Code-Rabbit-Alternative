@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Lock, Mail, AlertCircle, Eye, EyeOff, Sparkles, Terminal } from 'lucide-react'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().trim().min(1, 'Enter your username or email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
@@ -67,17 +67,17 @@ export default function Login() {
             <div>
               <label htmlFor="email" className="label-cyber">
                 <Mail className="w-4 h-4 inline mr-2" />
-                Email
+                Username or Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyber-500" />
                 <input
                   {...register('email')}
-                  type="email"
+                  type="text"
                   id="email"
-                  autoComplete="email"
+                  autoComplete="username"
                   className="input-cyber pl-10"
-                  placeholder="operator@gitfix.io"
+                  placeholder="Admin@Git-Fix or operator@gitfix.io"
                   disabled={isLoading}
                 />
                 {errors.email && (
