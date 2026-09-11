@@ -84,12 +84,19 @@ _KNOWN_PROVIDERS: Dict[str, Dict[str, Any]] = {
         "models": True,
         "auth": None,
     },
+    "nvidia": {
+        "name": "NVIDIA",
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "multimodal": False,
+        "models": True,
+    },
     "openrouter": {
         "name": "OpenRouter",
         "base_url": "https://openrouter.ai/api/v1",
         "multimodal": True,
         "models": True,
     },
+
     "perplexity": {
         "name": "Perplexity",
         "base_url": "https://api.perplexity.ai",
@@ -219,7 +226,19 @@ def create_provider():
         "created_at": existing.get("created_at") if existing else now,
         "updated_at": now,
     }
-    return jsonify(_public_provider(get_store().upsert_ai_provider(provider))), 200
+    saved = get_store().upsert_ai_provider(provider)
+
+    # Auto API Call: whenever a key is (re)provided, immediately validate the
+    # connection so the modal shows live status without a manual "Test" click.
+    # Also notify the LLM router so it picks up the new provider instantly.
+    probe = None
+    if provider.get("api_key") or pid == "ollama":
+        probe = _probe_provider(saved)
+        saved["last_probe"] = probe
+    response = _public_provider(saved)
+    if probe is not None:
+        response["probe"] = probe
+    return jsonify(response), 200
 
 
 @admin_bp.route("/providers/<provider_id>", methods=["DELETE"])

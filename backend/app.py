@@ -877,6 +877,15 @@ except ImportError as e:
     logging.warning(f"Admin API not available: {e}")
 
 
+# ── LLM Router API (auto-rotation AI provider gateway) ──────────────────────
+
+try:
+    from backend.llm.api import init_llm
+    init_llm(app)
+except ImportError as e:
+    logging.warning(f"LLM router API not available: {e}")
+
+
 # ── Run the app ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
