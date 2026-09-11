@@ -53,6 +53,12 @@ def init_self_improvement(app, db_path: Optional[str] = None):
             os.path.join(os.path.expanduser("~"), ".gitfix", "memory", "memory.db"),
         )
     _engine = SelfImprovementEngine(db_path=db_path)
+
+    # Share the single engine instance with the pipeline integration hooks so
+    # all subsystems write to the same in-memory state.
+    from . import pipeline_integration as _pi
+    _pi._engine = _engine
+
     app.register_blueprint(self_improvement_bp)
     logger.info("Self-improvement API mounted at /api/self-improvement")
 

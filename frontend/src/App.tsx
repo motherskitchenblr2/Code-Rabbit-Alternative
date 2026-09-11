@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Repositories from './pages/Repositories'
 import RepositoryDetail from './pages/RepositoryDetail'
 import Settings from './pages/Settings'
+import SelfImprovement from './pages/SelfImprovement'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import { useAuth } from './contexts/AuthContext'
@@ -68,6 +69,7 @@ function App() {
         <Route path="/repositories" element={<Repositories />} />
         <Route path="/repositories/:id" element={<RepositoryDetail />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/self-improvement" element={<SelfImprovement />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

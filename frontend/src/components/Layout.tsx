@@ -18,11 +18,13 @@ import {
   User,
   Terminal,
   Sparkles,
+  Brain,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/repositories', label: 'Repositories', icon: GitBranch },
+  { path: '/self-improvement', label: 'Self-Improvement', icon: Brain },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -202,5 +204,3 @@ export default function Layout() {
     </div>
   )
 }
-
-export default Layout

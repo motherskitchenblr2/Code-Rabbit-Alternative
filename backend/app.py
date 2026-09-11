@@ -173,6 +173,22 @@ def rate_limit_exceeded(e):
 @app.errorhandler(500)
 def internal_error(e):
     logger.error(f"Internal server error: {e}", exc_info=True)
+
+    # Self-improvement: route the crash through the self error-handler with an
+    # immediate escalate (no retry sleeps on the error path). It records the
+    # error as memory and learns a reflex for next time.
+    try:
+        if 'get_engine' in globals() and 'RecoveryStrategy' in globals() and RecoveryStrategy is not None:
+            _si_engine = get_engine()
+            _si_engine.errors.handle(
+                f"flask:{request.path}",
+                e if isinstance(e, BaseException) else RuntimeError(str(e)),
+                {"request_id": getattr(g, 'request_id', None)},
+                RecoveryStrategy.ESCALATE,
+            )
+    except Exception as learning_err:
+        logging.debug(f"Error-learning hook skipped: {learning_err}")
+
     return jsonify({
         "error": "Internal Server Error",
         "message": "An unexpected error occurred",
@@ -291,6 +307,17 @@ def webhook():
 
     # Enqueue for processing (simulate Redis-backed queue)
     pipeline_state["events_processed"] += 1
+
+    # Self-improvement: record the event + earn pattern-recognition XP
+    try:
+        if 'record_webhook' in globals():
+            record_webhook(
+                payload.get("repository", {}).get("full_name"),
+                payload.get("pull_request", {}).get("number"),
+                payload.get("action"),
+            )
+    except Exception as e:
+        logging.debug(f"Learning hook skipped: {e}")
 
     logger.info(f"Webhook accepted", extra={
         'request_id': g.request_id,
@@ -480,6 +507,13 @@ def critique():
 
     structured_findings = simulate_critique_ensemble(findings)
 
+    # Self-improvement: teach the model which categories to watch for
+    try:
+        if 'practice_on_request' in globals():
+            practice_on_request("critique")
+    except Exception as e:
+        logging.debug(f"Critique learning hook skipped: {e}")
+
     return jsonify({
         "status": "success",
         "findings": structured_findings,
@@ -608,6 +642,19 @@ def github_review():
     pipeline_state["reviews_created"] += 1
     pipeline_state["comments_dispatched"] += len(comments)
 
+    # Self-improvement: strongest learning signal — every dispatched review
+    # teaches the engine what categories to watch for next time.
+    try:
+        if 'record_review_dispatched' in globals():
+            record_review_dispatched(
+                data.get("repo_full_name"),
+                pr_number,
+                findings,
+                len(comments),
+            )
+    except Exception as e:
+        logging.debug(f"Review learning hook skipped: {e}")
+
     logger.info(f"GitHub review dispatched", extra={
         'request_id': g.request_id,
         'pr_number': pr_number,
@@ -694,7 +741,18 @@ def metrics():
 
 try:
     from backend.self_improvement.api import self_improvement_bp, init_self_improvement
+    from backend.self_improvement.pipeline_integration import (
+        get_engine,
+        record_webhook,
+        record_review_dispatched,
+        practice_on_request,
+        maybe_consolidate,
+        start_consolidator,
+    )
+    from backend.self_improvement.error_handling.core import RecoveryStrategy
     init_self_improvement(app)
+    # Start the background memory consolidator daemon.
+    start_consolidator()
 except ImportError as e:
     logging.warning(f"Self-improvement module not available: {e}")
 
