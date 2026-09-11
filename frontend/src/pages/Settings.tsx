@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import {
@@ -12,14 +12,40 @@ import {
   CheckCircle,
   Sparkles,
   GitBranch,
-  Server,
-  Database,
   Plus,
-  Bug,
   Trash2,
   Moon,
   Sun,
+  Slack,
+  MessageSquare,
+  Loader2,
+  X,
+  Send,
+  RefreshCw,
+  KeyRound,
+  AlertCircle,
+  CheckCircle2,
+  Plug,
 } from 'lucide-react'
+
+// ── API helper (mirrors Admin.tsx / AgentTeam.tsx) ───────────────────────────
+
+async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('access_token')
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
+    throw new Error(body.message || body.error || `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
 
 export default function Settings() {
   const { user } = useAuth()
@@ -498,47 +524,557 @@ function AppearanceSection({ theme, setTheme }: { theme: 'dark' | 'light'; setTh
   )
 }
 
-// Integrations Section
+// ── Integrations Section ─────────────────────────────────────────────────────
+
+interface TokenRecord {
+  id: string
+  name: string
+  platform: string
+  scopes: string[]
+  enabled: boolean
+  token_set: boolean
+  token_tail: string
+  created_at?: number
+  updated_at?: number
+}
+
+interface WebhookRecord {
+  id: string
+  name: string
+  kind: string
+  channel: string
+  url_set: boolean
+  url_tail: string
+  enabled: boolean
+  created_at?: number
+  updated_at?: number
+}
+
+interface ProbeResult {
+  ok: boolean
+  status?: number | null
+  detail: string
+}
+
+type ModalState =
+  | { kind: 'token'; platform: string; mode: 'connect' | 'manage' }
+  | { kind: 'webhook'; key: string; mode: 'connect' | 'manage' }
+  | null
+
+const TOKEN_INTEGRATIONS: Array<{ platform: string; name: string; desc: string; hint: string; icon: ReactNode }> = [
+  {
+    platform: 'github',
+    name: 'GitHub',
+    desc: 'Source control & PR reviews',
+    hint: 'Fine-grained PAT (ghp_) or classic PAT — scopes: repo, read:org',
+    icon: <GitBranch className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'gitlab',
+    name: 'GitLab',
+    desc: 'Alternative Git hosting',
+    hint: 'Personal access token (glpat-) scoped to api',
+    icon: <GitBranch className="w-6 h-6 text-neon-cyan" />,
+  },
+]
+
+const WEBHOOK_INTEGRATIONS: Array<{ kind: string; name: string; desc: string; hint: string; icon: ReactNode }> = [
+  {
+    kind: 'slack',
+    name: 'Slack',
+    desc: 'Team notifications via incoming webhook',
+    hint: 'Incoming webhook URL from Slack (https://hooks.slack.com/...)',
+    icon: <Slack className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    kind: 'discord',
+    name: 'Discord',
+    desc: 'Community notifications via incoming webhook',
+    hint: 'Incoming webhook URL from Discord (https://discord.com/api/webhooks/...)',
+    icon: <MessageSquare className="w-6 h-6 text-neon-cyan" />,
+  },
+]
+
+const COMING_SOON = ['Jira', 'Linear', 'Datadog', 'Sentry', 'PostgreSQL', 'Redis', 'Qdrant', 'Prometheus']
+
 function IntegrationsSection() {
-  const integrations = [
-    { name: 'GitHub', connected: true, desc: 'Source control & PR reviews', icon: GitBranch },
-    { name: 'GitLab', connected: false, desc: 'Alternative Git hosting', icon: GitBranch },
-    { name: 'Slack', connected: false, desc: 'Team notifications', icon: Globe },
-    { name: 'Discord', connected: false, desc: 'Community notifications', icon: Globe },
-    { name: 'Jira', connected: false, desc: 'Issue tracking', icon: Globe },
-    { name: 'Linear', connected: false, desc: 'Project management', icon: Globe },
-    { name: 'Datadog', connected: false, desc: 'Monitoring & APM', icon: Server },
-    { name: 'Sentry', connected: false, desc: 'Error tracking', icon: Bug },
-    { name: 'PostgreSQL', connected: false, desc: 'Primary database', icon: Database },
-    { name: 'Redis', connected: false, desc: 'Cache & queue', icon: Database },
-    { name: 'Qdrant', connected: false, desc: 'Vector database', icon: Database },
-    { name: 'Prometheus', connected: false, desc: 'Metrics & alerting', icon: Server },
-  ]
+  const [tokenList, setTokenList] = useState<TokenRecord[]>([])
+  const [webhookList, setWebhookList] = useState<WebhookRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [modal, setModal] = useState<ModalState>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [t, w] = await Promise.all([
+        api<{ tokens: TokenRecord[] }>('/api/v1/admin/tokens'),
+        api<{ webhooks: WebhookRecord[] }>('/api/v1/integrations/webhooks'),
+      ])
+      setTokenList(t.tokens || [])
+      setWebhookList(w.webhooks || [])
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load integrations')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="space-y-4">
-      {integrations.map((integration) => (
-        <div key={integration.name} className="card-cyber p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-cyber-800 flex items-center justify-center">
-              <integration.icon className="w-6 h-6 text-neon-cyan" />
-            </div>
-            <div>
-              <p className="font-medium text-white">{integration.name}</p>
-              <p className="text-xs text-cyber-400">{integration.desc}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`badge-cyber ${integration.connected ? 'bg-neon-green/20 text-neon-green border-neon-green/30' : 'bg-cyber-700 text-cyber-400'}`}>
-              {integration.connected ? 'Connected' : 'Available'}
-            </span>
-            <button className={`btn-cyber-${integration.connected ? 'ghost' : 'magenta'} text-sm`}>
-              {integration.connected ? 'Manage' : 'Connect'}
-            </button>
-          </div>
+      {error && <ErrorBanner message={error} onRetry={load} />}
+
+      <div className="card-cyber p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold font-display text-white">Available integrations</h3>
+          {loading && <Loader2 className="w-4 h-4 text-neon-cyan animate-spin" />}
         </div>
-      ))}
+        <p className="text-xs text-cyber-400 mt-1">
+          Connect code hosting and notification channels. Credentials stay on this server and are never shown in full again.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="card-cyber p-10 flex flex-col items-center justify-center gap-2 text-cyber-400">
+          <Loader2 className="w-6 h-6 text-neon-cyan animate-spin" />
+          <span className="text-sm">Loading integrations…</span>
+        </div>
+      ) : (
+        <>
+          {TOKEN_INTEGRATIONS.map((it) => {
+            const connected = tokenList.some((tk) => tk.platform === it.platform && tk.enabled)
+            return (
+              <IntegrationRow
+                key={it.platform}
+                name={it.name}
+                desc={it.desc}
+                icon={it.icon}
+                connected={connected}
+                onConnect={() => setModal({ kind: 'token', platform: it.platform, mode: 'connect' })}
+                onManage={() => setModal({ kind: 'token', platform: it.platform, mode: 'manage' })}
+              />
+            )
+          })}
+
+          {WEBHOOK_INTEGRATIONS.map((it) => {
+            const connected = webhookList.some((wh) => wh.kind === it.kind && wh.enabled)
+            return (
+              <IntegrationRow
+                key={it.kind}
+                name={it.name}
+                desc={it.desc}
+                icon={it.icon}
+                connected={connected}
+                onConnect={() => setModal({ kind: 'webhook', key: it.kind, mode: 'connect' })}
+                onManage={() => setModal({ kind: 'webhook', key: it.kind, mode: 'manage' })}
+              />
+            )
+          })}
+
+          <div className="card-cyber p-4 border border-dashed border-cyber-700/50">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-cyber-800/50 flex items-center justify-center flex-shrink-0">
+                <Plug className="w-6 h-6 text-cyber-500" />
+              </div>
+              <div>
+                <p className="font-medium text-white">More integrations coming soon</p>
+                <p className="text-xs text-cyber-400 mt-0.5">{COMING_SOON.join(' · ')}</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {modal && modal.kind === 'token' && (
+        modal.mode === 'connect' ? (
+          <TokenConnectModal platform={modal.platform} onClose={() => setModal(null)} onSaved={load} />
+        ) : (
+          <TokenManageModal
+            platform={modal.platform}
+            records={tokenList.filter((tk) => tk.platform === modal.platform)}
+            onClose={() => setModal(null)}
+            onChanged={load}
+          />
+        )
+      )}
+
+      {modal && modal.kind === 'webhook' && (
+        modal.mode === 'connect' ? (
+          <WebhookConnectModal kind={modal.key} onClose={() => setModal(null)} onSaved={load} />
+        ) : (
+          <WebhookManageModal
+            kind={modal.key}
+            records={webhookList.filter((wh) => wh.kind === modal.key)}
+            onClose={() => setModal(null)}
+            onChanged={load}
+          />
+        )
+      )}
     </div>
+  )
+}
+
+function IntegrationRow({ name, desc, icon, connected, onConnect, onManage }: {
+  name: string
+  desc: string
+  icon: ReactNode
+  connected: boolean
+  onConnect: () => void
+  onManage: () => void
+}) {
+  return (
+    <div className="card-cyber p-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="w-12 h-12 rounded-lg bg-cyber-800 flex items-center justify-center flex-shrink-0">{icon}</div>
+        <div className="min-w-0">
+          <p className="font-medium text-white">{name}</p>
+          <p className="text-xs text-cyber-400">{desc}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className={`badge-cyber ${connected ? 'bg-neon-green/20 text-neon-green border-neon-green/30' : 'bg-cyber-700 text-cyber-400'}`}>
+          {connected ? 'Connected' : 'Available'}
+        </span>
+        <button onClick={connected ? onManage : onConnect} className={`btn-cyber-${connected ? 'ghost' : 'magenta'} text-sm`}>
+          {connected ? 'Manage' : 'Connect'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-between gap-3">
+      <span className="text-sm text-red-400 flex items-center gap-2">
+        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        {message}
+      </span>
+      <button onClick={onRetry} className="btn-cyber-ghost text-xs">Retry</button>
+    </div>
+  )
+}
+
+function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="card-cyber w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold font-display text-white">{title}</h3>
+          <button onClick={onClose} className="p-2 rounded-lg text-cyber-400 hover:text-white hover:bg-cyber-800 transition-colors" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ProbeMessage({ probe }: { probe: ProbeResult | null }) {
+  if (!probe) return null
+  return (
+    <div className={`flex items-start gap-2 text-sm rounded-lg p-3 border ${probe.ok ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+      {probe.ok ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+      <span>{probe.detail}</span>
+    </div>
+  )
+}
+
+function TokenConnectModal({ platform, onClose, onSaved }: { platform: string; onClose: () => void; onSaved: () => void }) {
+  const meta = TOKEN_INTEGRATIONS.find((i) => i.platform === platform)
+  const [label, setLabel] = useState('')
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [probe, setProbe] = useState<ProbeResult | null>(null)
+
+  useEffect(() => {
+    if (label === '' && meta) setLabel(meta.name)
+  }, [label, meta])
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!token.trim()) { setError('Token is required'); return }
+    setBusy(true)
+    setError(null)
+    setProbe(null)
+    try {
+      const rec = await api<TokenRecord>('/api/v1/admin/tokens', {
+        method: 'POST',
+        body: JSON.stringify({ name: label.trim() || meta?.name, platform, token: token.trim() }),
+      })
+      const res = await api<{ result: ProbeResult }>(`/api/v1/admin/tokens/${rec.id}/test`, { method: 'POST' })
+      setProbe(res.result)
+      if (res.result.ok) {
+        await onSaved()
+        window.setTimeout(onClose, 1100)
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save token')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell title={`Connect ${meta?.name ?? platform}`} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="label-cyber">Connection Name</label>
+          <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} className="input-cyber" autoFocus />
+        </div>
+        <div>
+          <label className="label-cyber">Access Token</label>
+          <textarea
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="input-cyber min-h-[90px] resize-y font-mono"
+            placeholder="ghp_… / glpat-…"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <p className="text-xs text-cyber-500 mt-1">{meta?.hint}</p>
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <ProbeMessage probe={probe} />
+        <div className="flex items-center gap-3 pt-1">
+          <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Save & Validate
+          </button>
+          <button type="button" onClick={onClose} className="btn-cyber-ghost">Cancel</button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
+function TokenManageModal({ platform, records, onClose, onChanged }: {
+  platform: string
+  records: TokenRecord[]
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const meta = TOKEN_INTEGRATIONS.find((i) => i.platform === platform)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [results, setResults] = useState<Record<string, ProbeResult>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  async function validate(id: string) {
+    setBusyId(id)
+    setError(null)
+    try {
+      const res = await api<{ result: ProbeResult }>(`/api/v1/admin/tokens/${id}/test`, { method: 'POST' })
+      setResults((prev) => ({ ...prev, [id]: res.result }))
+    } catch (e: any) {
+      setError(e?.message || 'Failed to validate')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function disconnect(id: string) {
+    setBusyId(id)
+    setError(null)
+    try {
+      await api(`/api/v1/admin/tokens/${id}`, { method: 'DELETE' })
+      await onChanged()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to disconnect')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <ModalShell title={`Manage ${meta?.name ?? platform}`} onClose={onClose}>
+      <div className="space-y-3">
+        {records.length === 0 && <p className="text-sm text-cyber-400">No {meta?.name ?? platform} tokens configured.</p>}
+        {records.map((rec) => (
+          <div key={rec.id} className="p-4 rounded-lg bg-cyber-800/50 border border-cyber-700/50 space-y-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-neon-cyan flex-shrink-0" />
+                  {rec.name}
+                </p>
+                <p className="text-xs text-cyber-400 font-mono mt-1">{rec.token_tail || 'No token saved'}</p>
+              </div>
+              <span className={`badge-cyber ${rec.enabled ? 'bg-neon-green/20 text-neon-green border-neon-green/30' : 'bg-cyber-700 text-cyber-400'} text-xs`}>
+                {rec.enabled ? 'Active' : 'Disabled'}
+              </span>
+            </div>
+            <ProbeMessage probe={results[rec.id] ?? null} />
+            <div className="flex items-center gap-2">
+              <button onClick={() => validate(rec.id)} disabled={busyId !== null} className="btn-cyber-ghost text-sm flex items-center gap-1.5">
+                {busyId === rec.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Validate
+              </button>
+              <button onClick={() => disconnect(rec.id)} disabled={busyId !== null} className="btn-cyber-ghost text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30 flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4" />
+                Disconnect
+              </button>
+            </div>
+          </div>
+        ))}
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button onClick={onClose} className="btn-cyber-ghost w-full">Close</button>
+      </div>
+    </ModalShell>
+  )
+}
+
+function WebhookConnectModal({ kind, onClose, onSaved }: { kind: string; onClose: () => void; onSaved: () => void }) {
+  const meta = WEBHOOK_INTEGRATIONS.find((i) => i.kind === kind)
+  const [name, setName] = useState('')
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [probe, setProbe] = useState<ProbeResult | null>(null)
+
+  useEffect(() => {
+    if (name === '' && meta) setName(meta.name)
+  }, [name, meta])
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!url.trim()) { setError('Webhook URL is required'); return }
+    setBusy(true)
+    setError(null)
+    setProbe(null)
+    try {
+      const rec = await api<WebhookRecord & { probe?: ProbeResult }>('/api/v1/integrations/webhooks', {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim() || meta?.name, kind, url: url.trim() }),
+      })
+      setProbe(rec.probe ?? { ok: false, detail: 'No ping result' })
+      if (rec.probe?.ok) {
+        await onSaved()
+        window.setTimeout(onClose, 1100)
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save webhook')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell title={`Connect ${meta?.name ?? kind}`} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="label-cyber">Channel Name</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-cyber" autoFocus />
+        </div>
+        <div>
+          <label className="label-cyber">Incoming Webhook URL</label>
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="input-cyber font-mono"
+            placeholder="https://hooks…"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <p className="text-xs text-cyber-500 mt-1">{meta?.hint}</p>
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <ProbeMessage probe={probe} />
+        <div className="flex items-center gap-3 pt-1">
+          <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Save & Test
+          </button>
+          <button type="button" onClick={onClose} className="btn-cyber-ghost">Cancel</button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
+function WebhookManageModal({ kind, records, onClose, onChanged }: {
+  kind: string
+  records: WebhookRecord[]
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const meta = WEBHOOK_INTEGRATIONS.find((i) => i.kind === kind)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [results, setResults] = useState<Record<string, ProbeResult>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  async function validate(id: string) {
+    setBusyId(id)
+    setError(null)
+    try {
+      const res = await api<{ result: ProbeResult }>(`/api/v1/integrations/webhooks/${id}/test`, { method: 'POST' })
+      setResults((prev) => ({ ...prev, [id]: res.result }))
+    } catch (e: any) {
+      setError(e?.message || 'Failed to validate')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function disconnect(id: string) {
+    setBusyId(id)
+    setError(null)
+    try {
+      await api(`/api/v1/integrations/webhooks/${id}`, { method: 'DELETE' })
+      await onChanged()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to disconnect')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <ModalShell title={`Manage ${meta?.name ?? kind}`} onClose={onClose}>
+      <div className="space-y-3">
+        {records.length === 0 && <p className="text-sm text-cyber-400">No {meta?.name ?? kind} webhook configured.</p>}
+        {records.map((rec) => (
+          <div key={rec.id} className="p-4 rounded-lg bg-cyber-800/50 border border-cyber-700/50 space-y-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-neon-cyan flex-shrink-0" />
+                  {rec.name}
+                </p>
+                <p className="text-xs text-cyber-400 font-mono mt-1">{rec.url_tail || 'No URL saved'}</p>
+              </div>
+              <span className={`badge-cyber ${rec.enabled ? 'bg-neon-green/20 text-neon-green border-neon-green/30' : 'bg-cyber-700 text-cyber-400'} text-xs`}>
+                {rec.enabled ? 'Active' : 'Disabled'}
+              </span>
+            </div>
+            <ProbeMessage probe={results[rec.id] ?? null} />
+            <div className="flex items-center gap-2">
+              <button onClick={() => validate(rec.id)} disabled={busyId !== null} className="btn-cyber-ghost text-sm flex items-center gap-1.5">
+                {busyId === rec.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Test
+              </button>
+              <button onClick={() => disconnect(rec.id)} disabled={busyId !== null} className="btn-cyber-ghost text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30 flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4" />
+                Disconnect
+              </button>
+            </div>
+          </div>
+        ))}
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button onClick={onClose} className="btn-cyber-ghost w-full">Close</button>
+      </div>
+    </ModalShell>
   )
 }
 

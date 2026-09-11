@@ -64,6 +64,7 @@ class AdminSettings:
             "ai_providers": [],
             "mcp_servers": [],
             "access_tokens": [],
+            "webhook_configs": [],
         }
 
     # ── generic list helpers ───────────────────────────────────────────────
@@ -136,6 +137,18 @@ class AdminSettings:
 
     def get_access_token(self, token_id: str) -> Optional[Dict[str, Any]]:
         return self._get_item("access_tokens", token_id)
+
+    def list_webhook_configs(self) -> List[Dict[str, Any]]:
+        return self._list("webhook_configs")
+
+    def upsert_webhook_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        return self._upsert_item("webhook_configs", config)
+
+    def delete_webhook_config(self, config_id: str) -> bool:
+        return self._delete_item("webhook_configs", config_id)
+
+    def get_webhook_config(self, config_id: str) -> Optional[Dict[str, Any]]:
+        return self._get_item("webhook_configs", config_id)
 
 
 _store: Optional[AdminSettings] = None

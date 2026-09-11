@@ -877,6 +877,15 @@ except ImportError as e:
     logging.warning(f"Admin API not available: {e}")
 
 
+# ── Integrations API (notification webhook channels) ─────────────────────────
+
+try:
+    from backend.integrations.api import init_integrations
+    init_integrations(app)
+except ImportError as e:
+    logging.warning(f"Integrations API not available: {e}")
+
+
 # ── LLM Router API (auto-rotation AI provider gateway) ──────────────────────
 
 try:
