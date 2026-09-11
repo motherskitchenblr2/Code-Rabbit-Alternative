@@ -353,3 +353,53 @@
 **Prepared by**: Security Audit Team  
 **Review Date**: 2025-09-09  
 **Next Review**: 2025-09-16
+
+---
+
+## 🆕 Post-Audit Addendum — 2026-09-11
+
+Deep-dive code review of the shipped implementation found additional
+vulnerabilities beyond the Phase 1 findings. Status per item: **FIXED** (patch
+in this commit) or **RECOMMENDED** (requires feature/design work).
+
+### New Findings
+
+| # | Severity | Vulnerability | Location | Impact | Status |
+|---|----------|--------------|----------|--------|--------|
+| 21 | 🔴 CRITICAL | **RCE via `__builtins__` lookup** — `getattr(__builtins__, error_type)` resolves any builtin (`eval`, `exec`, `open`, `compile`) from attacker-controlled `error_type`/`message` | `backend/self_improvement/api.py` `/errors/handle` | Unauthenticated remote code execution (proven: `eval("1+1")` → 2) | **FIXED** — replaced with stdlib exception-class allowlist |
+| 22 | 🟠 HIGH | **Stored XSS in self-improvement dashboard** — goal names, milestones, error messages rendered unescaped | `backend/self_improvement/report.py` | Stored `<script>`/`onerror` injection into browser dashboard | **FIXED** — all user-controlled fields `html.escape`d |
+| 23 | 🟠 HIGH | **Hardcoded login password shipped to browser** — `gitfix2024!` baked into demo autofill buttons | `frontend/src/pages/Login.tsx` | Credentials exposed to every visitor | **FIXED** — demo autofill removed |
+| 24 | 🟠 HIGH | **Fail-open SAML signature verification** — `_verify_saml_signature` always returned `True`; unsigned/forgerable assertions accepted | `backend/auth/sso.py:252` | SAML authentication bypass | **FIXED** — fails closed without real xmlsec verification |
+| 25 | 🟠 HIGH | **Auth theater** — frontend calls `/api/v1/auth/*` but backend never implements it; all API endpoints unauthenticated; JWT kept in `localStorage` | `AuthContext.tsx`, `app.py` | Unauthenticated writes to memory/goals/errors; token theft via XSS | **RECOMMENDED** (feature) |
+| 26 | 🟡 MEDIUM | **`eval()` in policy DSL** — `eval(code, safe_globals, {})` with classic `().__class__` escape routes | `backend/policies/engine.py` (unreachable, no callers) | Latent RCE if module is ever wired in | **RECOMMENDED** — replace with AST allowlist before use |
+| 27 | 🟡 MEDIUM | **Unpinned CI action** — `aquasecurity/trivy-action@master` | `.github/workflows/ci-cd.yml` | Supply-chain risk from moving `@master` | **RECOMMENDED** — pin to commit SHA |
+| 28 | 🟡 MEDIUM | **Default infra credentials** — postgres `gitfix_dev_password`, `minioadmin`/`minioadmin`, grafana/flower `admin/admin`, Redis without auth | `docker-compose.yml` | Trivial compromise of dev stack | **RECOMMENDED** — env-gate + `--requirepass` |
+| 29 | 🟡 MEDIUM | **CSP allows `'unsafe-inline' 'unsafe-eval'` + external CDN script origins** (`cdn.tailwindcss.com`, `unpkg.com`) | `backend/app.py:56` | Script injection/re-supply chain under XSS | **RECOMMENDED** — tighten, remove external origins |
+| 30 | 🟢 LOW | **`sso.py` module is dead AND broken** — never imported; pre-existing `SyntaxError` (duplicate `Version=` kwarg, line 170) | `backend/auth/sso.py` | No runtime impact; blocks future SAML work | **RECOMMENDED** — fix kwarg + decide yank or wire |
+| 31 | 🟢 LOW | **Untracked secrets** — `test_regex.py`/`test_regex2.py` (untracked) contain `os.system` on `user_input`, `password="hardcoded_password_123456"`, `sk_test_…` strings | repo root | Credential exposure if accidentally committed | **RECOMMENDED** — delete or gitignore + rotate |
+
+### Feature Recommendations (with rationale)
+
+1. **Backend auth session** (Highest priority) — implement `POST /api/v1/auth/login`,
+   `POST /api/v1/auth/refresh`, `GET /api/v1/auth/me` (admin creds from env, stdlib
+   HMAC-signed expiring token), plus a `require_admin` decorator on all
+   self-improvement **write** endpoints and dashboard reads. Rationale: closes
+   finding #25, converts the current theater into real access control with ~150
+   lines and no new deps.
+2. **HttpOnly/SameSite cookie session** — move tokens from `localStorage` to
+   `httpOnly` cookies. Rationale: localStorage tokens are exfiltrable by any XSS
+   (finding #22 chain); cookies with `SameSite=Strict` neutralize that.
+3. **Real SSO wiring + xmlsec** — either remove or properly implement
+   `backend/auth/sso.py` (signature verification via `signxml`/`xmlsec`, issuer/
+   audience/expiry validation, PKCE on OIDC, persistent JWKS key). Rationale:
+   the current scaffolding is a severity-24 landmine if activated.
+4. **Input validation for webhook-triggered review comments** — sanitize
+   `summary`/`body_html` before they are posted to GitHub (HTML injection into
+   PR comments). Rationale: complements finding #22 hardening at the output edge.
+5. **Ephemeral keys CI** — pin all third-party actions to commit SHAs and gate
+   on `pip-audit`/`trivy` failures. Rationale: replaces `@master` drift with
+   reproducible, auditable supply chain (finding #27).
+
+---
+
+**Addendum prepared**: 2026-09-11 → **Next Review**: 2026-09-25

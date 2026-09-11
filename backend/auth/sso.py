@@ -250,9 +250,24 @@ class SSOManager:
             return None
 
     def _verify_saml_signature(self, saml_response: str, cert: str) -> bool:
-        """Verify SAML response signature"""
-        # Simplified - in production use xmlsec
-        return True
+        """Verify SAML response signature.
+
+        NOTE: Real verification requires python-xmlsec / lxml path verification,
+        which is NOT wired in here. To avoid a fail-open authentication bypass
+        (any attacker could forge an assertion), this deliberately fails
+        CLOSED unless a signing certificate is present AND a real verifier is
+        implemented.
+        """
+        if not cert:
+            logger.error(
+                "SAML signature verification requested but no x509 cert configured; denying assertion"
+            )
+            return False
+        logger.error(
+            "SAML signature verification is not implemented; denying assertion "
+            "(fail-closed — wire python-xmlsec before enabling assertions-signed)"
+        )
+        return False
 
     def _extract_user_from_saml(self, root: ET.Element, provider_name: str) -> Optional[User]:
         """Extract user attributes from SAML assertion"""

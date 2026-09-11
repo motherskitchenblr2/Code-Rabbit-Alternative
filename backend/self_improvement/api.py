@@ -257,11 +257,27 @@ def errors_handle():
     error_type = data.get("error_type", "RuntimeError")
     message    = data.get("message", "simulated error")
 
-    try:
-        ErrorCls = getattr(__builtins__, error_type, RuntimeError)
-    except Exception:
-        ErrorCls = RuntimeError
+    # Security: never resolve exception types from __builtins__ — an attacker
+    # could pass "eval"/"exec"/"open" and achieve arbitrary code execution.
+    # Only a fixed allowlist of stdlib exception classes may be instantiated.
+    _ALLOWED_ERROR_TYPES = {
+        "RuntimeError": RuntimeError,
+        "ValueError": ValueError,
+        "TypeError": TypeError,
+        "KeyError": KeyError,
+        "AttributeError": AttributeError,
+        "IndexError": IndexError,
+        "StopIteration": StopIteration,
+        "TimeoutError": TimeoutError,
+        "ConnectionError": ConnectionError,
+        "FileNotFoundError": FileNotFoundError,
+        "PermissionError": PermissionError,
+        "ZeroDivisionError": ZeroDivisionError,
+        "ArithmeticError": ArithmeticError,
+        "OverflowError": OverflowError,
+    }
 
+    ErrorCls = _ALLOWED_ERROR_TYPES.get(error_type, RuntimeError)
     error = ErrorCls(message)
     recovered, detail = engine.handle_error(source, error, data.get("context", {}))
     return jsonify({"recovered": recovered, **detail})

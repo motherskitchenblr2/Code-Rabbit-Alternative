@@ -176,7 +176,7 @@ def generate_html_dashboard(engine: SelfImprovementEngine) -> str:
   <div class="card">
     <table>
       <tr><th>Skill</th><th>Level</th><th>XP</th><th>Prereqs met</th></tr>
-      {''.join(f"<tr><td>{x['name']}</td><td>{x['level']}</td>"
+      {''.join(f"<tr><td>{html_mod.escape(x['name'])}</td><td>{html_mod.escape(x['level'])}</td>"
                             f"<td>{x['xp']}</td><td>{'✔' if x['prereqs_met'] else '—'}</td></tr>"
                             for x in s['skills']) if s['skills'] else "<tr><td colspan=4 style='color:var(--muted)'>No skills yet — practice something.</td></tr>"}
     </table>
@@ -184,10 +184,10 @@ def generate_html_dashboard(engine: SelfImprovementEngine) -> str:
 
   <h2>Goals</h2>
   <div class="card">
-    {''.join(f"<div style='margin:10px 0'><div>{g['name']} "
-             f"<span class='pill'>{g['status']}</span> "
-             f"<span class='pill'>{g['target_skill']}</span></div>"
-             f"<div class='bar'><div style='width:{g['progress']*100}%'></div></div></div>"
+    {''.join(f"<div style='margin:10px 0'><div>{html_mod.escape(g['name'])} "
+             f"<span class='pill'>{html_mod.escape(g['status'])}</span> "
+             f"<span class='pill'>{html_mod.escape(g['target_skill'])}</span></div>"
+             f"<div class='bar'><div style='width:{max(0.0, min(g['progress'], 1.0))*100}%'></div></div></div>"
              for g in engine.development.get_goals()) or "<div style='color:var(--muted)'>No goals defined.</div>"}
   </div>
 
@@ -195,8 +195,8 @@ def generate_html_dashboard(engine: SelfImprovementEngine) -> str:
   <div class="card">
     <table>
       <tr><th>Priority</th><th>Action</th><th>Why</th></tr>
-      {''.join(f"<tr><td>{p['priority']}</td><td>{p['action']}</td>"
-                            f"<td style='color:var(--muted)'>{p['reason']}</td></tr>" for p in s.get('improvement_plan',[]))}
+      {''.join(f"<tr><td>{p['priority']}</td><td>{html_mod.escape(p['action'])}</td>"
+                            f"<td style='color:var(--muted)'>{html_mod.escape(p['reason'])}</td></tr>" for p in s.get('improvement_plan',[]))}
     </table>
   </div>
 
@@ -206,8 +206,8 @@ def generate_html_dashboard(engine: SelfImprovementEngine) -> str:
       <tr><th>Recovered</th><th>Error</th><th>Attempts</th><th>Message</th></tr>
       {''.join(f"<tr><td class='{'ok' if e['recovered'] else 'bad'}'>"
                f"{'✔ recovered' if e['recovered'] else '✘ escalated'}</td>"
-               f"<td>{e['error_type']}</td><td>{e['attempts']}</td>"
-               f"<td style='color:var(--muted)'>{e['message'][:60]}</td></tr>"
+               f"<td>{html_mod.escape(e['error_type'])}</td><td>{e['attempts']}</td>"
+               f"<td style='color:var(--muted)'>{html_mod.escape(str(e['message'])[:60])}</td></tr>"
                for e in s['recent_errors']) or "<tr><td colspan=4 style='color:var(--muted)'>No errors — clean bill of health.</td></tr>"}
     </table>
   </div>

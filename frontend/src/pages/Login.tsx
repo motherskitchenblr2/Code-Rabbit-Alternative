@@ -139,29 +139,7 @@ export default function Login() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-cyber-700/50">
-            <p className="text-center text-cyber-400 text-sm mb-4">Demo Credentials</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById('email')!.value = 'admin@gitfix.io'
-                  document.getElementById('password')!.value = 'gitfix2024!'
-                }}
-                className="btn-cyber-ghost text-xs py-2"
-              >
-                Admin Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById('email')!.value = 'reviewer@gitfix.io'
-                  document.getElementById('password')!.value = 'gitfix2024!'
-                }}
-                className="btn-cyber-ghost text-xs py-2"
-              >
-                Reviewer Demo
-              </button>
-            </div>
+            <p className="text-center text-cyber-400 text-sm mb-4">Demo credentials are provisioned by the deployment owner — no passwords are baked into the client.</p>
           </div>
         </div>
 
