@@ -211,6 +211,26 @@ class ScannerTestCase(unittest.TestCase):
                 self.assertEqual(report["status"], "error")
                 self.assertEqual(report["error"], "boom")
 
+    def test_summary_exposes_flat_severity_keys(self):
+        empty = S._empty_summary()
+        for sev in ("critical", "high", "medium", "low", "info"):
+            self.assertIn(sev, empty, f"_empty_summary must seed flat key {sev}")
+            self.assertEqual(empty[sev], 0)
+        rec = {"full_name": "demo/demoapp", "default_branch": "main", "private": False}
+        tree_entries = [
+            {"path": "app.py", "size": 300},
+            {"path": "README.md", "size": 50},
+        ]
+        contents = {"app.py": "SECRET_KEY='hunter2'\nadmin_password = 'ActualS3cret99!'\n"}
+        with mock.patch.object(S, "repo_tree", return_value=(tree_entries, False)), \
+             mock.patch.object(S, "fetch_content", side_effect=lambda *a, **k: contents.get(a[2], "")), \
+             mock.patch.object(R, "_osv_vulns", return_value=[]):
+            report = S._scan_repo(rec, "tok")
+        s = report["summary"]
+        self.assertGreater(s["total"], 0)
+        for sev in ("critical", "high", "medium", "low", "info"):
+            self.assertEqual(s[sev], s["by_severity"][sev])
+
     def test_dashboard_payload_aggregates_correctly(self):
         from backend.github.api import _dashboard_payload
         repos = [

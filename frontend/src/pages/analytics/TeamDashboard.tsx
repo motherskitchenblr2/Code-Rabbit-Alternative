@@ -85,14 +85,14 @@ export default function TeamDashboard() {
   const metrics = [
     { label: 'Agents in Roster', value: agents.length, icon: Users2, color: 'neon-cyan' },
     { label: 'Events Processed', value: pipeline.events_processed, icon: Zap, color: 'neon-magenta' },
-    { label: 'Reviews Created', value: pipeline.reviews_created, icon: GitPullRequest, color: 'red' },
+    { label: 'Reviews Created', value: pipeline.reviews_created, icon: GitPullRequest, color: 'red-500' },
     { label: 'Compliance Score', value: compliance?.overall?.avg_score != null ? `${compliance.overall.avg_score}%` : '—', icon: ShieldCheck, color: 'neon-green' },
   ]
 
   const repoMetrics = [
     { label: 'Repositories Connected', value: repoDash?.repos_total ?? 0, icon: GitBranch, color: 'neon-amber' },
     { label: 'Repos Scanned', value: repoDash?.repos_scanned ?? 0, icon: ScanLine, color: 'neon-cyan' },
-    { label: 'Repository Findings', value: repoDash?.findings_total ?? 0, icon: ShieldAlert, color: 'red' },
+    { label: 'Repository Findings', value: repoDash?.findings_total ?? 0, icon: ShieldAlert, color: 'red-500' },
     { label: 'Critical + High', value: repoDash?.critical_high_total ?? 0, icon: ShieldCheck, color: 'neon-green' },
   ]
 

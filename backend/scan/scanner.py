@@ -128,11 +128,14 @@ def _error_report(full_name: str, message: str, code: int = 0) -> Dict[str, Any]
 
 
 def _empty_summary() -> Dict[str, Any]:
-    return {
+    summary = {
         "total": 0,
         "by_severity": {s: 0 for s in R.SEVERITIES},
         "by_category": {c: 0 for c in R.CATEGORIES},
     }
+    for sev in R.SEVERITIES:
+        summary[sev] = 0
+    return summary
 
 
 def _now() -> str:
@@ -193,6 +196,8 @@ def _scan_repo(repo: Dict[str, Any], token: str) -> Dict[str, Any]:
         summary["total"] += 1
         summary["by_severity"][f["severity"]] = summary["by_severity"].get(f["severity"], 0) + 1
         summary["by_category"][f["category"]] = summary["by_category"].get(f["category"], 0) + 1
+    for sev, n in summary["by_severity"].items():
+        summary[sev] = n
 
     report = {
         "full_name": full_name,
