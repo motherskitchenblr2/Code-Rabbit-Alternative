@@ -7,6 +7,8 @@ import RepositoryDetail from './pages/RepositoryDetail'
 import Settings from './pages/Settings'
 import SelfImprovement from './pages/SelfImprovement'
 import AgentTeam from './pages/AgentTeam'
+import TeamDashboard from './pages/analytics/TeamDashboard'
+import ComplianceReport from './pages/analytics/ComplianceReport'
 import Admin from './pages/Admin'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
@@ -100,6 +102,8 @@ function App() {
         } />
         <Route path="/self-improvement" element={<SelfImprovement />} />
         <Route path="/agents" element={<AgentTeam />} />
+        <Route path="/analytics" element={<TeamDashboard />} />
+        <Route path="/analytics/compliance" element={<ComplianceReport />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

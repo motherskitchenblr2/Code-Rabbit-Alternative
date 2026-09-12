@@ -115,6 +115,10 @@ pipeline_state = {
     "reviews_created": 0,
 }
 
+# Live activity feed: bounded in-memory log backing the UI live-event stream.
+# See backend/activity.py — shared with the integrations blueprint.
+from backend.activity import record_event, snapshot as activity_snapshot
+
 # Security: Secret from environment only. Fail loud in non-development.
 GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET')
 WEBHOOK_SECRET_IS_FALLBACK = False
@@ -340,6 +344,11 @@ def webhook():
 
     # Enqueue for processing (simulate Redis-backed queue)
     pipeline_state["events_processed"] += 1
+    record_event("webhook", "processing", {
+        "repo": payload.get("repository", {}).get("full_name") or "unknown",
+        "pr": payload.get("pull_request", {}).get("number") or payload.get("pull_request", {}).get("title") or "n/a",
+        "action": payload.get("action", "opened"),
+    })
 
     # Self-improvement: record the event + earn pattern-recognition XP.
     # Run off the request thread via the background pool (falls back to
@@ -680,6 +689,12 @@ def github_review():
 
     pipeline_state["reviews_created"] += 1
     pipeline_state["comments_dispatched"] += len(comments)
+    record_event("github", "completed", {
+        "repo": data.get("repo_full_name") or "unknown",
+        "pr": pr_number,
+        "findings": len(findings),
+        "comments": len(comments),
+    })
 
     # Self-improvement: strongest learning signal — every dispatched review
     # teaches the engine what categories to watch for next time.
@@ -736,6 +751,7 @@ def chat_reply():
         if not comment_id:
             return jsonify({"error": "Missing 'comment_id' field"}), 400
 
+    record_event("chat", "completed", {"comment_id": comment_id})
     return jsonify({
         "status": "reply_queued",
         "comment_id": comment_id,
@@ -795,6 +811,7 @@ def auth_login():
     refresh = create_token(admin_user, role="admin", ttl=604800)
     if store:
         store.register_login(request.headers.get("User-Agent", ""), access, refresh)
+    record_event("auth", "completed", {"username": admin_user, "totp": bool(store and store.totp_enabled())})
     return jsonify({
         "access_token": access,
         "refresh_token": refresh,
@@ -849,6 +866,29 @@ def auth_me():
             "totp_enabled": totp_enabled,
         }), 401
     return jsonify({"id": None, "username": "anonymous", "email": "", "role": "viewer", "totp_enabled": totp_enabled})
+
+
+# ── Live activity feed (backs the Dashboard live-event stream) ─────────────
+
+@app.route("/api/v1/events", methods=["GET"])
+@require_admin
+def events_feed():
+    """Recent pipeline events + per-type totals since (optional) timestamp.
+
+    The UI polls this instead of a WebSocket — the Flask worker has no
+    separate socket server, so a short-poll feed is the honest live channel.
+    """
+    since = request.args.get("since")
+    payload = activity_snapshot(
+        since=since,
+        pipeline={
+            "events_processed": pipeline_state["events_processed"],
+            "comments_dispatched": pipeline_state["comments_dispatched"],
+            "reviews_created": pipeline_state["reviews_created"],
+        },
+    )
+    payload["uptime_seconds"] = int(time.time() - app.start_time) if hasattr(app, "start_time") else 0
+    return jsonify(payload)
 
 
 # ── Health & status endpoints ───────────────────────────────────────────────
@@ -932,6 +972,14 @@ try:
     init_integrations(app)
 except ImportError as e:
     logging.warning(f"Integrations API not available: {e}")
+
+# ── Compliance API (Analytics → Compliance; real engine, generated on demand) ─
+
+try:
+    from backend.compliance.api import init_compliance
+    init_compliance(app)
+except ImportError as e:
+    logging.warning(f"Compliance API not available: {e}")
 
 
 # ── LLM Router API (auto-rotation AI provider gateway) ──────────────────────

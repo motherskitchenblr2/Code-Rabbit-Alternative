@@ -28,8 +28,6 @@ class ComplianceFramework(str, Enum):
     PCI_DSS = "pci_dss"
     OWASP_TOP_10 = "owasp_top_10"
     NIST_CSF = "nist_csf"
-    ISO27001 = "iso27001"
-    PCI_DSS = "pci_dss"
 
 
 class ComplianceStatus(str, Enum):
@@ -169,44 +167,44 @@ class ComplianceEngine:
             Control(
                 id="CC6.2",
                 title="Network Security",
-                description: "Restricts network access to authorized users.",
+                description= "Restricts network access to authorized users.",
                 framework=ComplianceFramework.SOC2_TYPE_II,
                 category="Logical Access",
                 automated_checks=["check_network_segmentation", "verify_firewall_rules"],
             ),
             Control(
                 id="CC6.3",
-                title: "Data Encryption",
-                description: "Encrypts data at rest and in transit.",
-                framework: ComplianceFramework.SOC2_TYPE_II,
-                category: "Logical Access",
-                automated_checks: ["check_encryption_at_rest", "verify_tls_config", "check_key_management"],
+                title= "Data Encryption",
+                description= "Encrypts data at rest and in transit.",
+                framework= ComplianceFramework.SOC2_TYPE_II,
+                category= "Logical Access",
+                automated_checks= ["check_encryption_at_rest", "verify_tls_config", "check_key_management"],
             ),
             # CC7.0 - System Operations
             Control(
                 id="CC7.1",
-                title: "System Monitoring",
-                description: "Monitors system components for anomalies.",
-                framework: ComplianceFramework.SOC2_TYPE_II,
-                category: "System Operations",
-                automated_checks: ["check_monitoring_config", "verify_alerting", "check_logging"],
+                title= "System Monitoring",
+                description= "Monitors system components for anomalies.",
+                framework= ComplianceFramework.SOC2_TYPE_II,
+                category= "System Operations",
+                automated_checks= ["check_monitoring_config", "verify_alerting", "check_logging"],
             ),
             Control(
-                id: "CC7.2",
-                title: "Incident Response",
-                description: "Detects and responds to security incidents.",
-                framework: ComplianceFramework.SOC2_TYPE_II,
-                category: "System Operations",
-                automated_checks: ["check_incident_response_plan", "verify_alerting"],
+                id= "CC7.2",
+                title= "Incident Response",
+                description= "Detects and responds to security incidents.",
+                framework= ComplianceFramework.SOC2_TYPE_II,
+                category= "System Operations",
+                automated_checks= ["check_incident_response_plan", "verify_alerting"],
             ),
             # CC8.0 - Change Management
             Control(
-                id: "CC8.1",
-                title: "Change Management",
-                description: "Authorizes, designs, develops, and implements changes.",
-                framework: ComplianceFramework.SOC2_TYPE_II,
-                category: "Change Management",
-                automated_checks: ["check_change_management", "verify_code_review", "check_ci_cd"],
+                id= "CC8.1",
+                title= "Change Management",
+                description= "Authorizes, designs, develops, and implements changes.",
+                framework= ComplianceFramework.SOC2_TYPE_II,
+                category= "Change Management",
+                automated_checks= ["check_change_management", "verify_code_review", "check_ci_cd"],
             ),
         ]
         for control in soc2_controls:
@@ -234,15 +232,15 @@ class ComplianceEngine:
             Control(
                 id="GDPR-7",
                 title="Conditions for Consent",
-                description: "Valid consent requirements for data processing.",
-                framework: ComplianceFramework.GDPR,
-                category: "Consent",
+                description= "Valid consent requirements for data processing.",
+                framework= ComplianceFramework.GDPR,
+                category= "Consent",
                 automated_checks=["verify_consent_records", "check_consent_withdrawal"],
             ),
             Control(
                 id="GDPR-12",
                 title="Transparent Information",
-                description: "Transparent information, communication, and modalities for exercising rights.",
+                description= "Transparent information, communication, and modalities for exercising rights.",
                 framework=ComplianceFramework.GDPR,
                 category="Data Subject Rights",
                 automated_checks=["check_privacy_policy", "verify_rights_portal"],
@@ -250,22 +248,22 @@ class ComplianceEngine:
             Control(
                 id="GDPR-15",
                 title="Right of Access",
-                description: "Data subject's right to access their personal data.",
-                framework: ComplianceFramework.GDPR,
-                category: "Data Subject Rights",
+                description= "Data subject's right to access their personal data.",
+                framework= ComplianceFramework.GDPR,
+                category= "Data Subject Rights",
                 automated_checks=["verify_access_request_process", "check_data_portability"],
             ),
             Control(
                 id="GDPR-16",
                 title="Right to Rectification",
-                description: "Right to rectify inaccurate personal data.",
+                description= "Right to rectify inaccurate personal data.",
                 framework=ComplianceFramework.GDPR,
                 category="Data Subject Rights",
             ),
             Control(
                 id="GDPR-17",
                 title="Right to Erasure (Right to be Forgotten)",
-                description: "Right to erasure of personal data.",
+                description= "Right to erasure of personal data.",
                 framework=ComplianceFramework.GDPR,
                 category="Data Subject Rights",
                 automated_checks=["verify_deletion_process", "check_retention_policies"],
@@ -273,15 +271,15 @@ class ComplianceEngine:
             Control(
                 id="GDPR-25",
                 title="Data Protection by Design and by Default",
-                description: "Implement appropriate technical and organizational measures.",
-                framework: ComplianceFramework.GDPR,
-                category: "Data Protection by Design",
+                description= "Implement appropriate technical and organizational measures.",
+                framework= ComplianceFramework.GDPR,
+                category= "Data Protection by Design",
                 automated_checks=["check_privacy_by_design", "verify_data_minimization"],
             ),
             Control(
                 id="GDPR-28",
                 title="Processor Obligations",
-                description: "Contracts with processors and their obligations.",
+                description= "Contracts with processors and their obligations.",
                 framework=ComplianceFramework.GDPR,
                 category="Processor Management",
                 automated_checks=["verify_dpa_contracts", "check_subprocessors"],
@@ -289,7 +287,7 @@ class ComplianceEngine:
             Control(
                 id="GDPR-32",
                 title="Security of Processing",
-                description: "Implement appropriate technical and organizational measures.",
+                description= "Implement appropriate technical and organizational measures.",
                 framework=ComplianceFramework.GDPR,
                 category="Security of Processing",
                 automated_checks=["check_encryption", "verify_access_controls", "check_pseudonymization"],
@@ -297,7 +295,7 @@ class ComplianceEngine:
             Control(
                 id="GDPR-33",
                 title="Notification of Personal Data Breach",
-                description: "Notify supervisory authority within 72 hours.",
+                description= "Notify supervisory authority within 72 hours.",
                 framework=ComplianceFramework.GDPR,
                 category="Breach Notification",
                 automated_checks=["verify_breach_notification_process", "check_72_hour_reporting"],
@@ -305,7 +303,7 @@ class ComplianceEngine:
             Control(
                 id="GDPR-35",
                 title="Data Protection Impact Assessment",
-                description: "Conduct DPIA for high-risk processing.",
+                description= "Conduct DPIA for high-risk processing.",
                 framework=ComplianceFramework.GDPR,
                 category="DPIA",
                 automated_checks=["check_dpia_process", "verify_high_risk_assessment"],
@@ -328,7 +326,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.308(a)(3)",
                 title="Workforce Security",
-                description: "Ensure workforce members have appropriate access to ePHI.",
+                description= "Ensure workforce members have appropriate access to ePHI.",
                 framework=ComplianceFramework.HIPAA,
                 category="Administrative Safeguards",
                 automated_checks=["check_access_authorization", "verify_access_termination"],
@@ -336,7 +334,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.308(a)(5)",
                 title="Security Awareness and Training",
-                description: "Implement security awareness and training program for all workforce members.",
+                description= "Implement security awareness and training program for all workforce members.",
                 framework=ComplianceFramework.HIPAA,
                 category="Administrative Safeguards",
                 automated_checks=["verify_security_training", "check_training_completion"],
@@ -344,7 +342,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.312(a)(1)",
                 title="Access Control",
-                description: "Implement technical policies for electronic information systems.",
+                description= "Implement technical policies for electronic information systems.",
                 framework=ComplianceFramework.HIPAA,
                 category="Technical Safeguards",
                 automated_checks=["check_unique_user_id", "verify_emergency_access", "check_automatic_logoff"],
@@ -352,7 +350,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.312(b)",
                 title="Audit Controls",
-                description: "Implement hardware, software, and procedural mechanisms to record and examine activity.",
+                description= "Implement hardware, software, and procedural mechanisms to record and examine activity.",
                 framework=ComplianceFramework.HIPAA,
                 category="Technical Safeguards",
                 automated_checks=["check_audit_logs", "verify_log_integrity", "check_log_retention"],
@@ -360,7 +358,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.312(c)(1)",
                 title="Integrity Controls",
-                description: "Protect ePHI from improper alteration or destruction.",
+                description= "Protect ePHI from improper alteration or destruction.",
                 framework=ComplianceFramework.HIPAA,
                 category="Technical Safeguards",
                 automated_checks=["check_data_integrity", "verify_checksums", "check_digital_signatures"],
@@ -368,7 +366,7 @@ class ComplianceEngine:
             Control(
                 id="HIPAA-164.312(e)(1)",
                 title="Transmission Security",
-                description: "Implement technical security measures to guard against unauthorized access to ePHI transmitted over electronic networks.",
+                description= "Implement technical security measures to guard against unauthorized access to ePHI transmitted over electronic networks.",
                 framework=ComplianceFramework.HIPAA,
                 category="Technical Safeguards",
                 automated_checks=["check_tls_encryption", "verify_end_to_end_encryption", "check_key_management"],
@@ -391,7 +389,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-2",
                 title="Default Passwords",
-                description: "Do not use vendor-supplied defaults for system passwords.",
+                description= "Do not use vendor-supplied defaults for system passwords.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Network Security",
                 automated_checks=["check_default_passwords", "verify_credential_rotation"],
@@ -399,7 +397,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-3",
                 title="Stored Cardholder Data",
-                description: "Protect stored cardholder data.",
+                description= "Protect stored cardholder data.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Data Protection",
                 automated_checks=["check_cardholder_data_encryption", "verify_data_retention"],
@@ -407,7 +405,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-4",
                 title="Encrypt Transmission",
-                description: "Encrypt transmission of cardholder data across open, public networks.",
+                description= "Encrypt transmission of cardholder data across open, public networks.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Data Protection",
                 automated_checks=["check_tls_encryption", "verify_tls_version", "check_certificate_validity"],
@@ -415,7 +413,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-7",
                 title="Restrict Access",
-                description: "Restrict access to cardholder data by business need-to-know.",
+                description= "Restrict access to cardholder data by business need-to-know.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Access Control",
                 automated_checks=["check_rbac", "verify_least_privilege", "check_access_reviews"],
@@ -423,7 +421,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-8",
                 title="Identify and Authenticate",
-                description: "Identify users and authenticate access to system components.",
+                description= "Identify users and authenticate access to system components.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Identification & Authentication",
                 automated_checks=["check_mfa", "verify_password_policy", "check_account_lockout"],
@@ -431,7 +429,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-10",
                 title="Track and Monitor",
-                description: "Track and monitor all access to network resources and cardholder data.",
+                description= "Track and monitor all access to network resources and cardholder data.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Monitoring",
                 automated_checks=["check_audit_logs", "verify_log_retention", "check_alerting"],
@@ -439,7 +437,7 @@ class ComplianceEngine:
             Control(
                 id="PCI-12",
                 title="Information Security Policy",
-                description: "Maintain a policy that addresses information security for all personnel.",
+                description= "Maintain a policy that addresses information security for all personnel.",
                 framework=ComplianceFramework.PCI_DSS,
                 category="Information Security Policy",
             ),
@@ -460,14 +458,14 @@ class ComplianceEngine:
             Control(
                 id="A.5.10",
                 title="Acceptable Use of Assets",
-                description: "Rules for acceptable use of information assets.",
+                description= "Rules for acceptable use of information assets.",
                 framework=ComplianceFramework.ISO27001,
                 category="Asset Management",
             ),
             Control(
                 id="A.5.12",
                 title="Classification of Information",
-                description: "Classification of information based on sensitivity.",
+                description= "Classification of information based on sensitivity.",
                 framework=ComplianceFramework.ISO27001,
                 category="Asset Management",
             ),
@@ -489,14 +487,14 @@ class ComplianceEngine:
             Control(
                 id="A.8.2",
                 title="Information Classification",
-                description: "Classification of information based on sensitivity.",
+                description= "Classification of information based on sensitivity.",
                 framework=ComplianceFramework.ISO27001,
                 category="Asset Management",
             ),
             Control(
                 id="A.8.3",
                 title="Media Handling",
-                description: "Procedures for handling removable media.",
+                description= "Procedures for handling removable media.",
                 framework=ComplianceFramework.ISO27001,
                 category="Asset Management",
             ),
@@ -518,7 +516,7 @@ class ComplianceEngine:
             Control(
                 id="A02:2021",
                 title="Cryptographic Failures",
-                description: "Failures related to cryptography which lead to exposure of sensitive data.",
+                description= "Failures related to cryptography which lead to exposure of sensitive data.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Cryptography",
                 automated_checks=["check_encryption", "verify_key_management", "check_tls_config"],
@@ -526,7 +524,7 @@ class ComplianceEngine:
             Control(
                 id="A03:2021",
                 title="Injection",
-                description: "Injection flaws allow attackers to relay malicious code through an application.",
+                description= "Injection flaws allow attackers to relay malicious code through an application.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Injection",
                 automated_checks=["check_sql_injection", "check_command_injection", "verify_parameterization"],
@@ -534,14 +532,14 @@ class ComplianceEngine:
             Control(
                 id="A04:2021",
                 title="Insecure Design",
-                description: "Missing or ineffective control design.",
+                description= "Missing or ineffective control design.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Architecture",
             ),
             Control(
                 id="A05:2021",
                 title="Security Misconfiguration",
-                description: "Security misconfiguration is the most commonly seen issue.",
+                description= "Security misconfiguration is the most commonly seen issue.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Configuration",
                 automated_checks=["check_security_headers", "verify_default_configs", "check_exposed_services"],
@@ -549,7 +547,7 @@ class ComplianceEngine:
             Control(
                 id="A06:2021",
                 title="Vulnerable and Outdated Components",
-                description: "Components with known vulnerabilities.",
+                description= "Components with known vulnerabilities.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Supply Chain",
                 automated_checks=["check_dependency_vulnerabilities", "verify_sbom", "check_component_versions"],
@@ -557,7 +555,7 @@ class ComplianceEngine:
             Control(
                 id="A07:2021",
                 title="Identification and Authentication Failures",
-                description: "Confirmation of user's identity, authentication, and session management.",
+                description= "Confirmation of user's identity, authentication, and session management.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Authentication",
                 automated_checks=["check_mfa", "verify_session_management", "check_credential_stuffing_protection"],
@@ -565,7 +563,7 @@ class ComplianceEngine:
             Control(
                 id="A08:2021",
                 title="Software and Data Integrity Failures",
-                description: "Code and infrastructure integrity verification failures.",
+                description= "Code and infrastructure integrity verification failures.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Supply Chain",
                 automated_checks=["verify_supply_chain", "check_integrity_verification", "check_ci_cd_integrity"],
@@ -573,7 +571,7 @@ class ComplianceEngine:
             Control(
                 id="A09:2021",
                 title="Security Logging and Monitoring Failures",
-                description: "Insufficient logging, detection, monitoring, and active response.",
+                description= "Insufficient logging, detection, monitoring, and active response.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Monitoring",
                 automated_checks=["check_logging", "verify_alerting", "check_incident_response"],
@@ -581,7 +579,7 @@ class ComplianceEngine:
             Control(
                 id="A10:2021",
                 title="Server-Side Request Forgery (SSRF)",
-                description: "SSRF flaws occur when a web application fetches a remote resource without validating the user-supplied URL.",
+                description= "SSRF flaws occur when a web application fetches a remote resource without validating the user-supplied URL.",
                 framework=ComplianceFramework.OWASP_TOP_10,
                 category="Server-Side Request Forgery",
                 automated_checks=["check_ssrf_protection", "verify_url_validation", "check_outbound_requests"],
@@ -688,9 +686,9 @@ class ComplianceEngine:
     ) -> str:
         status_text = {
             ComplianceStatus.COMPLIANT: "Compliant",
-            ComplianceFramework.PARTIAL: "Partially Compliant",
-            ComplianceFramework.NON_COMPLIANT: "Non-Compliant",
-            ComplianceFramework.NOT_ASSESSED: "Not Assessed",
+            ComplianceStatus.PARTIAL: "Partially Compliant",
+            ComplianceStatus.NON_COMPLIANT: "Non-Compliant",
+            ComplianceStatus.NOT_ASSESSED: "Not Assessed",
         }
 
         summary = f"""

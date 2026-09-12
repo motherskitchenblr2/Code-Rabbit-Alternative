@@ -1,69 +1,105 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Plus,
   Search,
   GitBranch,
-  Lock,
-  Globe,
-  ChevronDown,
-  ChevronUp,
-  Settings,
+  X,
   Eye,
   ExternalLink,
+  Trash2,
+  Power,
+  AlertTriangle,
 } from 'lucide-react'
 
-// Types
-interface Repository {
+interface Source {
   id: string
   name: string
-  full_name: string
-  description: string
-  private: boolean
-  language: string
-  stars: number
-  forks: number
-  open_prs: number
-  last_scan: string
-  status: 'active' | 'idle' | 'error'
-  created_at: string
+  kind: string
+  channel: string
+  url_tail: string
+  enabled: boolean
+  created_at?: number
 }
 
-const repositories: Repository[] = [
-  { id: '1', name: 'gitfix-core', full_name: 'org/gitfix-core', description: 'Core Git-Fix engine with 5-stage pipeline', private: true, language: 'Python', stars: 142, forks: 28, open_prs: 5, last_scan: '2 min ago', status: 'active', created_at: '2024-01-01' },
-  { id: '2', name: 'gitfix-frontend', full_name: 'org/gitfix-frontend', description: 'Cyberpunk dashboard with real-time updates', private: true, language: 'TypeScript', stars: 89, forks: 15, open_prs: 3, last_scan: '15 min ago', status: 'active', created_at: '2024-01-05' },
-  { id: '3', name: 'gitfix-cli', full_name: 'org/gitfix-cli', description: 'CLI tool for Git-Fix integration', private: false, language: 'Go', stars: 256, forks: 42, open_prs: 2, last_scan: '1 hour ago', status: 'idle', created_at: '2024-01-10' },
-  { id: '4', name: 'gitfix-hooks', full_name: 'org/gitfix-hooks', description: 'Git hooks integration package', private: true, language: 'Python', stars: 67, forks: 12, open_prs: 1, last_scan: '3 hours ago', status: 'active', created_at: '2024-01-12' },
-  { id: '5', name: 'gitfix-api', full_name: 'org/gitfix-api', description: 'REST API with WebSocket support', private: true, language: 'Python', stars: 134, forks: 23, open_prs: 4, last_scan: '5 min ago', status: 'active', created_at: '2024-01-08' },
-  { id: '6', name: 'gitfix-docs', full_name: 'org/gitfix-docs', description: 'Documentation and guides', private: false, language: 'Markdown', stars: 45, forks: 8, open_prs: 0, last_scan: '2 days ago', status: 'idle', created_at: '2024-01-15' },
-]
+const kindIcon: Record<string, string> = {
+  slack: 'neon-cyan',
+  discord: 'neon-magenta',
+  custom: 'neon-amber',
+}
 
 export default function Repositories() {
+  const [sources, setSources] = useState<Source[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'all' | 'active' | 'idle' | 'error'>('all')
-  const [sortBy, setSortBy] = useState<'name' | 'last_scan' | 'stars' | 'open_prs'>('last_scan')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [, setShowAddModal] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'active' | 'idle'>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  const filteredRepos = repositories
-    .filter(repo => {
-      if (filter !== 'all' && repo.status !== filter) return false
-      if (search && !repo.name.toLowerCase().includes(search.toLowerCase()) &&
-          !repo.full_name.toLowerCase().includes(search.toLowerCase()) &&
-          !repo.description.toLowerCase().includes(search.toLowerCase())) {
-        return false
-      }
+  const headers = useCallback((): Record<string, string> => {
+    const token = localStorage.getItem('access_token')
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }, [])
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/integrations/webhooks', { headers: headers() })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      setSources((data.webhooks || []).map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        kind: w.kind,
+        channel: w.channel,
+        url_tail: w.url_tail,
+        enabled: w.enabled,
+        created_at: w.created_at,
+      })))
+      setError(null)
+    } catch (e: any) {
+      setError(e.message || 'Failed to load sources')
+    } finally {
+      setLoading(false)
+    }
+  }, [headers])
+
+  useEffect(() => { load() }, [load])
+
+  const toggleEnabled = async (src: Source) => {
+    setBusy(true)
+    try {
+      const response = await fetch('/api/v1/integrations/webhooks', {
+        method: 'POST',
+        headers: { ...headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: src.id, name: src.name, kind: src.kind, enabled: !src.enabled }),
+      })
+      if (response.ok) await load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const deleteSource = async (src: Source) => {
+    if (!window.confirm(`Delete "${src.name}"?`)) return
+    setBusy(true)
+    try {
+      await fetch(`/api/v1/integrations/webhooks/${src.id}`, { method: 'DELETE', headers: headers() })
+      await load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const filteredSources = sources
+    .filter(src => {
+      if (filter !== 'all' && (filter === 'active') !== src.enabled) return false
+      if (search && !src.name.toLowerCase().includes(search.toLowerCase()) &&
+          !src.channel.toLowerCase().includes(search.toLowerCase()) &&
+          !src.kind.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-    .sort((a, b) => {
-      const aVal = a[sortBy]
-      const bVal = b[sortBy]
-      const cmp =
-        typeof aVal === 'number' && typeof bVal === 'number'
-          ? aVal - bVal
-          : String(aVal).localeCompare(String(bVal))
-      return sortOrder === 'asc' ? cmp : -cmp
-    })
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
   return (
     <div className="space-y-8">
@@ -73,7 +109,7 @@ export default function Repositories() {
           <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
             <span className="text-neon-magenta">{'>_'}</span> Repositories
           </h1>
-          <p className="text-cyber-400 mt-1">Manage and monitor your code repositories</p>
+          <p className="text-cyber-400 mt-1">Monitored webhook sources wired into the pipeline</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -107,190 +143,286 @@ export default function Repositories() {
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="idle">Idle</option>
-              <option value="error">Error</option>
             </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="input-cyber py-2 w-40"
-            >
-              <option value="last_scan">Last Scan</option>
-              <option value="name">Name</option>
-              <option value="stars">Stars</option>
-              <option value="open_prs">Open PRs</option>
-            </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 rounded-lg bg-cyber-800/50 border border-cyber-700/50 hover:bg-cyber-700/50 transition-colors"
-              aria-label={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
-            >
-              {sortOrder === 'asc' ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile repository cards */}
-      <div className="grid grid-cols-1 gap-3 md:hidden">
-        {filteredRepos.map((repo) => (
-          <div key={repo.id} className="card-cyber p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center flex-shrink-0">
-                <GitBranch className="w-5 h-5 text-neon-cyan" />
+      {error && (
+        <div className="card-cyber flex items-start gap-3 p-4 border-red-500/30">
+          <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+          <div>
+            <p className="text-red-400 font-medium mb-1">Failed to load sources</p>
+            <p className="text-cyber-400 text-sm">{error}. Check that the backend is running.</p>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="card-cyber p-12 text-center">
+          <div className="w-8 h-8 border-2 border-neon-magenta border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-cyber-400 font-mono tracking-wider">LOADING SOURCES…</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop sources table */}
+          <div className="card-cyber overflow-hidden hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-cyber-700/50">
+                    <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Source</th>
+                    <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden md:table-cell">Kind</th>
+                    <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden md:table-cell">Endpoint</th>
+                    <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden lg:table-cell">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-mono text-cyber-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSources.map((src) => {
+                    const color = kindIcon[src.kind] || 'neon-cyan'
+                    return (
+                      <tr key={src.id} className="border-b border-cyber-800/50 hover:bg-cyber-800/30 transition-colors">
+                        <td className="px-4 py-4">
+                          <Link to={`/repositories/${src.id}`} className="flex items-center gap-3 group">
+                            <div className={`w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center group-hover:bg-${color}/20 transition-colors`}>
+                              <GitBranch className={`w-5 h-5 text-${color}`} />
+                            </div>
+                            <div>
+                              <p className="font-medium text-white group-hover:text-neon-cyan transition-colors">{src.name}</p>
+                              <p className="text-xs text-cyber-400 truncate max-w-xs">channel-{src.id}</p>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-4 hidden md:table-cell">
+                          <span className="text-xs px-2 py-1 bg-cyber-800 rounded text-cyber-300 font-mono">{src.channel}</span>
+                        </td>
+                        <td className="px-4 py-4 hidden md:table-cell">
+                          <span className="text-xs text-cyber-400 font-mono">{src.url_tail || 'Not set'}</span>
+                        </td>
+                        <td className="px-4 py-4 hidden lg:table-cell">
+                          <span className="text-xs text-cyber-400 font-mono">{src.created_at ? new Date(src.created_at * 1000).toLocaleDateString() : '—'}</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-mono ${
+                            src.enabled ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' : 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${src.enabled ? 'bg-neon-green' : 'bg-neon-amber'}`} />
+                            {src.enabled ? 'Active' : 'Idle'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link to={`/repositories/${src.id}`} className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-cyan/10 hover:border-neon-cyan/30 border border-cyber-700/50 transition-colors" aria-label="View">
+                              <Eye className="w-4 h-4 text-cyber-400" />
+                            </Link>
+                            <a href={`https://github.com/${src.name}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-magenta/10 hover:border-neon-magenta/30 border border-cyber-700/50 transition-colors" aria-label="Open" hidden>
+                              <ExternalLink className="w-4 h-4 text-cyber-400" />
+                            </a>
+                            <button
+                              onClick={() => toggleEnabled(src)}
+                              disabled={busy}
+                              className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-amber/10 hover:border-neon-amber/30 border border-cyber-700/50 transition-colors disabled:opacity-50"
+                              aria-label={src.enabled ? 'Disable' : 'Enable'}
+                            >
+                              <Power className={`w-4 h-4 ${src.enabled ? 'text-neon-amber' : 'text-cyber-400'}`} />
+                            </button>
+                            <button
+                              onClick={() => deleteSource(src)}
+                              disabled={busy}
+                              className="p-2 rounded-lg bg-cyber-800/50 hover:bg-red-500/10 hover:border-red-500/30 border border-cyber-700/50 transition-colors disabled:opacity-50"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {filteredSources.length === 0 && (
+              <div className="p-12 text-center">
+                <GitBranch className="w-16 h-16 mx-auto mb-4 text-cyber-700" />
+                <h3 className="text-lg font-medium text-cyber-300 mb-2">No repositories found</h3>
+                <p className="text-cyber-500 mb-4">Configure a webhook source to start monitoring</p>
+                <button className="btn-cyber-magenta" onClick={() => setShowAddModal(true)}>
+                  Add Repository
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <Link to={`/repositories/${repo.id}`} className="block">
-                  <p className="font-medium text-white truncate">{repo.name}</p>
-                  <p className="text-xs text-cyber-400 font-mono flex items-center gap-1 mt-0.5">
-                    {repo.private ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                    {repo.full_name}
-                  </p>
-                </Link>
-                <p className="text-xs text-cyber-300 mt-2 line-clamp-2">{repo.description}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <span className="text-xs px-2 py-1 bg-cyber-800 rounded text-cyber-300 font-mono">{repo.language}</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono ${
-                    repo.status === 'active' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' :
-                    repo.status === 'idle' ? 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30' :
-                    'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
-                    {repo.status.charAt(0).toUpperCase() + repo.status.slice(1)}
-                  </span>
-                  <span className="text-xs text-cyber-400 font-mono">{repo.last_scan}</span>
+            )}
+          </div>
+
+          {/* Mobile cards */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {filteredSources.map((src) => (
+              <div key={src.id} className="card-cyber p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center flex-shrink-0">
+                    <GitBranch className="w-5 h-5 text-neon-cyan" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Link to={`/repositories/${src.id}`} className="block">
+                      <p className="font-medium text-white truncate">{src.name}</p>
+                      <p className="text-xs text-cyber-400 font-mono mt-0.5">{src.channel}</p>
+                    </Link>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono ${
+                        src.enabled ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' : 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30'
+                      }`}>
+                        {src.enabled ? 'Active' : 'Idle'}
+                      </span>
+                      <span className="text-xs text-cyber-400 font-mono truncate">{src.url_tail || 'No endpoint'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-cyber-700/50">
+                  <Link to={`/repositories/${src.id}`} className="btn-cyber-sm flex-1 items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50">
+                    <Eye className="w-4 h-4" /> View
+                  </Link>
+                  <button
+                    onClick={() => toggleEnabled(src)}
+                    disabled={busy}
+                    className="btn-cyber-sm flex-1 items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50 disabled:opacity-50"
+                  >
+                    <Power className="w-4 h-4" /> {src.enabled ? 'Disable' : 'Enable'}
+                  </button>
+                  <button
+                    onClick={() => deleteSource(src)}
+                    disabled={busy}
+                    className="btn-cyber-sm items-center justify-center bg-cyber-800/50 border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-cyber-700/50">
-              <Link to={`/repositories/${repo.id}`} className="btn-cyber-sm flex-1 flex items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50 transition-colors">
-                <Eye className="w-4 h-4" />
-                View
-              </Link>
-              <Link to={`/repositories/${repo.id}/settings`} className="btn-cyber-sm flex-1 flex items-center justify-center gap-1.5 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50 transition-colors">
-                <Settings className="w-4 h-4" />
-                Configure
-              </Link>
-            </div>
+            ))}
+            {filteredSources.length === 0 && (
+              <div className="card-cyber p-10 text-center">
+                <GitBranch className="w-16 h-16 mx-auto mb-4 text-cyber-700" />
+                <h3 className="text-lg font-medium text-cyber-300 mb-2">No repositories found</h3>
+                <button className="btn-cyber-magenta" onClick={() => setShowAddModal(true)}>
+                  Add Repository
+                </button>
+              </div>
+            )}
           </div>
-        ))}
-        {filteredRepos.length === 0 && (
-          <div className="card-cyber p-10 text-center">
-            <GitBranch className="w-16 h-16 mx-auto mb-4 text-cyber-700" />
-            <h3 className="text-lg font-medium text-cyber-300 mb-2">No repositories found</h3>
-            <p className="text-cyber-500 mb-4">Try adjusting your search or filters</p>
-            <button className="btn-cyber-magenta" onClick={() => { setSearch(''); setFilter('all'); }}>
-              Clear Filters
-            </button>
-          </div>
-        )}
-      </div>
 
-      {/* Desktop repositories table */}
-      <div className="card-cyber overflow-hidden hidden md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-cyber-700/50">
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Repository</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden md:table-cell">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden md:table-cell">Language</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden lg:table-cell">Stars</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden lg:table-cell">Forks</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider hidden lg:table-cell">Open PRs</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Last Scan</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-cyber-400 uppercase tracking-wider">Visibility</th>
-                <th className="px-4 py-3 text-right text-xs font-mono text-cyber-400 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRepos.map((repo) => (
-                <tr key={repo.id} className="border-b border-cyber-800/50 hover:bg-cyber-800/30 transition-colors">
-                  <td className="px-4 py-4">
-                    <Link to={`/repositories/${repo.id}`} className="flex items-center gap-3 group">
-                      <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center group-hover:bg-neon-magenta/20 transition-colors">
-                        <GitBranch className="w-5 h-5 text-neon-cyan" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-white group-hover:text-neon-cyan transition-colors">{repo.name}</p>
-                        <p className="text-xs text-cyber-400 truncate max-w-xs">{repo.full_name}</p>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-4 hidden md:table-cell">
-                    <p className="text-cyber-300 truncate max-w-md">{repo.description}</p>
-                  </td>
-                  <td className="px-4 py-4 hidden md:table-cell">
-                    <span className="text-xs px-2 py-1 bg-cyber-800 rounded text-cyber-300 font-mono">{repo.language}</span>
-                  </td>
-                  <td className="px-4 py-4 hidden lg:table-cell">
-                    <span className="text-cyber-300 font-mono flex items-center gap-1">{repo.stars.toLocaleString()}</span>
-                  </td>
-                  <td className="px-4 py-4 hidden lg:table-cell">
-                    <span className="text-cyber-300 font-mono">{repo.forks.toLocaleString()}</span>
-                  </td>
-                  <td className="px-4 py-4 hidden lg:table-cell">
-                    <span className="text-cyber-300 font-mono">{repo.open_prs}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="text-xs text-cyber-400 font-mono">{repo.last_scan}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-mono ${
-                      repo.status === 'active' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' :
-                      repo.status === 'idle' ? 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30' :
-                      'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${repo.status === 'active' ? 'bg-neon-green' : repo.status === 'idle' ? 'bg-neon-amber' : 'bg-red-500'}`} />
-                      {repo.status.charAt(0).toUpperCase() + repo.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-mono ${
-                      repo.private ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-neon-green/20 text-neon-green border border-neon-green/30'
-                    }`}>
-                      {repo.private ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                      {repo.private ? 'Private' : 'Public'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link to={`/repositories/${repo.id}`} className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-cyan/10 hover:border-neon-cyan/30 border border-cyber-700/50 transition-colors" aria-label="View">
-                        <Eye className="w-4 h-4 text-cyber-400" />
-                      </Link>
-                      <Link to={`/repositories/${repo.id}/settings`} className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-amber/10 hover:border-neon-amber/30 border border-cyber-700/50 transition-colors" aria-label="Settings">
-                        <Settings className="w-4 h-4 text-cyber-400" />
-                      </Link>
-                      <a href={`https://github.com/${repo.full_name}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-cyber-800/50 hover:bg-neon-magenta/10 hover:border-neon-magenta/30 border border-cyber-700/50 transition-colors" aria-label="View on GitHub">
-                        <ExternalLink className="w-4 h-4 text-cyber-400" />
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredRepos.length === 0 && (
-          <div className="p-12 text-center">
-            <GitBranch className="w-16 h-16 mx-auto mb-4 text-cyber-700" />
-            <h3 className="text-lg font-medium text-cyber-300 mb-2">No repositories found</h3>
-            <p className="text-cyber-500 mb-4">Try adjusting your search or filters</p>
-            <button className="btn-cyber-magenta" onClick={() => { setSearch(''); setFilter('all'); }}>
-              Clear Filters
-            </button>
+          <div className="flex items-center justify-between">
+            <p className="text-cyber-400 text-sm">Showing {filteredSources.length} of {sources.length} repositories</p>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-cyber-400 text-sm">Showing {filteredRepos.length} of {repositories.length} repositories</p>
-        <div className="flex items-center gap-2">
-          <button className="p-2 rounded-lg bg-cyber-800/50 border border-cyber-700/50 hover:bg-cyber-700/50 disabled:opacity-50" disabled>← Previous</button>
-          <button className="p-2 rounded-lg bg-cyber-800/50 border border-cyber-700/50 hover:bg-cyber-700/50 disabled:opacity-50" disabled>Next →</button>
-        </div>
-      </div>
+      {/* Add repository modal */}
+      {showAddModal && (
+        <AddSourceModal
+          onClose={() => setShowAddModal(false)}
+          onSaved={() => { setShowAddModal(false); load() }}
+        />
+      )}
     </div>
   )
 }
 
+function AddSourceModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState('')
+  const [kind, setKind] = useState('slack')
+  const [url, setUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem('access_token')
+      const response = await fetch('/api/v1/integrations/webhooks', {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, kind, url }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`)
+      onSaved()
+    } catch (e: any) {
+      setError(e.message || 'Failed to save source')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <div className="card-cyber w-full max-w-md p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-lg bg-cyber-800/50 hover:bg-red-500/10 transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4 text-cyber-400" />
+        </button>
+        <h2 className="text-xl font-bold font-display mb-1 flex items-center gap-2">
+          <span className="text-neon-magenta">{'>_'}</span> Add Repository
+        </h2>
+        <p className="text-cyber-400 text-sm mb-6">Register a webhook endpoint as a monitored source.</p>
+
+        <form onSubmit={(e) => { e.preventDefault(); submit() }} className="space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
+          )}
+          <div>
+            <label className="block text-xs font-mono text-cyber-400 uppercase tracking-wider mb-1.5" htmlFor="src-name">Name</label>
+            <input
+              id="src-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. slack-pr-reviews"
+              className="input-cyber"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-cyber-400 uppercase tracking-wider mb-1.5" htmlFor="src-kind">Kind</label>
+            <select id="src-kind" value={kind} onChange={(e) => setKind(e.target.value)} className="input-cyber">
+              <option value="slack">Slack</option>
+              <option value="discord">Discord</option>
+              <option value="custom">Custom Webhook</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-cyber-400 uppercase tracking-wider mb-1.5" htmlFor="src-url">Webhook URL</label>
+            <input
+              id="src-url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://hooks.slack.com/services/…"
+              className="input-cyber"
+              required
+            />
+            <p className="text-cyber-500 text-xs mt-1">Only http(s) endpoints are accepted.</p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-cyber-sm flex-1 bg-cyber-800/50 border border-cyber-700/50 text-cyber-200 hover:bg-cyber-700/50"
+            >
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="btn-cyber-magenta flex-1 disabled:opacity-60">
+              {saving ? 'Saving…' : 'Add & Test'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

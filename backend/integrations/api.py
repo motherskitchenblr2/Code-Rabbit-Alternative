@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - requests is a declared dependency
 
 from backend.security import require_admin
 from backend.admin.store import get_store, MASK_PLACEHOLDER
+from backend.activity import record_event, find_events
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,25 @@ def upsert_webhook():
     # Auto-ping whenever a webhook is (re)configured so the modal shows live status.
     response = _public_webhook(saved)
     response["probe"] = _ping_webhook(saved)
+    record_event("integration", "completed" if response["probe"].get("ok") else "failed",
+                 {"channel_id": wid, "name": name, "kind": kind,
+                  "action": "created" if existing is None else "updated"})
     return jsonify(response), 200
+
+
+@integrations_bp.route("/webhooks/<webhook_id>", methods=["GET"])
+@require_admin
+def get_webhook(webhook_id: str):
+    cfg = get_store().get_webhook_config(webhook_id)
+    if cfg is None:
+        return jsonify({"error": "not found"}), 404
+    body = _public_webhook(cfg)
+    body["probe"] = _ping_webhook(cfg)
+    body["recent_events"] = [
+        {"type": e["type"], "status": e["status"], "timestamp": e["timestamp"], "data": e.get("data", {})}
+        for e in find_events(channel_id=webhook_id)
+    ]
+    return jsonify(body)
 
 
 @integrations_bp.route("/webhooks/<webhook_id>", methods=["DELETE"])
@@ -123,7 +142,11 @@ def test_webhook(webhook_id: str):
     cfg = get_store().get_webhook_config(webhook_id)
     if cfg is None:
         return jsonify({"error": "not found"}), 404
-    return jsonify({"result": _ping_webhook(cfg)})
+    result = _ping_webhook(cfg)
+    record_event("integration", "completed" if result.get("ok") else "failed",
+                 {"channel_id": webhook_id, "name": cfg.get("name", webhook_id),
+                  "kind": cfg.get("kind", "custom"), "action": "test"})
+    return jsonify({"result": result})
 
 
 def _ping_webhook(cfg: Dict[str, Any]) -> Dict[str, Any]:

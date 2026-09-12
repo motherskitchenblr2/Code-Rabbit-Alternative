@@ -17,11 +17,13 @@ import {
   Brain,
   ShieldCheck,
   Users,
+  BarChart3,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/repositories', label: 'Repositories', icon: GitBranch },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
   { path: '/self-improvement', label: 'Self-Improvement', icon: Brain },
   { path: '/agents', label: 'AI Agents', icon: Users, adminOnly: true },
   { path: '/admin', label: 'Admin Panel', icon: ShieldCheck, adminOnly: true },

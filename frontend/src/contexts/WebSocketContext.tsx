@@ -1,81 +1,78 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 
 interface PipelineEvent {
   id: string
-  type: 'webhook' | 'ast' | 'rag' | 'critique' | 'github' | 'chat'
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  type: string
+  status: string
   timestamp: string
   data?: any
+}
+
+interface FeedTotals {
+  events_processed: number
+  comments_dispatched: number
+  reviews_created: number
 }
 
 interface WebSocketContextType {
   isConnected: boolean
   events: PipelineEvent[]
+  totals: Record<string, number>
+  pipeline: FeedTotals
   sendMessage: (message: any) => void
   clearEvents: () => void
 }
 
-const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
+const POLL_MS = 4000
 
+// The Flask worker has no WebSocket server, so the "live" stream is a short
+// poll against the real /api/v1/events feed. Same public surface as before.
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
   const [events, setEvents] = useState<PipelineEvent[]>([])
-  const [ws, setWs] = useState<WebSocket | null>(null)
-  const [reconnectAttempts, setReconnectAttempts] = useState(0)
-  const maxReconnectAttempts = 5
-
-  const connect = useCallback(() => {
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
-    const websocket = new WebSocket(wsUrl)
-
-    websocket.onopen = () => {
-      setIsConnected(true)
-      setReconnectAttempts(0)
-      console.log('WebSocket connected')
-    }
-
-    websocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        setEvents(prev => [data, ...prev].slice(0, 100))
-      } catch (e) {
-        console.error('Failed to parse WebSocket message:', e)
-      }
-    }
-
-    websocket.onclose = () => {
-      setIsConnected(false)
-      console.log('WebSocket disconnected')
-      if (reconnectAttempts < maxReconnectAttempts) {
-        setTimeout(() => {
-          setReconnectAttempts(prev => prev + 1)
-          connect()
-        }, Math.min(1000 * 2 ** reconnectAttempts, 30000))
-      }
-    }
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error)
-    }
-
-    setWs(websocket)
-  }, [reconnectAttempts])
+  const [totals, setTotals] = useState<Record<string, number>>({})
+  const [pipeline, setPipeline] = useState<FeedTotals>({
+    events_processed: 0,
+    comments_dispatched: 0,
+    reviews_created: 0,
+  })
+  const timerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    connect()
-    return () => {
-      if (ws) ws.close()
+    const poll = async () => {
+      const token = localStorage.getItem('access_token')
+      try {
+        const response = await fetch('/api/v1/events', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) {
+          setIsConnected(false)
+          return
+        }
+        const data = await response.json()
+        setEvents((data.events || []).slice(0, 100))
+        setTotals(data.totals || {})
+        setPipeline(data.pipeline || { events_processed: 0, comments_dispatched: 0, reviews_created: 0 })
+        setIsConnected(true)
+      } catch {
+        setIsConnected(false)
+      }
     }
-  }, [connect])
 
-  const sendMessage = useCallback((message: any) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message))
+    poll()
+    timerRef.current = window.setInterval(poll, POLL_MS)
+    return () => {
+      if (timerRef.current !== null) window.clearInterval(timerRef.current)
     }
-  }, [ws])
+  }, [])
+
+  const sendMessage = useCallback((_message: any) => {
+    // Kept for API compatibility; the feed is polled, not pushed.
+  }, [])
 
   const clearEvents = useCallback(() => {
     setEvents([])
+    setTotals({})
   }, [])
 
   return (
@@ -83,6 +80,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       value={{
         isConnected,
         events,
+        totals,
+        pipeline,
         sendMessage,
         clearEvents,
       }}
@@ -99,3 +98,5 @@ export function useWebSocket() {
   }
   return context
 }
+
+const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
