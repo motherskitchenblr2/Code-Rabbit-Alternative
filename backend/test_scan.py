@@ -211,6 +211,39 @@ class ScannerTestCase(unittest.TestCase):
                 self.assertEqual(report["status"], "error")
                 self.assertEqual(report["error"], "boom")
 
+    def test_dashboard_payload_aggregates_correctly(self):
+        from backend.github.api import _dashboard_payload
+        repos = [
+            {"full_name": "org/a", "language": "Python", "html_url": "https://g/1", "private": True, "fork": False, "archived": False, "default_branch": "main", "owner": {"login": "org"}},
+            {"full_name": "org/b", "language": "TS", "html_url": "https://g/2", "private": False, "fork": False, "archived": False, "default_branch": "main", "owner": {"login": "org"}},
+        ]
+        summaries = {
+            "org/a": {"status": "completed", "scanned_at": "2026-09-12T10:00:00Z", "files_scanned": 50,
+                       "summary": {"total": 10, "by_severity": {"high": 3, "medium": 7},
+                                   "by_category": {"bug": 4, "secret": 6}}},
+            "org/b": {"status": "completed", "scanned_at": "2026-09-12T11:00:00Z", "files_scanned": 20,
+                       "summary": {"total": 5, "by_severity": {"critical": 2, "high": 2, "low": 1},
+                                   "by_category": {"vulnerability": 5}}},
+            "org/uns": None,  # not scanned
+        }
+        with mock.patch("backend.github.gh.cached_github_repos", return_value=repos), \
+             mock.patch("backend.github.api.gh.cached_github_repos", return_value=repos), \
+             mock.patch("backend.scan.scanner.latest_summary", side_effect=lambda fn: summaries.get(fn)):
+            payload = _dashboard_payload()
+        self.assertTrue(payload["configured"])
+        self.assertEqual(payload["repos_total"], 2)
+        self.assertEqual(payload["repos_scanned"], 2)
+        self.assertEqual(payload["repos_with_findings"], 2)
+        self.assertEqual(payload["findings_total"], 15)
+        self.assertEqual(payload["critical_high_total"], 7)
+        self.assertEqual(payload["dependency_vulns"], 5)
+        self.assertEqual(payload["by_severity"]["high"], 5)
+        self.assertEqual(payload["by_severity"]["critical"], 2)
+        self.assertEqual(len(payload["riskiest"]), 2)
+        self.assertEqual(payload["riskiest"][0]["full_name"], "org/b")  # critical > high
+        self.assertEqual(len(payload["scan_timeline"]), 1)
+        self.assertEqual(payload["scan_timeline"][0]["findings"], 15)
+
 
 class GitHubClientTestCase(unittest.TestCase):
     def test_pagination_and_palette(self):

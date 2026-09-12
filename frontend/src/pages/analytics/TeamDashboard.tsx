@@ -8,6 +8,9 @@ import {
   Zap,
   GitPullRequest,
   Radio,
+  GitBranch,
+  ShieldAlert,
+  ScanLine,
 } from 'lucide-react'
 import {
   LineChart,
@@ -28,6 +31,7 @@ export default function TeamDashboard() {
   const [agents, setAgents] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [compliance, setCompliance] = useState<any>(null)
+  const [repoDash, setRepoDash] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const headers = useCallback((): Record<string, string> => {
@@ -40,10 +44,12 @@ export default function TeamDashboard() {
       fetch('/api/v1/agents/roster', { headers: headers() }).then(r => r.json()),
       fetch('/api/v1/agents/sessions', { headers: headers() }).then(r => r.json()),
       fetch('/api/v1/compliance/summary', { headers: headers() }).then(r => r.json()),
-    ]).then(([a, s, c]) => {
+      fetch('/api/v1/github/dashboard', { headers: headers() }).then(r => r.json()),
+    ]).then(([a, s, c, rd]) => {
       if (a.status === 'fulfilled') setAgents(a.value.agents || [])
       if (s.status === 'fulfilled') setSessions(s.value.sessions || [])
       if (c.status === 'fulfilled') setCompliance(c.value)
+      if (rd.status === 'fulfilled' && rd.value.configured) setRepoDash(rd.value)
       setLoading(false)
     })
   }, [headers])
@@ -81,6 +87,13 @@ export default function TeamDashboard() {
     { label: 'Events Processed', value: pipeline.events_processed, icon: Zap, color: 'neon-magenta' },
     { label: 'Reviews Created', value: pipeline.reviews_created, icon: GitPullRequest, color: 'red' },
     { label: 'Compliance Score', value: compliance?.overall?.avg_score != null ? `${compliance.overall.avg_score}%` : '—', icon: ShieldCheck, color: 'neon-green' },
+  ]
+
+  const repoMetrics = [
+    { label: 'Repositories Connected', value: repoDash?.repos_total ?? 0, icon: GitBranch, color: 'neon-amber' },
+    { label: 'Repos Scanned', value: repoDash?.repos_scanned ?? 0, icon: ScanLine, color: 'neon-cyan' },
+    { label: 'Repository Findings', value: repoDash?.findings_total ?? 0, icon: ShieldAlert, color: 'red' },
+    { label: 'Critical + High', value: repoDash?.critical_high_total ?? 0, icon: ShieldCheck, color: 'neon-green' },
   ]
 
   if (loading) {
@@ -128,7 +141,7 @@ export default function TeamDashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {metrics.map((m) => (
           <div key={m.label} className="card-cyber p-6">
             <div className="flex items-center justify-between">
@@ -143,6 +156,72 @@ export default function TeamDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Repository Scan Metrics */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-mono text-neon-cyan uppercase tracking-wider flex items-center gap-2">
+          <GitBranch className="w-4 h-4" /> Repository Scan Health
+        </h3>
+        <a href="/#/repositories" className="text-xs font-mono text-cyber-400 hover:text-neon-cyan transition-colors">
+          VIEW REPOSITORIES →
+        </a>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {repoMetrics.map((m) => (
+          <div key={m.label} className="card-cyber p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-mono text-cyber-400 uppercase tracking-wider mb-1">{m.label}</p>
+                <p className="text-3xl font-bold font-display text-white">{m.value}</p>
+              </div>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-${m.color}/10`}>
+                <m.icon className={`w-6 h-6 text-${m.color}`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Riskiest Repositories */}
+      {repoDash?.riskiest?.length > 0 && (
+        <div className="card-cyber p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-mono text-neon-magenta uppercase tracking-wider flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4" /> Riskiest Repositories
+            </h3>
+            <span className="text-xs font-mono text-cyber-500">{repoDash.repos_scanned}/{repoDash.repos_total} scanned · last scan {repoDash.last_scan_at?.slice(0, 10) || '—'}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-cyber-700/50">
+                  <th className="text-left py-2 text-xs font-mono text-cyber-400 tracking-wider">REPOSITORY</th>
+                  <th className="text-center py-2 text-xs font-mono text-cyber-400 tracking-wider">C</th>
+                  <th className="text-center py-2 text-xs font-mono text-cyber-400 tracking-wider">H</th>
+                  <th className="text-center py-2 text-xs font-mono text-cyber-400 tracking-wider">M</th>
+                  <th className="text-right py-2 text-xs font-mono text-cyber-400 tracking-wider">FINDINGS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {repoDash.riskiest.slice(0, 8).map((r: any, i: number) => (
+                  <tr key={r.full_name} className="border-b border-cyber-800/50 hover:bg-cyber-800/30">
+                    <td className="py-2.5">
+                      <a href={`/#/repositories/${r.full_name.split('/')[0]}/${r.full_name.split('/')[1]}/scan`} className="text-sm text-white hover:text-neon-cyan transition-colors font-medium">
+                        <span className="text-xs font-mono text-cyber-500 mr-1">{i + 1}.</span>
+                        {r.full_name}
+                      </a>
+                    </td>
+                    <td className="text-center">{r.critical ? <span className="badge-critical">{r.critical}</span> : <span className="text-cyber-600">·</span>}</td>
+                    <td className="text-center">{r.high ? <span className="badge-high">{r.high}</span> : <span className="text-cyber-600">·</span>}</td>
+                    <td className="text-center">{r.medium ? <span className="badge-medium">{r.medium}</span> : <span className="text-cyber-600">·</span>}</td>
+                    <td className="text-right text-sm font-mono text-white">{r.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
