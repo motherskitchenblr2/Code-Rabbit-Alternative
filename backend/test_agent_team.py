@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import json
+import io
 import tempfile
 import unittest
 from unittest import mock
@@ -62,6 +63,12 @@ class TeamSessionTestCase(unittest.TestCase):
         patcher_path = mock.patch.object(team_mod, "SESSIONS_PATH", Path(path))
         patcher_path.start()
         self.addCleanup(patcher_path.stop)
+
+        # Isolated uploads directory.
+        self._uploads_dir = tempfile.mkdtemp()
+        patcher_uploads = mock.patch.object(team_mod, "UPLOADS_PATH", Path(self._uploads_dir))
+        patcher_uploads.start()
+        self.addCleanup(patcher_uploads.stop)
 
         # Make turns fast and reset any shared router state.
         patcher_pause = mock.patch.object(team_mod, "TURN_PAUSE_SECONDS", 0.005)
@@ -167,6 +174,13 @@ class AgentApiTestCase(unittest.TestCase):
         self.addCleanup(setattr, sec, "AUTH_ENABLED", self._prev_auth)
         self.addCleanup(os.environ.pop, "GITFIX_ADMIN_PASSWORD", None)
 
+        # Isolated uploads directory for this suite.
+        self._uploads_dir = tempfile.mkdtemp()
+        from pathlib import Path
+        patcher_uploads = mock.patch.object(team_mod, "UPLOADS_PATH", Path(self._uploads_dir))
+        patcher_uploads.start()
+        self.addCleanup(patcher_uploads.stop)
+
         app.config["TESTING"] = True
         self.client = app.test_client()
         self.token = self._login()
@@ -227,6 +241,74 @@ class AgentApiTestCase(unittest.TestCase):
         resp = self.client.post("/api/v1/agents/sessions", json={},
                                 headers=self._headers())
         self.assertEqual(resp.status_code, 400)
+
+    def test_attachment_upload_and_download(self):
+        png = b"\x89PNG\r\n\x1a\n" + b"fakepng-data"
+        resp = self.client.post(
+            "/api/v1/agents/sessions",
+            data={"request": "Review this screenshot",
+                  "files": (io.BytesIO(png), "wireframe.png")},
+            content_type="multipart/form-data",
+            headers=self._headers(),
+        )
+        self.assertEqual(resp.status_code, 201)
+        session = resp.get_json()["session"]
+        sid = session["id"]
+
+        first_user = next(m for m in session["transcript"] if m["kind"] == "user")
+        self.assertEqual(len(first_user["attachments"]), 1)
+        att = first_user["attachments"][0]
+        self.assertEqual(att["kind"], "image")
+        self.assertEqual(att["name"], "wireframe.png")
+        self.assertTrue(att["url"].startswith(f"/api/v1/agents/sessions/{sid}/attachments/"))
+
+        # Inline image download round-trips the exact bytes.
+        dl = self.client.get(att["url"], headers=self._headers())
+        self.assertEqual(dl.status_code, 200)
+        self.assertEqual(dl.data, png)
+
+        # Reply accepts multipart with an audio file.
+        audio = {"message": "Listen to this",
+                 "files": (io.BytesIO(b"ID3 fake audio"), "note.webm", "audio/webm")}
+        chat = self.client.post(f"/api/v1/agents/sessions/{sid}/message",
+                                data=audio,
+                                content_type="multipart/form-data",
+                                headers=self._headers())
+        self.assertEqual(chat.status_code, 200)
+        user_msgs = [m for m in chat.get_json()["session"]["transcript"] if m["kind"] == "user"]
+        self.assertTrue(any(
+            len(m.get("attachments", [])) == 1 and m["attachments"][0]["kind"] == "audio"
+            for m in user_msgs
+        ))
+
+        # Attachment-only messages are allowed; empty messages are not.
+        only = {"files": (io.BytesIO(b"plain attachment"), "notes.txt")}
+        r2 = self.client.post(f"/api/v1/agents/sessions/{sid}/message", data=only,
+                              content_type="multipart/form-data", headers=self._headers())
+        self.assertEqual(r2.status_code, 200)
+        r3 = self.client.post(f"/api/v1/agents/sessions/{sid}/message", json={},
+                              headers=self._headers())
+        self.assertEqual(r3.status_code, 400)
+
+        # Files download with attachment disposition and metadata name.
+        user_msgs2 = [m for m in r2.get_json()["session"]["transcript"]
+                      if m.get("kind") == "user"]
+        self.assertTrue(user_msgs2)
+        txt = user_msgs2[-1]
+        self.assertEqual(txt["attachments"][0]["name"], "notes.txt")
+        target = txt["attachments"][0]["url"]
+
+        resp = self.client.get(f"/api/v1/agents/sessions/{sid}/attachments/nope.png",
+                               headers=self._headers())
+        self.assertEqual(resp.status_code, 404)
+        dl2 = self.client.get(target, headers=self._headers())
+        self.assertEqual(dl2.status_code, 200)
+        self.assertEqual(dl2.data, b"plain attachment")
+
+        # Let background agent turns finish so later tests aren't affected.
+        t = team_mod._session_threads.get(sid)
+        if t is not None:
+            t.join(timeout=10)
 
     def test_stop_endpoint(self):
         patcher = mock.patch.object(team_mod, "llm_complete", None)

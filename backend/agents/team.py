@@ -310,9 +310,16 @@ class TeamSession:
     def _touch(self) -> None:
         self.updated_at = time.time()
 
-    def add_user_message(self, content: str) -> Dict[str, Any]:
+    def add_user_message(
+        self,
+        content: str,
+        attachments: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         with self._lock:
-            msg = self._message("user", "You", "User", content, agent_id="user")
+            msg = self._message(
+                "user", "You", "User", content or "Shared attachments",
+                agent_id="user", attachments=attachments,
+            )
             self.transcript.append(msg)
             self._touch()
             return msg
@@ -326,6 +333,7 @@ class TeamSession:
         agent_id: str = "",
         synth: bool = False,
         mentions: Optional[List[str]] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         return {
             "id": uuid.uuid4().hex[:12],
@@ -337,6 +345,7 @@ class TeamSession:
             "at": time.time(),
             "synth": synth,
             "mentions": mentions or [],
+            "attachments": attachments or [],
         }
 
     # ── orchestration ────────────────────────────────────────────────────────
@@ -423,9 +432,20 @@ class TeamSession:
             context_lines = [f"USER REQUEST: {self.request}"]
             for m in self.transcript[-LLM_MAX_CONTEXT_MESSAGES:]:
                 if m["kind"] == "user":
-                    context_lines.append(f"You (the user): {m['content']}")
+                    # The initial request already appears above; don't repeat it verbatim.
+                    if m["content"] == self.request:
+                        continue
+                    line = f"You (the user): {m['content']}"
+                    atts = m.get("attachments") or []
+                    if atts:
+                        line += " [attached: " + ", ".join(a.get("name", "") for a in atts) + "]"
+                    context_lines.append(line)
                 else:
-                    context_lines.append(f"{m['name']} ({m['title']}): {m['content'][:600]}")
+                    line = f"{m['name']} ({m['title']}): {m['content'][:600]}"
+                    atts = m.get("attachments") or []
+                    if atts:
+                        line += " [attached: " + ", ".join(a.get("name", "") for a in atts) + "]"
+                    context_lines.append(line)
             context = "\n".join(context_lines)
             plan_note = ""
             if self.plan:
@@ -532,6 +552,85 @@ class TeamSession:
 # ── Registry + persistence ───────────────────────────────────────────────────
 
 SESSIONS_PATH = Path.home() / ".gitfix" / "agents" / "sessions.json"
+UPLOADS_PATH = Path.home() / ".gitfix" / "agents" / "uploads"
+
+MAX_ATTACHMENTS_PER_MESSAGE = 6
+MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024  # 5MB per file
+_INLINE_BLOCKLIST = {"image/svg+xml", "text/html", "application/xhtml+xml", "text/plain"}
+_EXT_RE = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def _classify_attachment_kind(mime: str) -> str:
+    mime = (mime or "").lower()
+    if mime in _INLINE_BLOCKLIST:
+        return "file"
+    if mime.startswith("image/"):
+        return "image"
+    if mime.startswith("audio/"):
+        return "audio"
+    return "file"
+
+
+def _safe_ext(filename: str) -> str:
+    ext = Path(filename or "").suffix[:16]
+    if not ext:
+        return ".bin"
+    safe = _EXT_RE.sub("", ext)
+    return safe or ".bin"
+
+
+def save_attachments(session_id: str, files) -> List[Dict[str, Any]]:
+    """Persist uploaded files to UPLOADS_PATH/<session_id>/ and return metadata.
+
+    Each item in `files` behaves like a Werkzeug FileStorage (filename /
+    content_type / read()). Classifies as image | audio | file and refuses
+    oversized or over-count payloads. Raises ValueError on policy violations.
+    """
+    files = list(files or [])
+    if not files:
+        return []
+    if len(files) > MAX_ATTACHMENTS_PER_MESSAGE:
+        raise ValueError(
+            f"Too many attachments (max {MAX_ATTACHMENTS_PER_MESSAGE} per message)"
+        )
+    upload_dir = UPLOADS_PATH / session_id
+    out: List[Dict[str, Any]] = []
+    for f in files:
+        raw_name = str(getattr(f, "filename", None) or "").strip()
+        if not raw_name:
+            continue
+        data = getattr(f, "read", lambda: b"")() or b""
+        if not data:
+            continue
+        if len(data) > MAX_ATTACHMENT_BYTES:
+            raise ValueError(
+                f"{raw_name} is too large (max {MAX_ATTACHMENT_BYTES // (1024 * 1024)}MB)"
+            )
+        mime = str(getattr(f, "content_type", None) or "application/octet-stream").lower()
+        kind = _classify_attachment_kind(mime)
+        stored = f"{uuid.uuid4().hex[:12]}{_safe_ext(raw_name)}"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        (upload_dir / stored).write_bytes(data)
+        out.append({
+            "id": uuid.uuid4().hex[:12],
+            "kind": kind,
+            "name": raw_name,
+            "size": len(data),
+            "mime": mime,
+            "stored": stored,
+            "url": f"/api/v1/agents/sessions/{session_id}/attachments/{stored}",
+        })
+    return out
+
+
+def find_attachment_meta(session: TeamSession, stored_name: str) -> Optional[Dict[str, Any]]:
+    """Return stored metadata for an uploaded file, or None."""
+    for m in session.transcript:
+        for att in m.get("attachments") or []:
+            if att.get("stored") == stored_name:
+                return att
+    return None
+
 
 _registry: Dict[str, TeamSession] = {}
 _registry_lock = threading.Lock()
@@ -569,9 +668,16 @@ def _persist() -> None:
         logger.warning("Failed to persist agent sessions: %s", exc)
 
 
-def start_session(request: str) -> TeamSession:
+def start_session(
+    request: str,
+    attachments: Optional[List[Dict[str, Any]]] = None,
+    session_id: Optional[str] = None,
+) -> TeamSession:
     """Create a session and kick off the first round in a background thread."""
-    s = TeamSession(request)
+    s = TeamSession(request, session_id=session_id)
+    # Record the user's opening message (with any attachments) in the transcript
+    # so the chat UI renders the request as a bubble.
+    s.add_user_message(request or "Shared attachments", attachments=attachments)
     with _registry_lock:
         _registry[s.id] = s
     _persist()
@@ -603,12 +709,16 @@ def list_sessions(limit: int = 10) -> List[Dict[str, Any]]:
         return [s.snapshot() for s in ordered[:limit]]
 
 
-def reply_to_session(session_id: str, content: str) -> Optional[TeamSession]:
+def reply_to_session(
+    session_id: str,
+    content: str,
+    attachments: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[TeamSession]:
     """Queue a user reply; if the team is waiting, kick a bounded continuation round."""
     s = get_session(session_id)
     if s is None:
         return None
-    s.add_user_message(content)
+    s.add_user_message(content, attachments=attachments)
     _persist()
 
     # Only spawn a new round when the previous one finished (or errored).
