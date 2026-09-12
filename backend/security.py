@@ -126,7 +126,12 @@ def extract_token() -> Optional[str]:
     header = request.headers.get("Authorization", "")
     if header.startswith("Bearer "):
         return header[7:].strip()
-    return request.headers.get("X-Auth-Token")
+    header = request.headers.get("X-Auth-Token")
+    if header:
+        return header.strip()
+    # Query-param fallback used by media download URLs (<img>/<audio> tags
+    # cannot carry Authorization headers).
+    return (request.args.get("token") or request.args.get("access_token") or "").strip() or None
 
 
 # ---------------------------------------------------------------------------

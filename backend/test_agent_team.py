@@ -267,6 +267,12 @@ class AgentApiTestCase(unittest.TestCase):
         self.assertEqual(dl.status_code, 200)
         self.assertEqual(dl.data, png)
 
+        # Query-param token works too (media tags can't send headers).
+        dlq = self.client.get(f"{att['url']}?token={self.token}")
+        self.assertEqual(dlq.status_code, 200)
+        self.assertEqual(dlq.data, png)
+        self.assertEqual(self.client.get(att["url"], headers=self._headers()).status_code, 200)
+
         # Reply accepts multipart with an audio file.
         audio = {"message": "Listen to this",
                  "files": (io.BytesIO(b"ID3 fake audio"), "note.webm", "audio/webm")}
