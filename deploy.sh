@@ -414,7 +414,13 @@ show_status() {
     echo -e "  ${CYAN}API Metrics:${NC}         http://localhost:5000/api/v1/metrics"
     echo -e "  ${CYAN}Flower (Celery):${NC}     http://localhost:5555"
     echo -e "  ${CYAN}Qdrant Dashboard:${NC}    http://localhost:6333/dashboard"
-    echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:5432 (gitfix/gitfix_dev_password)"
+    local _db_pass
+    _db_pass="$(grep -m1 '^POSTGRES_PASSWORD=' "$(dirname "$0")/.env" 2>/dev/null | cut -d= -f2-)"
+    if [[ -n "${_db_pass}" ]]; then
+        echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:5432 (gitfix/${_db_pass})"
+    else
+        echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:5432"
+    fi
     echo -e "  ${CYAN}Redis:${NC}               localhost:6379"
     echo -e "  ${CYAN}Qdrant:${NC}              localhost:6333"
     echo ""

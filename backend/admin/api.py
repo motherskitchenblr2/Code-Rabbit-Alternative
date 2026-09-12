@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - requests is a declared dependency
     http_client = None
 
 from backend.security import require_admin
+from backend.llm.router import _ollama_tags_url
 from .store import get_store, MASK_PLACEHOLDER
 
 logger = logging.getLogger(__name__)
@@ -301,9 +302,10 @@ def _probe_provider(provider: Dict[str, Any]) -> Dict[str, Any]:
         except Exception as exc:
             return {"ok": False, "status": None, "detail": f"Connection failed: {exc.__class__.__name__}"}
     elif pid == "ollama":
-        url = f"{base_url}/api/tags"
+        url = _ollama_tags_url(base_url)
         try:
-            r = http_client.get(url, timeout=PROBE_TIMEOUT)
+            headers = _headers_for(provider) if provider.get("api_key") else {}
+            r = http_client.get(url, headers=headers, timeout=PROBE_TIMEOUT)
         except Exception as exc:
             return {"ok": False, "status": None, "detail": f"Connection failed: {exc.__class__.__name__}"}
     else:

@@ -57,6 +57,28 @@ def _env_api_keys() -> Dict[str, str]:
     return out
 
 
+def _ollama_chat_url(base_url: str) -> str:
+    """Resolve the native Ollama chat endpoint from a configured base URL.
+
+    Local defaults use http://localhost:11434 (-> /api/chat). Remote/cloud
+    installs often publish the API root directly (https://ollama.com/api),
+    so the path must not be double-appended.
+    """
+    base = (base_url or "").rstrip("/")
+    if base.endswith("/api/chat"):
+        return base
+    if base.endswith("/api"):
+        return base + "/chat"
+    return base + "/api/chat"
+
+
+def _ollama_tags_url(base_url: str) -> str:
+    base = (base_url or "").rstrip("/")
+    if base.endswith("/api"):
+        return base + "/tags"
+    return base + "/api/tags"
+
+
 class ProviderHealth:
     """Per-provider circuit breaker state."""
 
@@ -277,8 +299,10 @@ class AutoRouter:
             }
             if system:
                 body["system"] = system
-        elif auth == "none":  # ollama
-            url = f"{base_url}/api/chat"
+        elif auth == "none":  # ollama (local by default; supports remote/cloud when a key is set)
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            url = _ollama_chat_url(base_url)
             body = {
                 "model": model,
                 "messages": messages,
@@ -312,10 +336,33 @@ class AutoRouter:
                 return "".join(p.get("text", "") for p in parts)
             return ""
         if pid == "ollama":
-            return payload.get("message", {}).get("content", "")
+            return payload.get("message", {}).get("content", "") or ""
         choices = payload.get("choices") or []
         if choices:
-            return choices[0].get("message", {}).get("content", "") or choices[0].get("text", "")
+            choice = choices[0]
+            message = choice.get("message") or {}
+            content = message.get("content")
+            # Some OpenAI-compatible providers return content as a list of
+            # typed parts instead of a plain string.
+            if isinstance(content, list):
+                parts = []
+                for part in content:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict):
+                        text = part.get("text") or part.get("output_text") or ""
+                        if text:
+                            parts.append(str(text))
+                content = "".join(parts)
+            text = str(content) if content is not None else ""
+            if not text.strip():
+                # Aggregated free tier can run out of budget on reasoning and
+                # return message.content=null (finish_reason=length). Surface
+                # the reasoning tail instead of a silent empty reply.
+                reasoning = message.get("reasoning") or message.get("reasoning_content") or ""
+                if reasoning:
+                    text = str(reasoning)
+            return text or choice.get("text", "")
         return ""
 
     # ── introspection ──────────────────────────────────────────────────────

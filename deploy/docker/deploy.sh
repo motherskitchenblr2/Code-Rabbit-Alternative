@@ -232,7 +232,7 @@ echo -e "  ${CYAN}Qdrant:${NC}              localhost:6333"
 
 if [[ "$PROFILE" == "monitoring" || "$PROFILE" == "full" ]]; then
     echo -e "  ${CYAN}Prometheus:${NC}         http://localhost:9090"
-    echo -e "  ${CYAN}Grafana:${NC}            http://localhost:3000 (admin/admin)"
+    echo -e "  ${CYAN}Grafana:${NC}            http://localhost:3000"
     echo -e "  ${CYAN}Jaeger:${NC}             http://localhost:16686"
 fi
 

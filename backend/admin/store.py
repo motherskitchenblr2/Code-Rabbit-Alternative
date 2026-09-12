@@ -56,6 +56,12 @@ def _fernet() -> Any:
 def _encrypt_record(record: Dict[str, Any], fields: tuple) -> Dict[str, Any]:
     f = _fernet()
     if f is None:
+        has_secrets = any(record.get(field) not in (None, "", [], {}) for field in fields)
+        if has_secrets:
+            logger.warning(
+                "Secret field(s) will be stored in PLAINTEXT at rest: %s. "
+                "Install the 'cryptography' package and set SECRET_KEY to enable "
+                "Fernet encryption (tamper-evident).", ", ".join(fields))
         return record
     rec = dict(record)
     for field in fields:
@@ -81,7 +87,12 @@ def _decrypt_record(record: Dict[str, Any], fields: tuple) -> Dict[str, Any]:
                 raise InvalidToken("crypto unavailable")
             raw = f.decrypt(val[len(_ENC_PREFIX):].encode("ascii")).decode("utf-8")
         except (InvalidToken, ValueError):
-            # Key rotated or dependency missing: keep the blob, never leak it.
+            # Key rotated or the disk file was tampered with: keep the blob as-is
+            # (never leak it as plaintext) but surface the event so tampering is
+            # visible in the logs instead of failing silently.
+            logger.warning(
+                "Encrypted secret field '%s' failed to decrypt (tampered file or "
+                "SECRET_KEY changed); leaving the stored blob intact.", field)
             continue
         try:
             rec[field] = json.loads(raw)
@@ -90,9 +101,22 @@ def _decrypt_record(record: Dict[str, Any], fields: tuple) -> Dict[str, Any]:
     return rec
 
 
+def _warn_plaintext(doc: Dict[str, Any]) -> None:
+    """Loudly surface any secret that would be written to disk unencrypted."""
+    for key, fields in _SECRET_FIELDS.items():
+        for item in doc.get(key, []) or []:
+            for field in fields:
+                if item.get(field) not in (None, "", [], {}):
+                    logger.warning(
+                        "Secret '%s.%s' will be stored in PLAINTEXT at rest. "
+                        "Install the 'cryptography' package and set SECRET_KEY "
+                        "to enable Fernet encryption (tamper-evident).", key, field)
+
+
 def _encrypt_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
     """Non-mutating copy of the doc with secret fields encrypted for disk."""
     if not _HAS_CRYPTO or not _fernet():
+        _warn_plaintext(doc)
         return doc
     out: Dict[str, Any] = {}
     for key, val in doc.items():

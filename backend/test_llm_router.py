@@ -163,6 +163,79 @@ class RouterTestCase(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertTrue(result["errors"])
 
+    def test_null_content_falls_back_to_reasoning(self):
+        # Free-tier routing can return content=null with only a reasoning
+        # field populated (budget spent on chain-of-thought). Callers must
+        # never silently receive an empty reply.
+        r = self._router()
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            body = {"choices": [{"message": {"role": "assistant", "content": None,
+                                             "reasoning": "chain of thought tail"}}]}
+            return mock.MagicMock(status_code=200, json=lambda: body, text="ok")
+
+        with mock.patch("backend.llm.router.requests.post", side_effect=fake_post):
+            result = r.complete([{"role": "user", "content": "hi"}], task="chat")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["content"], "chain of thought tail")
+        self.assertNotEqual(result["content"], "")
+
+    def test_openai_content_parts_array_is_joined(self):
+        # Some OpenAI-compatible providers return message.content as a list
+        # of typed parts; those must be joined into plain text.
+        r = self._router()
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            body = {"choices": [{"message": {"role": "assistant", "content": [
+                {"type": "text", "text": "hello "},
+                {"type": "text", "text": "world"},
+            ]}}]}
+            return mock.MagicMock(status_code=200, json=lambda: body, text="ok")
+
+        with mock.patch("backend.llm.router.requests.post", side_effect=fake_post):
+            result = r.complete([{"role": "user", "content": "hi"}], task="chat")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["content"], "hello world")
+
+    def test_ollama_local_no_key_sends_bare_post(self):
+        # A local Ollama (no api_key) must keep the legacy no-auth behaviour:
+        # base_url differs from the cloud case and no Authorization header.
+        r = self._router()
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured.update({"url": url, "headers": headers or {}, "body": json})
+            body = {"message": {"role": "assistant", "content": "local ok"}}
+            return mock.MagicMock(status_code=200, json=lambda: body, text="ok")
+
+        provider = {"id": "ollama", "base_url": "http://localhost:11434", "api_key": ""}
+        with mock.patch("backend.llm.router.requests.post", side_effect=fake_post):
+            out = r._chat_once(provider, "llama3.2", [{"role": "user", "content": "hi"}], 8, 0.0)
+        self.assertEqual(captured["url"], "http://localhost:11434/api/chat")
+        self.assertNotIn("Authorization", captured["headers"])
+        self.assertFalse(captured["body"]["stream"])
+        self.assertEqual(out, "local ok")
+
+    def test_ollama_cloud_with_key_authenticates_and_fixes_path(self):
+        # Remote/cloud Ollama is reached via https://ollama.com/api/... (the
+        # user sets base_url=https://ollama.com/api). The framework must not
+        # double-append /api and must forward the stored API key.
+        r = self._router()
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured.update({"url": url, "headers": headers or {}, "body": json})
+            body = {"message": {"role": "assistant", "content": "cloud ok"}}
+            return mock.MagicMock(status_code=200, json=lambda: body, text="ok")
+
+        provider = {"id": "ollama", "base_url": "https://ollama.com/api", "api_key": "sk-ollama"}
+        with mock.patch("backend.llm.router.requests.post", side_effect=fake_post):
+            out = r._chat_once(provider, "gemma4:31b-cloud", [{"role": "user", "content": "hi"}], 8, 0.0)
+        self.assertEqual(captured["url"], "https://ollama.com/api/chat")
+        self.assertEqual(captured["headers"].get("Authorization"), "Bearer sk-ollama")
+        self.assertEqual(captured["body"]["model"], "gemma4:31b-cloud")
+        self.assertEqual(out, "cloud ok")
+
 
 if __name__ == "__main__":
     unittest.main()
