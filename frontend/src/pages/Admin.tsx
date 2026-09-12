@@ -467,7 +467,7 @@ function RouterSection() {
 
   return (
     <div className="space-y-6 card-cyber-glow p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold font-display text-white flex items-center gap-2">
             <Zap className="w-5 h-5 text-neon-amber" />
@@ -477,7 +477,7 @@ function RouterSection() {
             Every request is routed to the strongest configured provider for its task, with automatic failover on error or rate-limit. Circuit breaker trips after 3 failures (60s cooldown).
           </p>
         </div>
-        <button className="btn-cyber-ghost text-sm" onClick={() => setRefreshKey(k => k + 1)}>
+        <button className="btn-cyber-ghost text-sm flex items-center shrink-0 whitespace-nowrap" onClick={() => setRefreshKey(k => k + 1)}>
           <RefreshCw className="w-4 h-4 mr-2" /> Refresh
         </button>
       </div>
