@@ -10,6 +10,11 @@ import {
   Loader2,
   MessageSquare,
   Sparkles,
+  Paperclip,
+  Mic,
+  X,
+  Image as ImageIcon,
+  FileText,
 } from 'lucide-react'
 
 // ── API helper (mirrors Admin.tsx) ──────────────────────────────────────────
@@ -31,6 +36,27 @@ async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Multipart variant for file/image/voice attachments (no Content-Type header —
+// the browser sets the boundary automatically).
+async function apiForm<T>(url: string, form: FormData): Promise<T> {
+  const token = localStorage.getItem('access_token')
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
+    throw new Error(body.message || body.error || `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
+const mediaUrl = (url: string): string => {
+  const token = localStorage.getItem('access_token')
+  return token ? `${url}?access_token=${encodeURIComponent(token)}` : url
+}
+
 // ── Types ───────────────────────────────────────────────────────────────────
 
 interface AgentStatus {
@@ -50,6 +76,22 @@ interface TranscriptEntry {
   at: number
   synth: boolean
   mentions: string[]
+  attachments?: Attachment[]
+}
+
+interface Attachment {
+  id: string
+  kind: 'image' | 'audio' | 'file'
+  name: string
+  mime: string
+  size: number
+  url: string
+}
+
+interface PendingAttachment {
+  id: string
+  file: File
+  kind: 'image' | 'audio' | 'file'
 }
 
 interface Session {
@@ -103,6 +145,23 @@ const SUGGESTIONS = [
   'Audit the LLM routing configuration',
 ]
 
+const MAX_ATTACHMENTS = 6
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+const ACCEPTED_FILE_TYPES = 'image/*,audio/*,.pdf,.txt,.zip,.md,.json,.csv,.doc,.docx,.cfg,.yml,.yaml,.log'
+
+function pendingKind(file: File): PendingAttachment['kind'] {
+  const type = (file.type || '').toLowerCase()
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('audio/')) return 'audio'
+  return 'file'
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${bytes} B`
+}
+
 const VERDICT_STYLES: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
   safe: {
     bg: 'bg-neon-green/5',
@@ -133,7 +192,13 @@ export default function AgentTeam() {
   const [error, setError] = useState<string | null>(null)
   const [roster, setRoster] = useState<Agent[]>([])
   const [pollTick, setPollTick] = useState(0)
+  const [pending, setPending] = useState<PendingAttachment[]>([])
+  const [recording, setRecording] = useState(false)
   const transcriptEnd = useRef<HTMLDivElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const mediaRecorder = useRef<MediaRecorder | null>(null)
+  const recorderChunks = useRef<BlobPart[]>([])
+  const recorderStream = useRef<MediaStream | null>(null)
 
   // Load roster once
   useEffect(() => {
@@ -166,44 +231,127 @@ export default function AgentTeam() {
 
   // ── Actions ─────────────────────────────────────────────────────────────
 
+  const buildForm = (field: string, text: string): FormData => {
+    const fd = new FormData()
+    if (text) fd.append(field, text)
+    pending.forEach((p) => fd.append('files', p.file, p.file.name))
+    return fd
+  }
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const incoming = Array.from(files)
+    if (!incoming.length) return
+    setError(null)
+    const next = [...pending]
+    for (const file of incoming) {
+      if (next.length >= MAX_ATTACHMENTS) {
+        setError(`You can attach up to ${MAX_ATTACHMENTS} files per message`)
+        break
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        setError(`"${file.name}" is too large (max ${MAX_ATTACHMENT_BYTES / (1024 * 1024)}MB)`)
+        continue
+      }
+      next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, file, kind: pendingKind(file) })
+    }
+    setPending(next)
+  }, [pending])
+
+  const removePending = useCallback((id: string) => {
+    setPending((prev) => prev.filter((p) => p.id !== id))
+  }, [])
+
+  const stopRecorder = useCallback(() => {
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.stop()
+    }
+    recorderStream.current?.getTracks().forEach((t) => t.stop())
+    recorderStream.current = null
+    mediaRecorder.current = null
+    setRecording(false)
+  }, [])
+
+  const startRecorder = useCallback(async () => {
+    setError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      recorderStream.current = stream
+      recorderChunks.current = []
+      const mime = ['audio/webm', 'audio/webm;codecs=opus', 'audio/mp4'].find(
+        (m) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m),
+      )
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) recorderChunks.current.push(e.data)
+      }
+      rec.onstop = () => {
+        const type = rec.mimeType || 'audio/webm'
+        const ext = type.includes('mp4') ? '.m4a' : type.includes('ogg') ? '.ogg' : '.webm'
+        const blob = new Blob(recorderChunks.current, { type })
+        const name = `voice-note-${new Date().toISOString().slice(11, 19).replace(/:/g, '-')}${ext}`
+        addFiles([new File([blob], name, { type })])
+      }
+      mediaRecorder.current = rec
+      rec.start()
+      setRecording(true)
+    } catch {
+      setError('Microphone access is unavailable — check permissions and that a mic is connected')
+    }
+  }, [addFiles])
+
+  const toggleRecording = useCallback(() => {
+    if (recording) {
+      stopRecorder()
+    } else {
+      startRecorder()
+    }
+  }, [recording, startRecorder, stopRecorder])
+
+  // Clean up any live mic stream on unmount.
+  useEffect(() => {
+    return () => recorderStream.current?.getTracks().forEach((t) => t.stop())
+  }, [])
+
   const handleStart = useCallback(async () => {
     const text = input.trim()
-    if (!text) return
+    if (!text && pending.length === 0) return
     setLoading(true)
     setError(null)
     try {
-      const res = await api<{ session: Session }>('/api/v1/agents/sessions', {
-        method: 'POST',
-        body: JSON.stringify({ request: text }),
-      })
+      const res = await apiForm<{ session: Session }>(
+        '/api/v1/agents/sessions',
+        buildForm('request', text),
+      )
       setSession(res.session)
       setInput('')
+      setPending([])
       setPollTick(0)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to start session')
     } finally {
       setLoading(false)
     }
-  }, [input])
+  }, [input, pending])
 
   const handleReply = useCallback(async (message: string) => {
-    if (!session || !message.trim()) return
+    if (!session || (!message.trim() && pending.length === 0)) return
     setLoading(true)
     setError(null)
     try {
-      const res = await api<{ session: Session }>(
+      const res = await apiForm<{ session: Session }>(
         `/api/v1/agents/sessions/${session.id}/message`,
-        { method: 'POST', body: JSON.stringify({ message: message.trim() }) },
+        buildForm('message', message.trim()),
       )
       setSession(res.session)
       setInput('')
+      setPending([])
       setPollTick(0)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to send message')
     } finally {
       setLoading(false)
     }
-  }, [session?.id])
+  }, [session?.id, pending])
 
   const handleStop = useCallback(async () => {
     if (!session) return
@@ -222,7 +370,9 @@ export default function AgentTeam() {
     setSession(null)
     setError(null)
     setInput('')
-  }, [])
+    setPending([])
+    stopRecorder()
+  }, [stopRecorder])
 
   // ── Derived state ────────────────────────────────────────────────────────
 
@@ -399,6 +549,40 @@ export default function AgentTeam() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t border-cyber-700/40 bg-cyber-900/60">
+            {pending.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2.5 scrollbar-hide">
+                {pending.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs shrink-0 ${
+                      p.kind === 'image'
+                        ? 'border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan'
+                        : p.kind === 'audio'
+                        ? 'border-neon-magenta/40 bg-neon-magenta/10 text-neon-magenta'
+                        : 'border-cyber-600 bg-cyber-800/60 text-cyber-200'
+                    }`}
+                  >
+                    {p.kind === 'image' ? (
+                      <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                    ) : p.kind === 'audio' ? (
+                      <Mic className="w-3.5 h-3.5 shrink-0" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5 shrink-0" />
+                    )}
+                    <span className="max-w-[9rem] truncate">{p.file.name}</span>
+                    <span className="opacity-70 font-mono">{formatBytes(p.file.size)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePending(p.id)}
+                      aria-label={`Remove ${p.file.name}`}
+                      className="p-0.5 rounded hover:bg-cyber-700/50 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <label htmlFor="agent-input" className="sr-only">
                 {isAwaiting || isDone || isError ? 'Reply to the team' : 'Describe a task'}
@@ -416,19 +600,56 @@ export default function AgentTeam() {
                 className="input-cyber flex-1 min-w-0"
                 autoFocus
               />
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                aria-label={isAwaiting || isDone || isError ? 'Send reply' : 'Start session'}
-                className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-tr from-neon-magenta to-neon-cyan text-cyber-900 flex items-center justify-center shadow-lg shadow-neon-magenta/20 hover:shadow-[0_0_20px_rgba(255,0,255,0.5)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_FILE_TYPES}
+                  className="sr-only"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files)
+                    e.target.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInput.current?.click()}
+                  disabled={loading || recording}
+                  aria-label="Attach files or images"
+                  title="Attach files or images"
+                  className="w-11 h-11 rounded-full border border-cyber-600 bg-cyber-800/60 text-cyber-300 flex items-center justify-center transition-colors hover:text-neon-cyan hover:border-neon-cyan/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Paperclip className="w-4.5 h-4.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  disabled={loading || pending.length >= MAX_ATTACHMENTS}
+                  aria-label={recording ? 'Stop recording' : 'Record a voice note'}
+                  title={recording ? 'Stop recording' : 'Record a voice note'}
+                  className={`w-11 h-11 rounded-full border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                    recording
+                      ? 'bg-red-500/20 border-red-500/60 text-red-400 animate-pulse'
+                      : 'border-cyber-600 bg-cyber-800/60 text-cyber-300 hover:text-neon-magenta hover:border-neon-magenta/50'
+                  }`}
+                >
+                  <Mic className="w-4.5 h-4.5" />
+                </button>
+                <button
+                  type="submit"
+                  disabled={(!input.trim() && pending.length === 0) || loading || recording}
+                  aria-label={isAwaiting || isDone || isError ? 'Send reply' : 'Start session'}
+                  className="w-12 h-12 rounded-full bg-gradient-to-tr from-neon-magenta to-neon-cyan text-cyber-900 flex items-center justify-center shadow-lg shadow-neon-magenta/20 hover:shadow-[0_0_20px_rgba(255,0,255,0.5)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             {!session && (
               <p className="text-cyber-500 text-[11px] font-mono mt-2">
                 All {roster.length || 10} agents will discuss your request — CEO first, Q&A last.
-                You can reply to steer the team.
+                Attach screenshots, files, or a voice note to give them context.
               </p>
             )}
           </form>
@@ -494,6 +715,48 @@ function TypingIndicator({ names }: { names: string[] }) {
   )
 }
 
+// ── Attachments in chat bubbles ────────────────────────────────────────────
+
+function AttachmentList({ attachments }: { attachments: Attachment[] }) {
+  return (
+    <div className="mt-2.5 flex flex-col gap-2">
+      {attachments.map((a) => {
+        const src = mediaUrl(a.url)
+        if (a.kind === 'image') {
+          return (
+            <img
+              key={a.id}
+              src={src}
+              alt={a.name}
+              loading="lazy"
+              className="rounded-xl border border-cyber-700/40 max-h-72 w-auto object-contain bg-cyber-950/40"
+            />
+          )
+        }
+        if (a.kind === 'audio') {
+          return (
+            <audio key={a.id} controls preload="metadata" src={src} className="w-full max-w-xs mx-auto" />
+          )
+        }
+        return (
+          <a
+            key={a.id}
+            href={src}
+            download={a.name}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-cyber-600 bg-cyber-800/60 px-3 py-2 text-xs text-cyber-200 hover:text-neon-cyan hover:border-neon-cyan/50 transition-colors max-w-full"
+          >
+            <FileText className="w-4 h-4 shrink-0" />
+            <span className="truncate">{a.name}</span>
+            <span className="ml-auto shrink-0 font-mono text-cyber-500">{formatBytes(a.size)}</span>
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Chat bubble sub-component ───────────────────────────────────────────────
 
 function ChatBubble({ entry }: { entry: TranscriptEntry }) {
@@ -555,6 +818,9 @@ function ChatBubble({ entry }: { entry: TranscriptEntry }) {
             >
               {expanded ? 'show less' : 'show full'}
             </button>
+          )}
+          {entry.attachments && entry.attachments.length > 0 && (
+            <AttachmentList attachments={entry.attachments} />
           )}
         </div>
         <div className="flex items-center gap-2 mt-1 px-1 justify-start">
