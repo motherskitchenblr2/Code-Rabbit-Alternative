@@ -7,6 +7,7 @@ flask-cors>=4.0.0
 flask-limiter>=3.5.0
 flask-talisman>=1.1.0
 pyyaml>=6.0.1
+cryptography>=42.0.0  # optional at runtime: encrypts admin settings at rest
 
 # Data Validation
 pydantic>=2.5.0

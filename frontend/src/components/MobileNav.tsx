@@ -18,7 +18,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
-  { path: '/repositories', label: 'Repos', icon: GitBranch },
+  { path: '/repositories', label: 'Repos', icon: GitBranch, adminOnly: true },
   { path: '/self-improvement', label: 'AI', icon: Brain },
   { path: '/agents', label: 'Agents', icon: Users, adminOnly: true },
   { path: '/admin', label: 'Admin', icon: ShieldCheck, adminOnly: true },

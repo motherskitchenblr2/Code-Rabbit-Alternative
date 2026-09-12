@@ -22,7 +22,7 @@ import {
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/repositories', label: 'Repositories', icon: GitBranch },
+  { path: '/repositories', label: 'Repositories', icon: GitBranch, adminOnly: true },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
   { path: '/self-improvement', label: 'Self-Improvement', icon: Brain },
   { path: '/agents', label: 'AI Agents', icon: Users, adminOnly: true },

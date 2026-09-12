@@ -982,6 +982,15 @@ except ImportError as e:
     logging.warning(f"Compliance API not available: {e}")
 
 
+# ── GitHub Repositories & Scanner API (rule-based, no AI required) ────────────
+
+try:
+    from backend.github.api import init_github
+    init_github(app)
+except ImportError as e:
+    logging.warning(f"GitHub repo API not available: {e}")
+
+
 # ── LLM Router API (auto-rotation AI provider gateway) ──────────────────────
 
 try:

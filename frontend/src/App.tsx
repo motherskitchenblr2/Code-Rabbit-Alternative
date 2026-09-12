@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Repositories from './pages/Repositories'
 import RepositoryDetail from './pages/RepositoryDetail'
+import ScanResults from './pages/ScanResults'
 import Settings from './pages/Settings'
 import SelfImprovement from './pages/SelfImprovement'
 import AgentTeam from './pages/AgentTeam'
@@ -94,6 +95,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/repositories" element={<Repositories />} />
         <Route path="/repositories/:id" element={<RepositoryDetail />} />
+        <Route path="/repositories/:owner/:name/scan" element={<ScanResults />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/admin" element={
           <AdminOnly>
