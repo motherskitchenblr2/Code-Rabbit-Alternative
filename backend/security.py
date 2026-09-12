@@ -6,7 +6,9 @@
 # default deployment behaviour is byte-for-byte identical to before.
 # =============================================================================
 
+import hashlib
 import os
+import secrets
 import time
 import threading
 import logging
@@ -36,6 +38,21 @@ except ImportError:
 # ---------------------------------------------------------------------------
 _security_secret: Optional[str] = None
 AUTH_ENABLED: bool = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
+
+# Globally revoked token fingerprints (in-memory; persisted session revocations
+# live in the account store). Kept here as a module-level set so the vanilla
+# single-worker deploy and threaded test clients share revocations.
+_REVOKED_TOKENS: set = set()
+
+
+def fingerprint(token: str) -> str:
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
+
+
+def revoke_token(token: str, reason: Optional[str] = None) -> None:
+    """Hard-revoke an access/refresh token without touching the session store."""
+    if token:
+        _REVOKED_TOKENS.add(fingerprint(token))
 
 
 def init_security(secret_key: Optional[str] = None, auth_enabled: Optional[bool] = None):
@@ -109,17 +126,32 @@ def create_token(identity: str, role: str = "admin", ttl: Optional[int] = None) 
     if not security_ready():
         raise RuntimeError("Security not initialized")
     serializer = URLSafeTimedSerializer(_security_secret, salt=_SALT)
-    return serializer.dumps({"sub": identity, "role": role})
+    payload = {"sub": identity, "role": role, "jti": secrets.token_hex(6)}
+    return serializer.dumps(payload)
 
 
 def verify_token(token: str, max_age: Optional[int] = None) -> Optional[Dict[str, Any]]:
     if not token or not security_ready():
         return None
+    if fingerprint(token) in _REVOKED_TOKENS:
+        return None
     serializer = URLSafeTimedSerializer(_security_secret, salt=_SALT)
     try:
-        return serializer.loads(token, max_age=max_age or _REFRESH_TTL)
+        payload = serializer.loads(token, max_age=max_age or _REFRESH_TTL)
     except (BadSignature, SignatureExpired, Exception):
         return None
+    if _session_revoked(fingerprint(token)):
+        return None
+    return payload
+
+
+def _session_revoked(fp: str) -> bool:
+    try:
+        from backend.auth.store import account_store
+
+        return account_store().is_revoked(fp)
+    except Exception:
+        return False
 
 
 def extract_token() -> Optional[str]:
@@ -153,11 +185,48 @@ def _forbidden(msg: str = "Insufficient permissions") -> "_Response":
     }), 403
 
 
+def _touch_session(fp: str) -> None:
+    try:
+        from backend.auth.store import account_store
+
+        account_store().touch_session(fp)
+    except Exception:
+        pass
+
+
+def _authenticate_api_key() -> Optional[Dict[str, Any]]:
+    api_key = request.headers.get("X-API-Key") or request.args.get("api_key") or ""
+    if not api_key:
+        return None
+    try:
+        from backend.auth.store import account_store, AccountStore
+    except Exception:
+        return None
+    record = account_store().get_api_key_record(AccountStore.hash_api_key(api_key))
+    if not record:
+        return None
+    account_store().touch_api_key(record.get("id"))
+    return {
+        "sub": f"key:{record.get('name', 'api-key')}",
+        "role": "admin",
+        "auth_source": "api_key",
+        "key_id": record.get("id"),
+    }
+
+
 def _authenticate() -> Optional[Dict[str, Any]]:
     token = extract_token()
-    if not token:
-        return None
-    return verify_token(token)
+    if token:
+        payload = verify_token(token)
+        if payload:
+            g.auth_source = "token"
+            _touch_session(fingerprint(token))
+            return payload
+    api_payload = _authenticate_api_key()
+    if api_payload:
+        g.auth_source = "api_key"
+        return api_payload
+    return None
 
 
 def require_auth(f):
@@ -200,4 +269,6 @@ __all__ = [
     "extract_token",
     "require_auth",
     "require_admin",
+    "revoke_token",
+    "fingerprint",
 ]

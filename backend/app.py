@@ -771,14 +771,35 @@ def auth_login():
     admin_user, admin_pass = _get_admin_credentials()
     if not admin_pass:
         return jsonify({"error": "Auth not configured", "message": "Set GITFIX_ADMIN_PASSWORD"}), 503
-    if not (hmac.compare_digest(username, admin_user) and hmac.compare_digest(password, admin_pass)):
+    from backend.auth.store import account_store
+
+    store = account_store()
+    if store and store.has_password():
+        # Once the user sets a password in Settings, the env bootstrap
+        # password is retired and the stored (PBKDF2) password is used.
+        password_ok = hmac.compare_digest(username, admin_user) and store.verify_password(password)
+    else:
+        password_ok = (
+            hmac.compare_digest(username, admin_user) and hmac.compare_digest(password, admin_pass)
+        )
+    if not password_ok:
         return jsonify({"error": "Unauthorized", "message": "Invalid credentials"}), 401
+    if store and store.totp_enabled():
+        if not store.verify_totp_code(data.get("code")):
+            return jsonify({
+                "error": "2FA code required",
+                "message": "Enter your authenticator code",
+                "totp_required": True,
+            }), 401
     access = create_token(admin_user, role="admin")
     refresh = create_token(admin_user, role="admin", ttl=604800)
+    if store:
+        store.register_login(request.headers.get("User-Agent", ""), access, refresh)
     return jsonify({
         "access_token": access,
         "refresh_token": refresh,
         "user": {"id": admin_user, "username": admin_user, "email": "", "role": "admin"},
+        "totp_enabled": bool(store and store.totp_enabled()),
     })
 
 
@@ -794,6 +815,12 @@ def auth_refresh():
         return jsonify({"error": "Unauthorized", "message": "Invalid or expired token"}), 401
     access = create_token(payload.get("sub", "admin"), role=payload.get("role", "admin"))
     refresh = create_token(payload.get("sub", "admin"), role=payload.get("role", "admin"), ttl=604800)
+    try:
+        from backend.auth.store import account_store
+
+        account_store().rotate_session(refresh_token, access, refresh)
+    except Exception:
+        pass
     return jsonify({
         "access_token": access,
         "refresh_token": refresh,
@@ -806,10 +833,22 @@ def auth_me():
     token = extract_token()
     payload = verify_token(token) if token else None
     if payload:
-        return jsonify(_authed_user_payload(payload))
+        out = _authed_user_payload(payload)
+        out["totp_enabled"] = False
+        return jsonify(out)
+    try:
+        from backend.auth.store import account_store
+
+        totp_enabled = bool(account_store() and account_store().totp_enabled())
+    except Exception:
+        totp_enabled = False
     if security_mod.AUTH_ENABLED:
-        return jsonify({"error": "Unauthorized", "message": "Authentication required"}), 401
-    return jsonify({"id": None, "username": "anonymous", "email": "", "role": "viewer"})
+        return jsonify({
+            "error": "Unauthorized",
+            "message": "Authentication required",
+            "totp_enabled": totp_enabled,
+        }), 401
+    return jsonify({"id": None, "username": "anonymous", "email": "", "role": "viewer", "totp_enabled": totp_enabled})
 
 
 # ── Health & status endpoints ───────────────────────────────────────────────
@@ -866,6 +905,15 @@ try:
     start_consolidator()
 except ImportError as e:
     logging.warning(f"Self-improvement module not available: {e}")
+
+
+# ── User Account API (Settings → Security: 2FA, API keys, sessions, password) ─
+
+try:
+    from backend.auth.api import init_auth
+    init_auth(app)
+except ImportError as e:
+    logging.warning(f"Account API not available: {e}")
 
 
 # ── Admin API ──────────────────────────────────────────────────────────────
