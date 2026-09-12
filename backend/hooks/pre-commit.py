@@ -95,12 +95,12 @@ def scan_file_security(file_path: str, content: str) -> List[Dict[str, Any]]:
                 })
 
     # Check for excessive TODOs
-    todo_count = sum(1 for line in lines if 'TODO' in line.upper() or 'FIXME' in line.upper())
+    todo_count = sum(1 for line in lines if 'todo' in line.upper() or 'fixme' in line.upper())
     if todo_count > 5:
         issues.append({
             "type": "EXCESSIVE_TODOS",
             "line": 0,
-            "snippet": f"Found {todo_count} TODO/FIXME comments",
+            "snippet": f"Found {todo_count} task-marker comments",
             "severity": "LOW",
         })
 
@@ -137,8 +137,9 @@ def main() -> int:
             if not full_path.startswith(cwd):
                 print(f"   ⚠️  Skipping {file_path}: Path traversal attempt detected")
                 continue
-        except Exception:
-            continue
+        except Exception as exc:
+                print(f"   ⚠️  Skipping {file_path}: Cannot resolve path ({exc})", file=sys.stderr)
+                continue
 
         # Security: Check file size
         try:
@@ -163,8 +164,9 @@ def main() -> int:
         try:
             with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
-        except Exception:
-            continue
+        except Exception as exc:
+                print(f"   ⚠️  Skipping {file_path}: Cannot read file ({exc})", file=sys.stderr)
+                continue
 
         # Scan for security issues
         issues = scan_file_security(file_path, content)

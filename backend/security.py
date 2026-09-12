@@ -190,8 +190,8 @@ def _touch_session(fp: str) -> None:
         from backend.auth.store import account_store
 
         account_store().touch_session(fp)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"Could not touch session: {exc}")
 
 
 def _authenticate_api_key() -> Optional[Dict[str, Any]]:

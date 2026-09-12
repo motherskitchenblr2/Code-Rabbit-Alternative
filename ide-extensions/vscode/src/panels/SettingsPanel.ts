@@ -80,8 +80,8 @@ export class SettingsPanel {
         if (confirm === 'Yes, Reset') {
             const defaults = {
                 enabled: true,
-                apiUrl: 'http://localhost:5000',
-                wsUrl: 'ws://localhost:5000/ws',
+                apiUrl: 'https://localhost:5000',
+                wsUrl: 'wss://localhost:5000/ws',
                 autoReview: true,
                 severityThreshold: 'medium',
                 showInlineAnnotations: true,
@@ -600,7 +600,11 @@ export class SettingsPanel {
                 const tag = document.createElement('span');
                 tag.className = 'tag';
                 tag.dataset.lang = lang;
-                tag.innerHTML = lang + ' <span class="remove">×</span>';
+                tag.textContent = lang;
+                const remove = document.createElement('span');
+                remove.className = 'remove';
+                remove.textContent = '×';
+                tag.appendChild(remove);
                 container.insertBefore(tag, e.target);
                 e.target.value = '';
             }

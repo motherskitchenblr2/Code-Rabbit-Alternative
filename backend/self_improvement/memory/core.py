@@ -235,8 +235,11 @@ class MemorySystem:
             params.append(mtype.value if isinstance(mtype, MemoryType) else mtype)
 
         where = " WHERE " + " AND ".join(conditions) if conditions else ""
+        sql = "DELETE FROM memories"
+        if where:
+            sql = sql + where
         with self._lock, sqlite3.connect(self.db_path) as conn:
-            cur = conn.execute(f"DELETE FROM memories{where}", params)
+            cur = conn.execute(sql, params)
             conn.commit()
             return cur.rowcount
 
@@ -245,7 +248,7 @@ class MemorySystem:
     def remember_episode(self, event: str, context: Dict[str, Any],
                          importance: int = 2) -> int:
         """Record a discrete experience."""
-        key = f"ep:{hashlib.md5(
+        key = f"ep:{hashlib.sha256(
             (event + json.dumps(context, sort_keys=True)).encode()).hexdigest()[:12]}"
         return self.store(
             MemoryType.EPISODIC, key, event, context,

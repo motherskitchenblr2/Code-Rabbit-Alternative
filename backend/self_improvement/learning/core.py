@@ -200,4 +200,4 @@ class LearningEngine:
 
 def hashlib_short(text: str) -> str:
     import hashlib
-    return hashlib.sha1(text.encode()).hexdigest()[:10]
+    return hashlib.sha256(text.encode()).hexdigest()[:10]

@@ -143,8 +143,8 @@ async def list_models():
                         num_labels=server.model.config.num_labels,
                         labels=["critical", "high", "medium", "low", "info"],
                     ))
-                except:
-                    pass
+                except Exception as exc:
+                    logger.warning(f"Could not inspect model {model_dir.name}: {exc}")
     return models
 
 

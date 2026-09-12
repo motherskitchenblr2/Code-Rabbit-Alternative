@@ -392,11 +392,12 @@ export class PipelinePanel {
         function renderRuns() {
             const container = document.getElementById('runsContainer');
             if (!runs.length) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>No pipeline runs yet</p></div>';
+                container.replaceChildren();
+                container.insertAdjacentHTML('beforeend', '<div class="empty-state"><div class="icon">⚡</div><p>No pipeline runs yet</p></div>');
                 return;
             }
 
-            container.innerHTML = runs.slice(0, 20).map(run => \`
+            const html = runs.slice(0, 20).map(run => \`
                 <div class="run-row">
                     <div class="run-id font-mono" title="\${run.id}">\${run.id.substring(0, 12)}...</div>
                     <div><span class="trigger-badge trigger-\${run.trigger}">\${run.trigger}</span></div>
@@ -408,6 +409,8 @@ export class PipelinePanel {
                         <span class="status-badge status-\${run.status}">\${run.status}</span>
                     </div>
                 \`).join('');
+            container.replaceChildren();
+            container.insertAdjacentHTML('beforeend', html);
         }
 
         function refresh() {

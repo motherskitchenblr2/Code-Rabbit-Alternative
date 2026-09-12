@@ -23,7 +23,7 @@ if ROOT not in sys.path:
 
 os.environ.setdefault("APP_ENV", "development")
 os.environ["GITFIX_ADMIN_USERNAME"] = "admin"
-os.environ["GITFIX_ADMIN_PASSWORD"] = "env-pass-123"
+os.environ["GITFIX_ADMIN_PASSWORD"] = "your-env-pass-123"
 
 from backend.auth import store as store_mod
 from backend.auth import totp
@@ -54,7 +54,7 @@ class AccountTestCase(unittest.TestCase):
         store_mod.ACCOUNT_FILE = self._orig_file
         store_mod.reset()
 
-    def _login(self, password="env-pass-123", code=None, username="admin"):
+    def _login(self, password="your-env-pass-123", code=None, username="admin"):
         body = {"username": username, "password": password}
         if code is not None:
             body["code"] = code
@@ -96,7 +96,7 @@ class AccountTestCase(unittest.TestCase):
         no_code = self._login()
         self.assertEqual(no_code.status_code, 401)
         self.assertTrue(no_code.get_json().get("totp_required"))
-        with_code = self._login(password="env-pass-123", code=totp.current_code(self._secret or ""))
+        with_code = self._login(password="your-env-pass-123", code=totp.current_code(self._secret or ""))
         self.assertEqual(with_code.status_code, 200)
 
     def test_2fa_disable_requires_code(self):
@@ -118,23 +118,23 @@ class AccountTestCase(unittest.TestCase):
 
     def test_password_first_change_requires_env_password(self):
         bad = self.client.post("/api/v1/auth/password", headers=self._admin_headers, json={
-            "current_password": "wrong", "new_password": "fresh-pass-456"})
+            "current_password": "wrong", "new_password": "your-fresh-pass-456"})
         self.assertEqual(bad.status_code, 400)
         ok = self.client.post("/api/v1/auth/password", headers=self._admin_headers, json={
-            "current_password": "env-pass-123", "new_password": "fresh-pass-456"})
+            "current_password": "your-env-pass-123", "new_password": "your-fresh-pass-456"})
         self.assertEqual(ok.status_code, 200)
 
     def test_password_change_then_login_uses_stored(self):
         self.client.post("/api/v1/auth/password", headers=self._admin_headers, json={
-            "current_password": "env-pass-123", "new_password": "fresh-pass-456"})
+            "current_password": "your-env-pass-123", "new_password": "your-fresh-pass-456"})
         # Env password is retired once a stored password exists.
-        self.assertEqual(self._login(password="env-pass-123").status_code, 401)
-        ok = self._login(password="fresh-pass-456")
+        self.assertEqual(self._login(password="your-env-pass-123").status_code, 401)
+        ok = self._login(password="your-fresh-pass-456")
         self.assertEqual(ok.status_code, 200)
 
     def test_password_requires_min_length(self):
         resp = self.client.post("/api/v1/auth/password", headers=self._admin_headers, json={
-            "current_password": "env-pass-123", "new_password": "short"})
+            "current_password": "your-env-pass-123", "new_password": "short"})
         self.assertEqual(resp.status_code, 400)
 
     # ── API keys ─────────────────────────────────────────────────────────────

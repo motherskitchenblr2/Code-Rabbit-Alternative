@@ -171,7 +171,7 @@ def check_disk_space() -> Dict:
             result["status"] = "pass"
         elif gb_free >= 2:
             result["status"] = "warn"
-    except:
+    except Exception:
         result["version"] = "unknown"
     return result
 
@@ -190,8 +190,8 @@ def check_ports() -> Dict:
                 result_code = s.connect_ex(('127.0.0.1', port))
                 if result_code == 0:
                     occupied.append(port)
-        except:
-            pass
+        except Exception as exc:
+            print(f"  ⚠️  Could not probe port {port}: {exc}", file=sys.stderr)
     
     if occupied:
         result["version"] = f"Occupied: {', '.join(map(str, occupied))}"

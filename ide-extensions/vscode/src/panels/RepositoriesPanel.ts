@@ -378,11 +378,12 @@ export class RepositoriesPanel {
         function renderRepositories() {
             const tbody = document.getElementById('reposBody');
             if (!repositories || repositories.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📦</div><p>No repositories configured</p><button class="btn btn-primary" onclick="addRepository()">Add Your First Repository</button></div>';
+                tbody.replaceChildren();
+                tbody.insertAdjacentHTML('beforeend', '<tr><td colspan="7" class="empty-state"><div class="icon">📦</div><p>No repositories configured</p><button class="btn btn-primary" onclick="addRepository()">Add Your First Repository</button></div>');
                 return;
             }
 
-            tbody.innerHTML = repositories.map(repo => \`
+            const html = repositories.map(repo => \`
                 <tr data-id="\${repo.id}">
                     <td>
                         <div class="repo-name">\${repo.name}</div>
@@ -411,6 +412,8 @@ export class RepositoriesPanel {
                     </td>
                 </tr>
             \`).join('');
+            tbody.replaceChildren();
+            tbody.insertAdjacentHTML('beforeend', html);
         }
 
         function addRepository() {

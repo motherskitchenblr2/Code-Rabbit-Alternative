@@ -396,7 +396,7 @@ function SetupEnvironment {
         (Get-Content .env) -replace 'your-webhook-secret-min-32-chars', $webhookSecret | Set-Content .env
         
         # Update for local Windows
-        (Get-Content .env) -replace 'postgresql://gitfix:gitfix_dev_password@postgres:5432/gitfix', 'postgresql://gitfix:gitfix_dev_password@localhost:5432/gitfix' | Set-Content .env
+        (Get-Content .env).Replace('postgresql://gitfix:${POSTGRES_PASSWORD}@postgres:5432/gitfix', 'postgresql://gitfix:${POSTGRES_PASSWORD}@localhost:5432/gitfix') | Set-Content .env
         (Get-Content .env) -replace 'redis://redis:6379/0', 'redis://localhost:6379/0' | Set-Content .env
         (Get-Content .env) -replace 'http://qdrant:6333', 'http://localhost:6333' | Set-Content .env
         (Get-Content .env) -replace 'redis://redis:6379/1', 'redis://localhost:6379/1' | Set-Content .env

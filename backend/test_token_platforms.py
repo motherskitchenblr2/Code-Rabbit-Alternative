@@ -207,7 +207,7 @@ class TokenPlatformProbeTests(unittest.TestCase):
 
     def test_postgresql_parse_and_default_port(self):
         with mock.patch("socket.create_connection", return_value=_Conn()) as mk:
-            res = self._probe("postgresql", "postgresql://user:pass@dbhost:5433/app")
+            res = self._probe("postgresql", "postgresql://app-user:your-password@dbhost:5433/app")
         mk.assert_called_once_with(("dbhost", 5433), timeout=admin_api.PROBE_TIMEOUT)
         self.assertTrue(res["ok"])
 

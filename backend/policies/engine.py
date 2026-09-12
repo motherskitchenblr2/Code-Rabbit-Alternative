@@ -334,25 +334,121 @@ class PolicyParser:
             self._validate_ast(child)
 
     def evaluate(self, expression: str, context: Dict[str, Any]) -> Any:
-        """Evaluate DSL expression with context (AST-validated, no bare eval)."""
+        """Evaluate DSL expression with context (AST-validated, no eval/compile)."""
         try:
             tree = self.parse(expression)
             self._validate_ast(tree)
 
             safe_globals = {
-                "__builtins__": {},
                 **self.FUNCTIONS,
                 **self.OPERATORS,
             }
             safe_locals = {**context}
-            code = compile(tree, '<policy>', 'eval')
-            result = eval(code, safe_globals, safe_locals)
-            return result
+            return self._eval_node(tree, safe_globals, safe_locals)
         except PolicySyntaxError:
             raise
         except Exception as e:
             logger.warning(f"Policy evaluation error: {e}")
             return False
+
+    def _eval_node(self, node: ast.AST,
+                   globals_: Dict[str, Any], locals_: Dict[str, Any]) -> Any:
+        """Recursively interpret the allowlisted parse tree without compiling strings."""
+        t = type(node)
+        if t is ast.Expression:
+            return self._eval_node(node.body, globals_, locals_)
+        if t is ast.Constant:
+            return node.value
+        if t is ast.Name:
+            if node.id in locals_:
+                return locals_[node.id]
+            if node.id in globals_:
+                return globals_[node.id]
+            raise PolicySyntaxError(f"Unknown name: {node.id}")
+        if t is ast.Attribute:
+            value = self._eval_node(node.value, globals_, locals_)
+            return getattr(value, node.attr)
+        if t is ast.Subscript:
+            value = self._eval_node(node.value, globals_, locals_)
+            key = self._eval_node(node.slice, globals_, locals_)
+            return value[key]
+        if t is ast.Slice:
+            lower = self._eval_node(node.lower, globals_, locals_) if node.lower is not None else None
+            upper = self._eval_node(node.upper, globals_, locals_) if node.upper is not None else None
+            step = self._eval_node(node.step, globals_, locals_) if node.step is not None else None
+            return slice(lower, upper, step)
+        if t is ast.Tuple:
+            return tuple(self._eval_node(e, globals_, locals_) for e in node.elts)
+        if t is ast.List:
+            return [self._eval_node(e, globals_, locals_) for e in node.elts]
+        if t is ast.Dict:
+            keys = node.keys
+            return {
+                (self._eval_node(k, globals_, locals_) if k is not None else None):
+                self._eval_node(v, globals_, locals_)
+                for k, v in zip(keys, node.values)
+            }
+        if t is ast.BoolOp:
+            result: Any = None
+            for v in node.values:
+                result = self._eval_node(v, globals_, locals_)
+                if isinstance(node.op, ast.And) and not result:
+                    break
+                if isinstance(node.op, ast.Or) and result:
+                    break
+            return result
+        if t is ast.BinOp:
+            left = self._eval_node(node.left, globals_, locals_)
+            right = self._eval_node(node.right, globals_, locals_)
+            op = {
+                ast.Add: operator.add, ast.Sub: operator.sub,
+                ast.Mult: operator.mul, ast.Div: operator.truediv,
+                ast.Mod: operator.mod, ast.Pow: operator.pow,
+            }.get(type(node.op))
+            if op is None:
+                raise PolicySyntaxError(f"Unsupported operator: {type(node.op).__name__}")
+            return op(left, right)
+        if t is ast.UnaryOp:
+            operand = self._eval_node(node.operand, globals_, locals_)
+            if isinstance(node.op, ast.USub):
+                return -operand
+            if isinstance(node.op, ast.UAdd):
+                return +operand
+            if isinstance(node.op, ast.Not):
+                return not operand
+            raise PolicySyntaxError(f"Unsupported unary op: {type(node.op).__name__}")
+        if t is ast.Compare:
+            left = self._eval_node(node.left, globals_, locals_)
+            for op, comparator in zip(node.ops, node.comparators):
+                right = self._eval_node(comparator, globals_, locals_)
+                cmp_op = {
+                    ast.Eq: operator.eq, ast.NotEq: operator.ne,
+                    ast.Lt: operator.lt, ast.LtE: operator.le,
+                    ast.Gt: operator.gt, ast.GtE: operator.ge,
+                    ast.In: lambda a, b: a in b,
+                    ast.NotIn: lambda a, b: a not in b,
+                }.get(type(op))
+                if cmp_op is None:
+                    raise PolicySyntaxError(f"Unsupported comparison: {type(op).__name__}")
+                if not cmp_op(left, right):
+                    return False
+                left = right
+            return True
+        if t is ast.IfExp:
+            test = self._eval_node(node.test, globals_, locals_)
+            return self._eval_node(node.body if test else node.orelse, globals_, locals_)
+        if t is ast.Call:
+            args = [self._eval_node(a, globals_, locals_) for a in node.args]
+            kwargs = {kw.arg: self._eval_node(kw.value, globals_, locals_)
+                      for kw in node.keywords if kw.arg}
+            if isinstance(node.func, ast.Name):
+                fn = locals_.get(node.func.id) if node.func.id in locals_ else globals_.get(node.func.id)
+                if fn is None:
+                    raise PolicySyntaxError(f"Unknown function: {node.func.id}")
+                return fn(*args, **kwargs)
+            value = self._eval_node(node.func.value, globals_, locals_)
+            return getattr(value, node.func.attr)(*args, **kwargs)
+        raise PolicySyntaxError(f"Unsupported expression node: {t.__name__}")
 
     def validate(self, expression: str) -> Tuple[bool, Optional[str]]:
         """Validate DSL expression syntax"""

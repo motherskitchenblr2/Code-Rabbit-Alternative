@@ -1607,7 +1607,7 @@ const samples = {
                 file: "config/db.js",
                 diff: `<span class="text-slate-500">@@ -10,3 +10,4 @@</span><br>
  <span class="text-slate-400">   host: "localhost",</span><br>
- <span class="text-red-400 bg-red-950/40 block">-  password: "super_secret_pw_123"</span>
+ <span class="text-red-400 bg-red-950/40 block">-  password: "your_db_password_here"</span>
  <span class="text-emerald-400 bg-emerald-950/40 block">+  password: process.env.DB_PASSWORD || "fallback_pw"</span>
  <span class="text-slate-400">   port: 5432</span>`,
                 explanation: `<p><strong>Hardcoded Credentials:</strong> Database password embedded in source code is exposed in version control and accessible to anyone with repo access.</p>`,

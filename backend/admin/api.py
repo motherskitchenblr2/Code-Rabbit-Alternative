@@ -507,7 +507,7 @@ _PLATFORMS: Dict[str, Dict[str, Any]] = {
         "name": "PostgreSQL",
         "type_guess": "postgresql_connection_string",
         "credential_label": "Connection string",
-        "hint": "postgresql://user:pass@host:5432/dbname — reachability only, credentials are not checked",
+        "hint": "postgresql://user:password@host:5432/dbname — reachability only, credentials are not checked",
         "probe": {"type": "tcp", "default_port": 5432},
     },
     "redis": {

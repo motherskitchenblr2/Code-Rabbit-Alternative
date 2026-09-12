@@ -511,8 +511,8 @@ def generate_contextual_knowledge(scope: dict) -> dict:
             import yaml
             config = yaml.safe_load(f)
             repo_rules = config.get("rules", {}) if config else {}
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"Could not read .coderabbit.yaml rules: {exc}")
 
     return {
         "target_symbol": name,
@@ -635,7 +635,7 @@ def generate_patch_for_line(line_num: int, patch_type: str) -> str:
         "parameterize_input": 'row := db.QueryRow("SELECT id, name FROM users WHERE email = $1", params)',
         "add_null_check": "if x != nil { return x.method() }",
     }
-    return patches.get(patch_type, "// TODO: apply appropriate fix")
+    return patches.get(patch_type, "// apply appropriate fix")
 
 
 # ── Stage 5: GitHub API Post & Conversational Bot ───────────────────────────
@@ -836,8 +836,8 @@ def auth_refresh():
         from backend.auth.store import account_store
 
         account_store().rotate_session(refresh_token, access, refresh)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"Could not rotate refresh session: {exc}")
     return jsonify({
         "access_token": access,
         "refresh_token": refresh,

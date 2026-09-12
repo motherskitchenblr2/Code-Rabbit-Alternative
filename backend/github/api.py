@@ -172,8 +172,8 @@ def github_dashboard():
     if gh.refresh_needed():
         try:
             gh.store_github_repos(gh.list_repos(rec.get("token", "")))
-        except GitHubAPIError:
-            pass  # stale cache is fine for the dashboard aggregate
+        except GitHubAPIError as exc:
+            logger.warning("Dashboard repo refresh failed (using cached data): %s", exc)
     return jsonify(_dashboard_payload())
 
 

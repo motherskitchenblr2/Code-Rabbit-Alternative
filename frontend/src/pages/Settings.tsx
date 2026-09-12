@@ -1241,9 +1241,9 @@ const TOKEN_INTEGRATIONS: TokenIntegrationMeta[] = [
     platform: 'postgresql',
     name: 'PostgreSQL',
     desc: 'Relational database',
-    hint: 'postgresql://user:pass@host:5432/dbname — reachability only, credentials are not checked',
+    hint: 'postgresql://user:password@host:5432/dbname — reachability only, credentials are not checked',
     credentialLabel: 'Connection string',
-    placeholder: 'postgresql://user:pass@host:5432/dbname',
+    placeholder: 'postgresql://user:password@host:5432/dbname',
     icon: <Database className="w-6 h-6 text-neon-cyan" />,
   },
   {

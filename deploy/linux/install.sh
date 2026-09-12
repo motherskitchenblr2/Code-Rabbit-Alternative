@@ -420,7 +420,7 @@ setup_environment() {
         sed -i "s/your-webhook-secret-min-32-chars/$WEBHOOK_SECRET/" .env
         
         # Update for local
-        sed -i 's|postgresql://gitfix:gitfix_dev_password@postgres:5432/gitfix|postgresql://gitfix:gitfix_dev_password@localhost:5432/gitfix|' .env
+        sed -i 's|postgresql://gitfix:${POSTGRES_PASSWORD}@postgres:5432/gitfix|postgresql://gitfix:${POSTGRES_PASSWORD}@localhost:5432/gitfix|' .env
         sed -i 's|redis://redis:6379/0|redis://localhost:6379/0|' .env
         sed -i 's|http://qdrant:6333|http://localhost:6333|' .env
         sed -i 's|redis://redis:6379/1|redis://localhost:6379/1|' .env

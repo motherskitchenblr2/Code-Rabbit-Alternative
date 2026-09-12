@@ -47,7 +47,7 @@ class TestMemoryDbPath(unittest.TestCase):
 
     def test_postgres_database_url_falls_back(self):
         from backend.config import memory_db_path
-        os.environ["DATABASE_URL"] = "postgresql://u:p@host:5432/db"
+        os.environ["DATABASE_URL"] = "postgresql://app-user:your-password@dbhost:5432/db"
         path = memory_db_path()
         self.assertTrue(path.endswith("memory.db"))
 

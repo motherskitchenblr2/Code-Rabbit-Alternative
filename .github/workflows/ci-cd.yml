@@ -95,7 +95,7 @@ jobs:
         env:
           POSTGRES_DB: gitfix_test
           POSTGRES_USER: gitfix
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: ci-test-password
         ports: 5432:5432
         options: >-
           --health-cmd pg_isready
@@ -130,11 +130,12 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://gitfix:test_password@localhost:5432/gitfix_test
+          POSTGRES_PASSWORD: ci-test-password
           REDIS_URL: redis://localhost:6379/0
           GITHUB_WEBHOOK_SECRET: test_secret
           SECRET_KEY: test_secret_key
         run: |
+          export DATABASE_URL="postgresql://gitfix:${POSTGRES_PASSWORD}@localhost:5432/gitfix_test"
           pytest backend/ -v --cov=backend --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage

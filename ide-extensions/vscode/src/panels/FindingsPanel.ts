@@ -426,7 +426,8 @@ ${finding.suggested_fix}
         function renderFindings() {
             const container = document.getElementById('findingsContainer');
             if (!findings || findings.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>No findings found</p></div>';
+                container.replaceChildren();
+                container.insertAdjacentHTML('beforeend', '<div class="empty-state"><div class="icon">🔍</div><p>No findings found</p></div>');
                 return;
             }
 
@@ -456,7 +457,7 @@ ${finding.suggested_fix}
                 return aVal < bVal ? 1 : -1;
             });
 
-            container.innerHTML = filtered.map(f => \`
+            const html = filtered.map(f => \`
                 <div class="finding-card" data-id="\${f.id}">
                     <div class="finding-header">
                         <span class="severity-badge severity-\${f.severity}">\${f.severity.toUpperCase()}</span>
@@ -479,6 +480,8 @@ ${finding.suggested_fix}
                     </div>
                 </div>
             \`).join('');
+            container.replaceChildren();
+            container.insertAdjacentHTML('beforeend', html);
         }
 
         function updateStats() {

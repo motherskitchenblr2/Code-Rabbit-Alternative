@@ -268,8 +268,8 @@ PORT=5000
 # Database
 POSTGRES_DB=gitfix
 POSTGRES_USER=gitfix
-POSTGRES_PASSWORD=gitfix_dev_password
-DATABASE_URL=postgresql://gitfix:gitfix_dev_password@postgres:5432/gitfix
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
+DATABASE_URL="postgresql://gitfix:${POSTGRES_PASSWORD}@postgres:5432/gitfix"
 
 # Redis
 REDIS_URL=redis://redis:6379/0
