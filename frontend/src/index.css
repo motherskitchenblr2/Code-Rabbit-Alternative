@@ -236,6 +236,18 @@
     display: none;
   }
 
+  .typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
   /* Mobile-safe padding that respects bottom nav + safe area */
   .pb-mobile-nav {
     padding-bottom: calc(64px + var(--safe-area-bottom, 0px));

@@ -8,8 +8,8 @@ import {
   ShieldCheck,
   AlertOctagon,
   Loader2,
-  User,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react'
 
 // ── API helper (mirrors Admin.tsx) ──────────────────────────────────────────
@@ -85,24 +85,42 @@ const AGENT_ICONS: Record<string, string> = {
   qa: '🧪',
 }
 
+const PHASE_LABELS: Record<string, string> = {
+  orchestrating: 'Orchestrating the team',
+  planning: 'Agents are planning',
+  executing: 'Agents are working',
+  reviewing: 'Running security review',
+  collecting: 'Collecting feedback',
+  asking: 'Awaiting your input',
+  complete: 'Session complete',
+  error: 'Session errored',
+}
+
+const SUGGESTIONS = [
+  'Suggest security improvements for my backend',
+  'Review the auth flow and API design',
+  'Plan a refactor of the frontend state handling',
+  'Audit the LLM routing configuration',
+]
+
 const VERDICT_STYLES: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
   safe: {
     bg: 'bg-neon-green/5',
     border: 'border-neon-green/30',
     text: 'text-neon-green',
-    icon: <ShieldCheck className="w-5 h-5" />,
+    icon: <ShieldCheck className="w-4 h-4" />,
   },
   risk: {
     bg: 'bg-neon-amber/5',
     border: 'border-neon-amber/30',
     text: 'text-neon-amber',
-    icon: <ShieldAlert className="w-5 h-5" />,
+    icon: <ShieldAlert className="w-4 h-4" />,
   },
   break: {
     bg: 'bg-red-500/5',
     border: 'border-red-500/30',
     text: 'text-red-400',
-    icon: <AlertOctagon className="w-5 h-5" />,
+    icon: <AlertOctagon className="w-4 h-4" />,
   },
 }
 
@@ -144,7 +162,7 @@ export default function AgentTeam() {
   // Auto-scroll transcript
   useEffect(() => {
     transcriptEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [session?.transcript.length, session?.status])
+  }, [session?.transcript.length, session?.status, session?.verdict?.level])
 
   // ── Actions ─────────────────────────────────────────────────────────────
 
@@ -219,6 +237,10 @@ export default function AgentTeam() {
         .filter(([, st]) => st.status === 'working')
         .map(([id]) => id)
     : []
+  const workingNames = roster
+    .filter((a) => activeAgents.includes(a.id))
+    .map((a) => a.name.split(' ')[0])
+  const phaseLabel = PHASE_LABELS[session?.phase ?? ''] ?? (session?.phase || 'Team ready')
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -229,28 +251,40 @@ export default function AgentTeam() {
     }
   }
 
+  const agentStatus = (id: string): AgentStatus['status'] => session?.statuses?.[id]?.status ?? 'idle'
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-display text-white flex items-center gap-3">
-            <span className="text-neon-magenta">{'>_'}</span> Agent Team
-          </h1>
-          <p className="text-cyber-400 mt-1 flex items-center gap-2">
-            <Users className="w-4 h-4 text-neon-cyan" />
-            Collaborative AI agents that work your request together — live.
-          </p>
+    <div className="flex flex-col gap-4 h-[calc(100dvh-13rem)] min-h-[24rem] md:h-[calc(100dvh-11rem)]">
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-neon-magenta to-neon-cyan flex items-center justify-center text-cyber-900 shrink-0 shadow-[0_0_20px_rgba(255,0,255,0.25)]">
+            {isRunning ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isDone ? (
+              <ShieldCheck className="w-5 h-5" />
+            ) : (
+              <Users className="w-5 h-5" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-white truncate">
+              Agent Team
+            </h1>
+            <p className="text-xs text-cyber-400 truncate">
+              Collaborative AI agents that work your request together — live.
+            </p>
+          </div>
         </div>
         {session && (
           <button
             onClick={handleReset}
-            className="btn-cyber-secondary px-4 py-2 flex items-center gap-2 text-sm"
+            className="btn-cyber-secondary px-3 py-2 flex items-center gap-2 text-sm shrink-0"
           >
             <RefreshCw className="w-4 h-4" />
-            New Session
+            <span className="hidden sm:inline">New Session</span>
           </button>
         )}
       </div>
@@ -262,226 +296,258 @@ export default function AgentTeam() {
         </div>
       )}
 
-      {/* Agent status grid */}
-      {session && (
-        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 gap-2">
-          {roster.map((agent) => {
-            const st = session.statuses?.[agent.id]
-            const status = st?.status ?? 'idle'
-            const isActive = status === 'working'
-            const isDoneSt = status === 'done'
-            return (
-              <div
-                key={agent.id}
-                className={`card-cyber p-2 text-center transition-all duration-300 ${
-                  isActive
-                    ? 'border-neon-magenta/60 bg-neon-magenta/5 shadow-[0_0_16px_rgba(255,0,255,0.15)] animate-pulse'
-                    : isDoneSt
-                    ? 'border-neon-green/30 bg-neon-green/5'
-                    : 'border-cyber-700/40 bg-cyber-800/30'
-                }`}
-              >
-                <div className="text-lg mb-0.5">{AGENT_ICONS[agent.id] ?? '🤖'}</div>
-                <div className="text-[10px] font-mono font-medium text-cyber-200 truncate">
-                  {agent.name.split(' ')[0]}
-                </div>
-                {isActive && (
-                  <div className="mt-1 flex justify-center">
-                    <Loader2 className="w-3 h-3 text-neon-magenta animate-spin" />
-                  </div>
-                )}
-                {isDoneSt && st?.turns ? (
-                  <div className="mt-1 text-[9px] font-mono text-neon-green">
-                    {st.turns}x
-                  </div>
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Verdict banner */}
-      {session && verdict !== 'review' && (
-        <div
-          className={`card-cyber ${verdictStyle.bg} ${verdictStyle.border} p-4 flex items-start gap-3`}
-        >
-          <div className={`mt-0.5 ${verdictStyle.text}`}>{verdictStyle.icon}</div>
-          <div className="flex-1 min-w-0">
-            <div className={`text-sm font-bold font-mono uppercase ${verdictStyle.text}`}>
-              VERDICT: {verdict}
-            </div>
-            {session.verdict.summary && (
-              <p className="text-cyber-300 text-sm mt-1 leading-relaxed">
-                {session.verdict.summary}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Transcript */}
-      {session && (
-        <div className="card-cyber border-cyber-700/40 bg-cyber-900/60">
-          <div className="px-4 py-3 border-b border-cyber-700/40 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-cyber-300 font-medium">
-              <MessageSquare className="w-4 h-4 text-neon-cyan" />
-              Transcript
-              {isRunning && (
-                <span className="badge-cyber bg-neon-magenta/10 text-neon-magenta text-[10px] animate-pulse ml-2">
-                  {activeAgents.length} working
-                </span>
-              )}
-              {isAwaiting && (
-                <span className="badge-cyber bg-neon-amber/10 text-neon-amber text-[10px] ml-2">
-                  awaiting you
-                </span>
-              )}
-              {isDone && (
-                <span className="badge-cyber bg-neon-green/10 text-neon-green text-[10px] ml-2">
-                  complete
-                </span>
-              )}
-            </div>
+      {/* Chat window */}
+      <div className="card-cyber-glow border-cyber-700/40 flex flex-col overflow-hidden flex-1 min-h-0">
+        {/* Chat header bar */}
+        <div className="px-4 py-2.5 border-b border-cyber-700/40 flex items-center justify-between gap-3 bg-cyber-900/60">
+          <div className="flex items-center gap-2 text-xs text-cyber-300 min-w-0">
+            <MessageSquare className="w-4 h-4 text-neon-cyan shrink-0" />
+            <span className="font-medium font-mono truncate">{phaseLabel}</span>
             {isRunning && (
-              <button
-                onClick={handleStop}
-                className="text-[10px] font-mono text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
-              >
-                <Square className="w-3 h-3" /> stop
-              </button>
+              <span className="w-2 h-2 rounded-full bg-neon-magenta animate-pulse shrink-0" />
             )}
+            {isAwaiting && (
+              <span className="w-2 h-2 rounded-full bg-neon-amber animate-pulse shrink-0" />
+            )}
+            {isDone && <span className="w-2 h-2 rounded-full bg-neon-green shrink-0" />}
           </div>
-          <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto" role="log" aria-live="polite">
-            {session.transcript.length === 0 && (
-              <p className="text-cyber-500 text-sm text-center py-8">Waiting for agents to start...</p>
-            )}
-            {session.transcript.map((entry) => (
-              <TranscriptBubble key={entry.id} entry={entry} />
-            ))}
-            <div ref={transcriptEnd} />
+          {/* Agent presence strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            {roster.map((agent) => {
+              const st = agentStatus(agent.id)
+              return (
+                <span
+                  key={agent.id}
+                  title={`${agent.name} — ${st}`}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 border transition-colors ${
+                    st === 'working'
+                      ? 'border-neon-magenta bg-neon-magenta/15 animate-pulse'
+                      : st === 'done'
+                      ? 'border-neon-green/60 bg-neon-green/10'
+                      : 'border-cyber-700 bg-cyber-800/50'
+                  }`}
+                >
+                  {AGENT_ICONS[agent.id] ?? '🤖'}
+                </span>
+              )
+            })}
           </div>
         </div>
-      )}
 
-      {/* Input area */}
-      <form onSubmit={handleSubmit} className="card-cyber border-cyber-700/40 bg-cyber-800/30 p-4">
-        <div className="flex items-center gap-3">
-          {!session && <Users className="w-5 h-5 text-neon-magenta shrink-0" />}
-          {session && !isRunning && (
-            <User className="w-5 h-5 text-neon-cyan shrink-0" />
+        {/* Messages area */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto bg-cyber-800/20 p-4 sm:p-6 space-y-5"
+          role="log"
+          aria-live="polite"
+        >
+          {!session ? (
+            <EmptyChat roster={roster} onPick={setInput} />
+          ) : (
+            <>
+              {session.transcript.length === 0 && (
+                <p className="text-cyber-500 text-sm text-center py-10">
+                  Waiting for agents to start...
+                </p>
+              )}
+              {session.transcript.map((entry) => (
+                <ChatBubble key={entry.id} entry={entry} />
+              ))}
+              {isError && session.error && (
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-mono">
+                    <AlertOctagon className="w-3.5 h-3.5" />
+                    {session.error}
+                  </div>
+                </div>
+              )}
+              {verdict !== 'review' && (
+                <div className="flex justify-center">
+                  <div
+                    className={`inline-flex items-start gap-2 max-w-[95%] px-4 py-2.5 rounded-2xl border ${verdictStyle.bg} ${verdictStyle.border}`}
+                  >
+                    <div className={`mt-0.5 ${verdictStyle.text}`}>{verdictStyle.icon}</div>
+                    <div className="text-left min-w-0">
+                      <div className={`text-xs font-bold font-mono uppercase ${verdictStyle.text}`}>
+                        Verdict: {verdict}
+                      </div>
+                      {session.verdict.summary && (
+                        <p className="text-cyber-300 text-xs mt-1 leading-relaxed">
+                          {session.verdict.summary}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {isRunning && <TypingIndicator names={workingNames} />}
+              <div ref={transcriptEnd} />
+            </>
           )}
-          {isRunning && (
-            <Loader2 className="w-5 h-5 text-neon-magenta animate-spin shrink-0" />
-          )}
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isRunning}
-            placeholder={
-              isRunning
-                ? 'Team is working...'
-                : isAwaiting || isDone || isError
-                ? 'Type your reply...'
-                : 'Describe what you want the team to build or fix...'
-            }
-            className="flex-1 input-cyber py-3 text-sm"
-            autoFocus
-          />
-          {isRunning ? (
+        </div>
+
+        {/* Composer / stop row */}
+        {isRunning ? (
+          <div className="p-3 border-t border-cyber-700/40 bg-cyber-900/60 flex justify-center">
             <button
               type="button"
               onClick={handleStop}
-              className="btn-cyber-secondary px-4 py-3 flex items-center gap-2 text-sm"
+              className="btn-cyber-secondary px-5 py-2.5 rounded-full text-sm flex items-center gap-2 text-red-300 border-red-500/40 hover:bg-red-500/10"
             >
               <Square className="w-4 h-4" />
+              Stop generating
             </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="btn-cyber-primary px-4 py-3 flex items-center gap-2 text-sm disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-              {(isAwaiting || isDone || isError) ? 'Reply' : 'Start'}
-            </button>
-          )}
-        </div>
-        {!session && (
-          <p className="text-cyber-500 text-[11px] font-mono mt-2">
-            All {roster.length || 10} agents will discuss your request. CEO first, Q&A last. You can reply to steer the team.
-          </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t border-cyber-700/40 bg-cyber-900/60">
+            <div className="flex items-end gap-2">
+              <label htmlFor="agent-input" className="sr-only">
+                {isAwaiting || isDone || isError ? 'Reply to the team' : 'Describe a task'}
+              </label>
+              <input
+                id="agent-input"
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  isAwaiting || isDone || isError
+                    ? 'Type your reply...'
+                    : 'Describe what you want the team to build or fix...'
+                }
+                className="input-cyber flex-1 min-w-0"
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || loading}
+                aria-label={isAwaiting || isDone || isError ? 'Send reply' : 'Start session'}
+                className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-tr from-neon-magenta to-neon-cyan text-cyber-900 flex items-center justify-center shadow-lg shadow-neon-magenta/20 hover:shadow-[0_0_20px_rgba(255,0,255,0.5)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </div>
+            {!session && (
+              <p className="text-cyber-500 text-[11px] font-mono mt-2">
+                All {roster.length || 10} agents will discuss your request — CEO first, Q&A last.
+                You can reply to steer the team.
+              </p>
+            )}
+          </form>
         )}
-      </form>
+      </div>
     </div>
   )
 }
 
-// ── Transcript bubble sub-component ─────────────────────────────────────────
+// ── Empty chat state ────────────────────────────────────────────────────────
 
-function TranscriptBubble({ entry }: { entry: TranscriptEntry }) {
+function EmptyChat({ roster, onPick }: { roster: Agent[]; onPick: (text: string) => void }) {
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-6 px-4 py-10 text-center">
+      <div className="relative">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-neon-magenta to-neon-cyan flex items-center justify-center text-cyber-900 shadow-[0_0_40px_rgba(255,0,255,0.3)]">
+          <Sparkles className="w-8 h-8" />
+        </div>
+        <div className="absolute -right-2 -bottom-2 w-7 h-7 rounded-full bg-cyber-800 border border-neon-cyan/40 flex items-center justify-center text-sm">
+          {roster.length ? AGENT_ICONS[roster[0].id] ?? '🤖' : '🤖'}
+        </div>
+      </div>
+      <div>
+        <h2 className="text-lg font-bold font-display text-white">Brief your agent team</h2>
+        <p className="text-cyber-400 text-sm mt-1 max-w-md leading-relaxed">
+          {roster.length || 10} specialized agents will discuss your request together, then report
+          back with a verdict.
+        </p>
+      </div>
+      <div className="grid gap-2 w-full max-w-lg">
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            onClick={() => onPick(s)}
+            className="text-left card-cyber px-4 py-2.5 text-sm text-cyber-200 hover:text-white hover:border-neon-magenta/40 transition-colors cursor-pointer"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Typing indicator ────────────────────────────────────────────────────────
+
+function TypingIndicator({ names }: { names: string[] }) {
+  const label = names.length
+    ? `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} working`
+    : 'Agents are working'
+  return (
+    <div className="flex items-end gap-2.5">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-magenta/25 to-neon-cyan/15 border border-neon-magenta/30 flex items-center justify-center text-base shrink-0">
+        🤖
+      </div>
+      <div className="bg-cyber-800/60 border border-cyber-700/40 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5">
+        <span className="typing-dot bg-neon-magenta" />
+        <span className="typing-dot bg-neon-magenta [animation-delay:150ms]" />
+        <span className="typing-dot bg-neon-magenta [animation-delay:300ms]" />
+      </div>
+      <span className="text-[10px] font-mono text-cyber-500 mb-1.5">{label}</span>
+    </div>
+  )
+}
+
+// ── Chat bubble sub-component ───────────────────────────────────────────────
+
+function ChatBubble({ entry }: { entry: TranscriptEntry }) {
   const [expanded, setExpanded] = useState(true)
   const isUser = entry.kind === 'user'
   const isSystem = entry.kind === 'system'
+  const time = new Date(entry.at * 1000).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const body = expanded || entry.content.length < 500
+    ? entry.content
+    : entry.content.slice(0, 500) + '...'
+
+  if (isSystem) {
+    return (
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyber-800/40 border border-cyber-700/30 text-cyber-500 text-[11px] italic max-w-[95%]">
+          <span className="truncate">{entry.content}</span>
+          <span className="text-cyber-600 font-mono not-italic">{time}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex gap-2.5 items-start ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 ${
+        className={`w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0 border ${
           isUser
-            ? 'bg-neon-cyan/10 text-neon-cyan'
-            : isSystem
-            ? 'bg-cyber-700/50 text-cyber-400'
-            : 'bg-neon-magenta/10 text-neon-magenta'
+            ? 'bg-neon-cyan/15 text-neon-cyan border-neon-cyan/30'
+            : 'bg-gradient-to-br from-neon-magenta/25 to-neon-cyan/15 text-neon-magenta border-neon-magenta/30'
         }`}
       >
-        {isUser ? '👤' : isSystem ? '📢' : AGENT_ICONS[entry.agent_id] ?? '🤖'}
+        {isUser ? '👤' : AGENT_ICONS[entry.agent_id] ?? '🤖'}
       </div>
 
       {/* Content */}
-      <div
-        className={`flex-1 min-w-0 ${
-          isUser ? 'text-right' : ''
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-1">
-          {!isUser && (
-            <span className="text-[11px] font-mono font-medium text-cyber-300">
-              {entry.name}
-            </span>
-          )}
-          {isUser && (
-            <span className="text-[11px] font-mono font-medium text-neon-cyan">You</span>
-          )}
-          {entry.synth && (
-            <span className="badge-cyber bg-cyber-700 text-cyber-500 text-[9px]">
-              template
-            </span>
-          )}
-          {isSystem && (
-            <span className="text-[10px] text-cyber-500 font-mono">
-              {new Date(entry.at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          )}
-        </div>
+      <div className={`max-w-[85%] sm:max-w-[75%] min-w-0 ${isUser ? 'text-right' : ''}`}>
+        {!isUser && (
+          <div className="flex items-baseline gap-2 mb-1 pl-1">
+            <span className="text-xs font-semibold font-mono text-cyber-100">{entry.name}</span>
+            <span className="text-[10px] font-mono text-cyber-500 truncate">{entry.title}</span>
+          </div>
+        )}
         <div
-          className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
+          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
             isUser
-              ? 'bg-neon-cyan/10 text-cyber-100 border border-neon-cyan/20'
-              : isSystem
-              ? 'bg-cyber-800/40 text-cyber-400 border border-cyber-700/30 text-center'
-              : 'bg-cyber-800/60 text-cyber-200 border border-cyber-700/40'
+              ? 'bg-gradient-to-tr from-neon-cyan/25 to-neon-cyan/5 text-cyber-50 border border-neon-cyan/25 rounded-br-md'
+              : 'bg-cyber-800/60 text-cyber-200 border border-cyber-700/40 rounded-tl-md'
           }`}
         >
-          {expanded || entry.content.length < 500
-            ? entry.content
-            : entry.content.slice(0, 500) + '...'}
+          {body}
           {entry.content.length >= 500 && (
             <button
               onClick={() => setExpanded(!expanded)}
@@ -491,15 +557,21 @@ function TranscriptBubble({ entry }: { entry: TranscriptEntry }) {
             </button>
           )}
         </div>
-        {!isUser && !isSystem && entry.mentions.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1 justify-start">
-            {entry.mentions.map((m) => (
-              <span key={m} className="text-[9px] font-mono text-neon-magenta/70">
-                @{m}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2 mt-1 px-1 justify-start">
+          {!isUser && entry.mentions.length > 0 && (
+            <span className="flex flex-wrap gap-1">
+              {entry.mentions.map((m) => (
+                <span key={m} className="text-[9px] font-mono text-neon-magenta/70">
+                  @{m}
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="text-[10px] font-mono text-cyber-500">{time}</span>
+          {entry.synth && (
+            <span className="badge-cyber bg-cyber-700 text-cyber-500 text-[9px] px-1.5">template</span>
+          )}
+        </div>
       </div>
     </div>
   )
