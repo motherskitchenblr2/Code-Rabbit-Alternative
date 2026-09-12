@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, FormEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
   ShieldCheck,
@@ -423,17 +423,28 @@ interface RouterSnapshot {
 function RouterSection() {
   const [snap, setSnap] = useState<RouterSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const hasLoaded = useRef(false)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    if (hasLoaded.current) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     setErr(null)
     api<RouterSnapshot>('/api/v1/llm/status')
-      .then((d) => { if (!cancelled) setSnap(d) })
+      .then((d) => {
+        if (!cancelled) {
+          hasLoaded.current = true
+          setSnap(d)
+        }
+      })
       .catch((e) => { if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed to load router status') })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .finally(() => { if (!cancelled) { setLoading(false); setRefreshing(false) } })
     return () => { cancelled = true }
   }, [refreshKey])
 
@@ -478,7 +489,7 @@ function RouterSection() {
           </p>
         </div>
         <button className="btn-cyber-ghost text-sm flex items-center shrink-0 whitespace-nowrap" onClick={() => setRefreshKey(k => k + 1)}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
 
