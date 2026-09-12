@@ -620,7 +620,7 @@ export default function AgentTeam() {
                   title="Attach files or images"
                   className="w-11 h-11 rounded-full border border-cyber-600 bg-cyber-800/60 text-cyber-300 flex items-center justify-center transition-colors hover:text-neon-cyan hover:border-neon-cyan/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  <Paperclip className="w-4.5 h-4.5" />
+                  <Paperclip className="w-5 h-5" />
                 </button>
                 <button
                   type="button"
@@ -634,7 +634,7 @@ export default function AgentTeam() {
                       : 'border-cyber-600 bg-cyber-800/60 text-cyber-300 hover:text-neon-magenta hover:border-neon-magenta/50'
                   }`}
                 >
-                  <Mic className="w-4.5 h-4.5" />
+                  <Mic className="w-5 h-5" />
                 </button>
                 <button
                   type="submit"
