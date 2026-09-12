@@ -40,6 +40,8 @@ import {
   MemoryStick,
   Container,
   Gauge,
+  Copy,
+  LogOut,
 } from 'lucide-react'
 
 // ── API helper (mirrors Admin.tsx / AgentTeam.tsx) ───────────────────────────
@@ -256,86 +258,607 @@ function ProfileSection({ user }: { user: any }) {
   )
 }
 
-// Security Section
+// ── Security Section ───────────────────────────────────────────────────────
+
+interface ApiKeyRecord {
+  id: string
+  name: string
+  tail: string
+  created_at?: number
+  last_used_at?: number | null
+}
+
+interface SessionRecord {
+  id: string
+  device: string
+  current: boolean
+  created_at?: number
+  last_active?: number
+  expires_at?: number
+  revoked?: boolean
+}
+
+interface TfaState {
+  enabled: boolean
+  secret?: string | null
+  otpauth_uri?: string | null
+  digits?: number
+  period?: number
+}
+
+function timeAgo(ts?: number | null): string {
+  if (!ts) return '—'
+  const s = Math.floor(Date.now() / 1000 - ts)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`
+  return new Date(ts * 1000).toLocaleDateString()
+}
+
+function CopyButton({ text, label = 'copy' }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch { /* clipboard unavailable */ }
+  }
+  return (
+    <button
+      onClick={copy}
+      type="button"
+      aria-label={`Copy ${label}`}
+      className="p-1.5 rounded-lg text-cyber-400 hover:text-white hover:bg-cyber-800 transition-colors flex-shrink-0"
+    >
+      {copied ? <CheckCircle2 className="w-4 h-4 text-neon-green" /> : <Copy className="w-4 h-4" />}
+    </button>
+  )
+}
+
 function SecuritySection() {
-  const [twoFA, setTwoFA] = useState(false)
-  const [sessions] = useState([
-    { id: '1', device: 'Chrome on macOS', location: 'San Francisco, US', current: true, lastActive: 'Now' },
-    { id: '2', device: 'Firefox on Linux', location: 'New York, US', current: false, lastActive: '2 days ago' },
-    { id: '3', device: 'Safari on iOS', location: 'London, UK', current: false, lastActive: '1 week ago' },
-  ])
+  const [tfa, setTfa] = useState<TfaState>({ enabled: false })
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([])
+  const [sessions, setSessions] = useState<SessionRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [tfaModal, setTfaModal] = useState<{ mode: 'setup'; secret: string; uri: string } | { mode: 'disable' } | null>(null)
+  const [newApiKey, setNewApiKey] = useState<{ name: string; key: string } | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [t, k, s] = await Promise.all([
+        api<TfaState>('/api/v1/auth/2fa/status'),
+        api<{ keys: ApiKeyRecord[] }>('/api/v1/auth/api-keys'),
+        api<{ sessions: SessionRecord[] }>('/api/v1/auth/sessions'),
+      ])
+      setTfa(t)
+      setApiKeys(k.keys || [])
+      setSessions(s.sessions || [])
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load security settings')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="space-y-8">
-      <div className="card-cyber p-6">
-        <h3 className="text-lg font-bold font-display text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-neon-magenta" />
-          Two-Factor Authentication
-        </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-white">Enable 2FA</p>
-            <p className="text-cyber-400 text-sm">Add an extra layer of security to your account</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={twoFA} onChange={(e) => setTwoFA(e.target.checked)} className="sr-only peer" />
-            <div className="w-11 h-6 bg-cyber-700 peer-focus-visible:ring-2 peer-focus-visible:ring-neon-cyan rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-neon-magenta after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neon-magenta"></div>
-          </label>
-        </div>
-      </div>
+      {error && <ErrorBanner message={error} onRetry={load} />}
 
-      <div className="card-cyber p-6">
-        <h3 className="text-lg font-bold font-display text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-neon-magenta" />
-          API Keys
-        </h3>
-        <p className="text-cyber-400 mb-4">Manage API keys for CI/CD and integrations</p>
-        <button className="btn-cyber-magenta">
-          <Plus className="w-4 h-4 mr-2" />
+      {loading ? (
+        <div className="card-cyber p-10 flex flex-col items-center justify-center gap-2 text-cyber-400">
+          <Loader2 className="w-6 h-6 text-neon-cyan animate-spin" />
+          <span className="text-sm">Loading security settings…</span>
+        </div>
+      ) : (
+        <>
+          <PasswordCard onChanged={() => { }} />
+          <TfaCard enabled={tfa.enabled} onEnable={startTfaSetup} onDisable={() => setTfaModal({ mode: 'disable' })} />
+          <ApiKeysCard keys={apiKeys} onCreated={load} />
+          <SessionsCard sessions={sessions} onChanged={load} />
+        </>
+      )}
+
+      {tfaModal?.mode === 'setup' && (
+        <TfaSetupModal
+          secret={tfaModal.secret}
+          uri={tfaModal.uri}
+          onClose={() => setTfaModal(null)}
+          onEnabled={() => { setTfaModal(null); load() }}
+        />
+      )}
+      {tfaModal?.mode === 'disable' && (
+        <TfaDisableModal onClose={() => setTfaModal(null)} onDisabled={() => { setTfaModal(null); load() }} />
+      )}
+      {newApiKey && (
+        <NewApiKeyModal
+          name={newApiKey.name}
+          keyValue={newApiKey.key}
+          onClose={() => { setNewApiKey(null); load() }}
+        />
+      )}
+    </div>
+  )
+
+  async function startTfaSetup() {
+    setError(null)
+    try {
+      const res = await api<TfaState & { secret: string; otpauth_uri: string }>('/api/v1/auth/2fa/setup', { method: 'POST' })
+      setTfaModal({ mode: 'setup', secret: res.secret, uri: res.otpauth_uri })
+    } catch (e: any) {
+      setError(e?.message || 'Failed to start 2FA setup')
+    }
+  }
+}
+
+// ── 2FA ─────────────────────────────────────────────────────────────────────
+
+function TfaCard({ enabled, onEnable, onDisable }: { enabled: boolean; onEnable: () => void; onDisable: () => void }) {
+  return (
+    <div className="card-cyber p-6">
+      <h3 className="text-lg font-bold font-display text-white mb-4 flex items-center gap-2">
+        <Shield className="w-5 h-5 text-neon-magenta" />
+        Two-Factor Authentication
+      </h3>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <p className="font-medium text-white">
+            {enabled ? '2FA is on' : 'Enable 2FA'}
+          </p>
+          <p className="text-cyber-400 text-sm">
+            {enabled
+              ? 'Every login requires a 6-digit authenticator code'
+              : 'Add an extra layer of security to your account (TOTP, Authy / Google Authenticator)'}
+          </p>
+        </div>
+        {enabled
+          ? <button onClick={onDisable} className="btn-cyber-ghost text-sm flex items-center gap-2"><Shield className="w-4 h-4" /> Disable</button>
+          : <button onClick={onEnable} className="btn-cyber-magenta text-sm flex items-center gap-2"><Shield className="w-4 h-4" /> Enable 2FA</button>}
+      </div>
+    </div>
+  )
+}
+
+function TfaSetupModal({ secret, uri, onClose, onEnabled }: {
+  secret: string
+  uri: string
+  onClose: () => void
+  onEnabled: () => void
+}) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!/^\d{6}$/.test(code.trim())) { setError('Enter the 6-digit code from your authenticator app'); return }
+    setBusy(true)
+    setError(null)
+    try {
+      await api('/api/v1/auth/2fa/enable', { method: 'POST', body: JSON.stringify({ code: code.trim() }) })
+      onEnabled()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to enable 2FA')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell title="Enable two-factor authentication" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-cyber-400">
+          Scan this with your authenticator app, or enter the secret manually (this screen cannot display a QR image):
+        </p>
+        <div>
+          <label className="label-cyber">Secret</label>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 p-2.5 rounded-lg bg-cyber-800/70 border border-cyber-700/50 font-mono text-neon-cyan break-all">{secret}</code>
+            <CopyButton text={secret} label="secret" />
+          </div>
+        </div>
+        <div>
+          <label className="label-cyber">or copy otpauth:// link</label>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 p-2.5 rounded-lg bg-cyber-800/70 border border-cyber-700/50 font-mono text-xs text-cyber-400 break-all leading-relaxed">{uri}</code>
+            <CopyButton text={uri} label="otpauth link" />
+          </div>
+        </div>
+        <div>
+          <label className="label-cyber" htmlFor="tfa-code">6-digit code</label>
+          <input
+            id="tfa-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            className="input-cyber font-mono tracking-widest"
+            placeholder="000000"
+            autoFocus
+          />
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <div className="flex items-center gap-3 pt-1">
+          <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+            Enable 2FA
+          </button>
+          <button type="button" onClick={onClose} className="btn-cyber-ghost">Cancel</button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
+function TfaDisableModal({ onClose, onDisabled }: { onClose: () => void; onDisabled: () => void }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await api('/api/v1/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code: code.trim() }) })
+      onDisabled()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to disable 2FA')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell title="Disable two-factor authentication" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-cyber-400">Enter your current authenticator code to confirm.</p>
+        <div>
+          <label className="label-cyber" htmlFor="tfa-disable-code">6-digit code</label>
+          <input
+            id="tfa-disable-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            className="input-cyber font-mono tracking-widest"
+            placeholder="000000"
+            autoFocus
+          />
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <div className="flex items-center gap-3 pt-1">
+          <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+            Disable 2FA
+          </button>
+          <button type="button" onClick={onClose} className="btn-cyber-ghost">Cancel</button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
+// ── API keys ────────────────────────────────────────────────────────────────
+
+function ApiKeysCard({ keys, onCreated }: { keys: ApiKeyRecord[]; onCreated: () => void }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [revealed, setRevealed] = useState<{ name: string; key: string } | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  async function create(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) { setError('Give the key a name'); return }
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await api<{ record: ApiKeyRecord; key: string }>('/api/v1/auth/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      setRevealed({ name: res.record.name, key: res.key })
+      setName('')
+      onCreated()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create API key')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(id: string) {
+    setDeleting(id)
+    setError(null)
+    try {
+      await api(`/api/v1/auth/api-keys/${id}`, { method: 'DELETE' })
+      onCreated()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to delete API key')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  return (
+    <div className="card-cyber p-6">
+      <h3 className="text-lg font-bold font-display text-white mb-1 flex items-center gap-2">
+        <KeyRound className="w-5 h-5 text-neon-magenta" />
+        API Keys
+      </h3>
+      <p className="text-cyber-400 text-sm mb-4">Use these keys to authenticate CI/CD and external integrations. Keys are only shown once after creation.</p>
+
+      <form onSubmit={create} className="flex flex-col sm:flex-row gap-3 mb-5">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="input-cyber flex-1"
+          placeholder="Key name, e.g. ci-runner"
+          maxLength={80}
+          aria-label="API key name"
+        />
+        <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center justify-center gap-2">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           Generate New API Key
         </button>
+      </form>
+
+      {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+
+      {keys.length === 0 ? (
+        <p className="text-sm text-cyber-500">No API keys yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {keys.map((k) => (
+            <div key={k.id} className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-cyber-800/50 border border-cyber-700/50">
+              <div className="min-w-0">
+                <p className="font-medium text-white flex items-center gap-2">
+                  {k.name}
+                  <span className="badge-cyber bg-cyber-700 text-cyber-400 text-xs font-mono">{'••••••••••••'}{k.tail}</span>
+                </p>
+                <p className="text-xs text-cyber-500 mt-0.5">
+                  Created {timeAgo(k.created_at)}{k.last_used_at ? ` · last used ${timeAgo(k.last_used_at)}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => remove(k.id)}
+                disabled={deleting === k.id}
+                className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                aria-label={`Revoke key ${k.name}`}
+              >
+                {deleting === k.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {revealed && (
+        <NewApiKeyModal
+          name={revealed.name}
+          keyValue={revealed.key}
+          onClose={() => setRevealed(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function NewApiKeyModal({ name, keyValue, onClose }: { name: string; keyValue: string; onClose: () => void }) {
+  return (
+    <ModalShell title="API key created" onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-cyber-400">
+          <span className="text-white font-medium">{name}</span> — copy this key now. It will not be shown again.
+        </p>
+        <div>
+          <label className="label-cyber">API Key</label>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 p-2.5 rounded-lg bg-cyber-800/70 border border-cyber-700/50 font-mono text-neon-magenta break-all">{keyValue}</code>
+            <CopyButton text={keyValue} label="api key" />
+          </div>
+        </div>
+        <p className="text-xs text-cyber-500">
+          Authenticate with <code className="font-mono text-cyan-300">X-API-Key: {keyValue.slice(0, 8)}...</code> or <code className="font-mono text-cyan-300">?api_key=</code> on supported endpoints.
+        </p>
+        <button onClick={onClose} className="btn-cyber-ghost w-full">Done</button>
+      </div>
+    </ModalShell>
+  )
+}
+
+// ── Active sessions ─────────────────────────────────────────────────────────
+
+function SessionsCard({ sessions, onChanged }: { sessions: SessionRecord[]; onChanged: () => void }) {
+  const [busy, setBusy] = useState<string | '' | 'all' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function run(endpoint: string, body?: Record<string, unknown>, id?: string) {
+    setBusy(id ?? '')
+    setError(null)
+    try {
+      await api(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined })
+      onChanged()
+    } catch (err: any) {
+      setError(err?.message || 'Request failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="card-cyber p-6">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <h3 className="text-lg font-bold font-display text-white flex items-center gap-2">
+          <Shield className="w-5 h-5 text-neon-magenta" />
+          Active Sessions
+        </h3>
+        {sessions.length > 1 && (
+          <button
+            onClick={() => run('/api/v1/auth/sessions/revoke-all', {}, 'all')}
+            disabled={busy !== null}
+            className="btn-cyber-ghost text-sm flex items-center gap-2"
+          >
+            {busy === 'all' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            Revoke All
+          </button>
+        )}
       </div>
 
-      <div className="card-cyber p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold font-display text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-neon-magenta" />
-            Active Sessions
-          </h3>
-          <button className="btn-cyber-ghost text-sm">Revoke All</button>
-        </div>
+      {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+
+      {sessions.length === 0 ? (
+        <p className="text-sm text-cyber-500">No active sessions.</p>
+      ) : (
         <div className="space-y-3">
           {sessions.map((session) => (
-            <div key={session.id} className="flex items-center justify-between p-4 rounded-lg bg-cyber-800/50 border border-cyber-700/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center">
+            <div key={session.id} className="flex items-center justify-between gap-3 p-4 rounded-lg bg-cyber-800/50 border border-cyber-700/50">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-cyber-800 flex items-center justify-center flex-shrink-0">
                   <Terminal className="w-5 h-5 text-neon-cyan" />
                 </div>
-                <div>
-                  <p className="font-medium text-white">{session.device}</p>
-                  <p className="text-xs text-cyber-400">{session.location} • {session.lastActive}</p>
+                <div className="min-w-0">
+                  <p className="font-medium text-white truncate">{session.device}</p>
+                  <p className="text-xs text-cyber-400">
+                    {session.current ? 'This device · ' : ''}Last active {timeAgo(session.last_active)}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {session.current && <span className="badge-cyber bg-neon-green/20 text-neon-green border-neon-green/30 text-xs">Current</span>}
-                {!session.current && (
-                  <button className="text-red-400 hover:text-red-300 text-sm font-mono">Revoke</button>
-                )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {session.current
+                  ? <span className="badge-cyber bg-neon-green/20 text-neon-green border-neon-green/30 text-xs">Current</span>
+                  : (
+                    <button
+                      onClick={() => run('/api/v1/auth/sessions/revoke', { id: session.id }, session.id)}
+                      disabled={busy !== null}
+                      className="text-red-400 hover:text-red-300 text-sm font-mono flex items-center gap-1"
+                      aria-label={`Revoke session on ${session.device}`}
+                    >
+                      {busy === session.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+                      Revoke
+                    </button>
+                  )}
               </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
+    </div>
+  )
+}
 
-      <div className="card-cyber p-6">
-        <h3 className="text-lg font-bold font-display text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-neon-magenta" />
-          Password
-        </h3>
-        <button className="btn-cyber-magenta">
-          Change Password
-        </button>
-      </div>
+// ── Password ────────────────────────────────────────────────────────────────
+
+function PasswordCard({ onChanged }: { onChanged: () => void }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
+
+  function reset() {
+    setCurrent('')
+    setNext('')
+    setConfirm('')
+    setOk(false)
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setOk(false)
+    if (next.length < 8) { setError('New password must be at least 8 characters'); return }
+    if (next !== confirm) { setError('New passwords do not match'); return }
+    setBusy(true)
+    setError(null)
+    try {
+      await api('/api/v1/auth/password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: current, new_password: next }),
+      })
+      reset()
+      setOk(true)
+      onChanged()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to change password')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card-cyber p-6">
+      <h3 className="text-lg font-bold font-display text-white mb-4 flex items-center gap-2">
+        <KeyRound className="w-5 h-5 text-neon-magenta" />
+        Password
+      </h3>
+      <form onSubmit={submit} className="space-y-4 max-w-md">
+        <div>
+          <label className="label-cyber" htmlFor="pw-current">Current password</label>
+          <input
+            id="pw-current"
+            type="password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className="input-cyber"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="label-cyber" htmlFor="pw-new">New password</label>
+            <input
+              id="pw-new"
+              type="password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className="input-cyber"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </div>
+          <div>
+            <label className="label-cyber" htmlFor="pw-confirm">Confirm new password</label>
+            <input
+              id="pw-confirm"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="input-cyber"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </div>
+        </div>
+        <p className="text-xs text-cyber-500">Minimum 8 characters. Once set, this replaces the GITFIX_ADMIN_PASSWORD boot credential.</p>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        {ok && (
+          <p className="text-sm text-neon-green flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" /> Password updated successfully
+          </p>
+        )}
+        <div>
+          <button type="submit" disabled={busy} className="btn-cyber-magenta flex items-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Change Password
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
