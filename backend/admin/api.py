@@ -154,6 +154,8 @@ def _public_token(item: Dict[str, Any]) -> Dict[str, Any]:
         "enabled": bool(item.get("enabled", True)),
         "token_set": bool(item.get("token")),
         "token_tail": _mask(item.get("token")),
+        "endpoint_set": bool(item.get("endpoint")),
+        "endpoint_tail": _mask(item.get("endpoint")),
         "created_at": item.get("created_at"),
         "updated_at": item.get("updated_at"),
     }
@@ -400,29 +402,134 @@ def _probe_server(server: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": False, "status": r.status_code, "detail": f"HTTP error {r.status_code}"}
 
 
-# ── Access Tokens (GitHub, GitLab, Bitbucket, Azure DevOps) ────────────────
+# ── Access Tokens & connection credentials ──────────────────────────────────
+# Each platform carries a `probe` spec that drives _probe_token():
+#   api      — validate a token against a GET endpoint (auth strategy in `auth`)
+#   graphql  — validate against a GraphQL POST endpoint
+#   tcp      — connection-string service (Redis/PostgreSQL): TCP reachability only
+#   http     — the stored value IS a base URL; GET value + `path`
+# `endpoint_optional` platforms may store a per-record base-URL override, which
+# is persisted masked like a token (it can embed credentials, e.g. a DSN).
 
-_PLATFORMS = {
+_PLATFORMS: Dict[str, Dict[str, Any]] = {
     "github": {
         "name": "GitHub",
         "type_guess": "github_personal_access_token",
-        # README token format descriptions (fine-grained or classic PATs)
         "hint": "Fine-grained PAT (prefix ghp_) or classic PAT — scopes: repo, read:org",
+        "probe": {"type": "api", "url": "https://api.github.com/user", "auth": "bearer"},
     },
     "gitlab": {
         "name": "GitLab",
         "type_guess": "gitlab_personal_access_token",
         "hint": "Personal access token (glpat-) scoped to api",
+        "probe": {"type": "api", "url": "https://gitlab.com/api/v4/user", "auth": "private_token"},
     },
     "bitbucket": {
         "name": "Bitbucket",
         "type_guess": "bitbucket_app_password",
-        "hint": "App password (username:password) with repo read access",
+        "hint": "Store as username:app-password with repo read access",
+        "probe": {"type": "api", "url": "https://api.bitbucket.org/2.0/user", "auth": "basic_colon"},
     },
     "azure_devops": {
         "name": "Azure DevOps",
         "type_guess": "azure_devops_personal_access_token",
         "hint": "PAT with Code Read scope",
+        "probe": {"type": "api", "url": "https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1", "auth": "basic_colon_prefix"},
+    },
+    "vercel": {
+        "name": "Vercel",
+        "type_guess": "vercel_api_token",
+        "credential_label": "API Token",
+        "hint": "API token from vercel.com/account/tokens (read scope)",
+        "probe": {"type": "api", "url": "https://api.vercel.com/v2/user", "auth": "bearer"},
+    },
+    "netlify": {
+        "name": "Netlify",
+        "type_guess": "netlify_personal_access_token",
+        "credential_label": "Personal Access Token",
+        "hint": "Personal access token from app.netlify.com/user/applications",
+        "probe": {"type": "api", "url": "https://api.netlify.com/api/v1/user", "auth": "bearer"},
+    },
+    "cloudflare": {
+        "name": "Cloudflare",
+        "type_guess": "cloudflare_api_token",
+        "credential_label": "API Token",
+        "hint": "API token from dash.cloudflare.com/profile/api-tokens",
+        "probe": {"type": "api", "url": "https://api.cloudflare.com/client/v4/user/tokens/verify", "auth": "bearer", "invalid_statuses": [400, 401, 403]},
+    },
+    "huggingface": {
+        "name": "Hugging Face",
+        "type_guess": "huggingface_access_token",
+        "hint": "Access token from huggingface.co/settings/tokens",
+        "probe": {"type": "api", "url": "https://huggingface.co/api/whoami-v2", "auth": "bearer"},
+    },
+    "codeberg": {
+        "name": "Codeberg",
+        "type_guess": "codeberg_project_token",
+        "hint": "Token from codeberg.org/user/settings/applications",
+        "probe": {"type": "api", "url": "https://codeberg.org/api/v1/user", "auth": "token"},
+    },
+    "jira": {
+        "name": "Jira",
+        "type_guess": "jira_api_token",
+        "credential_label": "Email:API token",
+        "hint": "Store as email:your-api-token (Atlassian API token); set your site URL in Endpoint",
+        "endpoint_optional": True,
+        "endpoint_hint": "Atlassian site URL, e.g. https://your-domain.atlassian.net",
+        "probe": {"type": "api", "url": "https://your-domain.atlassian.net", "path": "/rest/api/2/myself", "auth": "basic_colon", "require_endpoint": True},
+    },
+    "linear": {
+        "name": "Linear",
+        "type_guess": "linear_api_token",
+        "credential_label": "API Key",
+        "hint": "Personal API key from linear.app/settings/api",
+        "probe": {"type": "graphql", "url": "https://api.linear.app/graphql", "auth": "linear"},
+    },
+    "datadog": {
+        "name": "Datadog",
+        "type_guess": "datadog_api_key",
+        "credential_label": "API Key",
+        "hint": "Datadog API key; override Endpoint for a regional site (https://api.eu.datadoghq.com etc.)",
+        "endpoint_optional": True,
+        "endpoint_hint": "Regional API endpoint, e.g. https://api.us3.datadoghq.com",
+        "probe": {"type": "api", "url": "https://api.datadoghq.com", "path": "/api/v1/validate", "auth": "dd_api_key"},
+    },
+    "sentry": {
+        "name": "Sentry",
+        "type_guess": "sentry_auth_token",
+        "credential_label": "Auth Token",
+        "hint": "Auth token from sentry.io/settings/auth-tokens (or your self-hosted Sentry)",
+        "endpoint_optional": True,
+        "endpoint_hint": "Sentry base URL, e.g. https://sentry.io or https://sentry.example.com",
+        "probe": {"type": "api", "url": "https://sentry.io", "path": "/api/0/", "auth": "bearer"},
+    },
+    "postgresql": {
+        "name": "PostgreSQL",
+        "type_guess": "postgresql_connection_string",
+        "credential_label": "Connection string",
+        "hint": "postgresql://user:pass@host:5432/dbname — reachability only, credentials are not checked",
+        "probe": {"type": "tcp", "default_port": 5432},
+    },
+    "redis": {
+        "name": "Redis",
+        "type_guess": "redis_connection_string",
+        "credential_label": "Connection string",
+        "hint": "redis://:password@host:6379 — reachability only, credentials are not checked",
+        "probe": {"type": "tcp", "default_port": 6379},
+    },
+    "qdrant": {
+        "name": "Qdrant",
+        "type_guess": "qdrant_endpoint_url",
+        "credential_label": "Endpoint URL",
+        "hint": "Full Qdrant base URL, e.g. http://localhost:6333",
+        "probe": {"type": "http", "path": "/collections", "label": "Endpoint reachable"},
+    },
+    "prometheus": {
+        "name": "Prometheus",
+        "type_guess": "prometheus_endpoint_url",
+        "credential_label": "Endpoint URL",
+        "hint": "Prometheus base URL, e.g. http://localhost:9090",
+        "probe": {"type": "http", "path": "/api/v1/status/buildinfo", "label": "Endpoint reachable"},
     },
 }
 
@@ -458,6 +565,10 @@ def create_token_record():
     if existing and existing.get("token") and (not token or _mask(token) == token):
         token = existing.get("token")
 
+    endpoint = data.get("endpoint")
+    if existing and existing.get("endpoint") and (not endpoint or _mask(str(endpoint)) == str(endpoint)):
+        endpoint = existing.get("endpoint")
+
     now = time.time()
     record = {
         "id": tid,
@@ -465,6 +576,7 @@ def create_token_record():
         "platform": platform,
         "enabled": bool(data.get("enabled", True)) if "enabled" in data else (existing.get("enabled", True) if existing else True),
         "token": token or "",
+        "endpoint": str(endpoint or "").strip(),
         "scopes": data.get("scopes") or (existing.get("scopes", []) if existing else []),
         "created_at": existing.get("created_at") if existing else now,
         "updated_at": now,
@@ -489,48 +601,112 @@ def test_token_record(token_id: str):
     return jsonify({"result": _probe_token(record)})
 
 
-def _probe_token(record: Dict[str, Any]) -> Dict[str, Any]:
-    if http_client is None:
-        return {"ok": False, "detail": "requests library unavailable"}
+def _b64(secret: str) -> str:
+    import base64
+    return base64.b64encode(secret.encode("utf-8")).decode("ascii")
+
+
+def _parse_host_port(value: str, default_port: int):
+    from urllib.parse import urlparse
+    value = (value or "").strip()
+    if not value:
+        return None, None
+    parsed = urlparse(value if "://" in value else f"//{value}")
+    host = parsed.hostname
+    if not host:
+        return None, None
+    return host, parsed.port or default_port
+
+
+def _tcp_reachable(host: str, port: int, timeout: float = PROBE_TIMEOUT) -> bool:
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _token_headers(record: Dict[str, Any], probe: Dict[str, Any]) -> Dict[str, str]:
     token = record.get("token", "")
-    if not token:
-        return {"ok": False, "detail": "No token saved yet"}
-    platform = record.get("platform", "")
+    auth = probe.get("auth", "bearer")
     headers = {"Accept": "application/json"}
-
-    if platform == "github":
+    if auth == "bearer":
         headers["Authorization"] = f"Bearer {token}"
-        url = "https://api.github.com/user"
-    elif platform == "gitlab":
+    elif auth == "token":
+        headers["Authorization"] = f"token {token}"
+    elif auth == "private_token":
         headers["PRIVATE-TOKEN"] = token
-        url = "https://gitlab.com/api/v4/user"
-    elif platform == "bitbucket":
-        # token stored as "username:app_password"
-        parts = token.split(":", 1)
-        if len(parts) == 2:
-            headers["Authorization"] = None
-            # use basic auth
-            import base64
-            b64 = base64.b64encode(token.encode("utf-8")).decode("ascii")
-            headers["Authorization"] = f"Basic {b64}"
-        url = "https://api.bitbucket.org/2.0/user"
-    elif platform == "azure_devops":
-        import base64
-        b64 = base64.b64encode(f":{token}".encode("utf-8")).decode("ascii")
-        headers["Authorization"] = f"Basic {b64}"
-        url = "https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1"
-    else:
-        return {"ok": False, "detail": f"Unsupported platform {platform}"}
+    elif auth == "basic_colon":
+        headers["Authorization"] = f"Basic {_b64(token)}"
+    elif auth == "basic_colon_prefix":
+        headers["Authorization"] = f"Basic {_b64(':' + token)}"
+    elif auth == "dd_api_key":
+        headers["DD-API-KEY"] = token
+    elif auth == "linear":
+        headers["Authorization"] = f"Linear {token}"
+    return headers
 
+
+def _token_http_get(url: str, headers: Dict[str, str], ok_text: str, invalid_statuses=()) -> Dict[str, Any]:
     try:
         r = http_client.get(url, headers=headers, timeout=PROBE_TIMEOUT)
     except Exception as exc:
         return {"ok": False, "detail": f"Connection failed: {exc.__class__.__name__}"}
     if r.status_code == 200:
-        return {"ok": True, "status": 200, "detail": "Token validated"}
-    if r.status_code in (401, 403):
+        return {"ok": True, "status": 200, "detail": ok_text}
+    if r.status_code in (401, 403) + tuple(invalid_statuses):
         return {"ok": False, "status": r.status_code, "detail": "Invalid token / insufficient scope"}
     return {"ok": False, "status": r.status_code, "detail": f"Unexpected HTTP {r.status_code}"}
+
+
+def _probe_token(record: Dict[str, Any]) -> Dict[str, Any]:
+    if http_client is None:
+        return {"ok": False, "detail": "requests library unavailable"}
+    token = (record.get("token") or "").strip()
+    if not token:
+        return {"ok": False, "detail": "No credential saved yet"}
+    platform = record.get("platform", "")
+    spec = _PLATFORMS.get(platform, {})
+    if not spec:
+        return {"ok": False, "detail": f"Unsupported platform {platform}"}
+    probe = spec.get("probe", {}) or {}
+    ptype = probe.get("type", "api")
+
+    # TCP reachability (Redis / PostgreSQL connection strings)
+    if ptype == "tcp":
+        host, port = _parse_host_port(token, probe.get("default_port", 443))
+        if not host:
+            return {"ok": False, "detail": "Could not parse host from connection string"}
+        if _tcp_reachable(host, port, PROBE_TIMEOUT):
+            return {"ok": True, "detail": f"TCP reachable on {host}:{port}"}
+        return {"ok": False, "detail": f"Connection failed on {host}:{port}"}
+
+    # URL-based HTTP services (Qdrant, Prometheus) where the stored value IS the URL
+    if ptype == "http":
+        url = f"{token.rstrip('/')}{probe.get('path', '/')}"
+        return _token_http_get(url, {"Accept": "application/json"}, probe.get("label", "Connection OK"))
+
+    # API / GraphQL token probes
+    endpoint = (record.get("endpoint") or "").strip()
+    base = endpoint.rstrip("/") or probe.get("url", "").rstrip("/")
+    if probe.get("require_endpoint") and not endpoint:
+        return {"ok": False, "detail": "Set your site URL (e.g. https://your-domain.atlassian.net) when connecting"}
+    url = base + (probe.get("path", "") or "")
+    headers = _token_headers(record, probe)
+
+    if ptype == "graphql":
+        try:
+            r = http_client.post(url, headers=headers, json={"query": "{ viewer { id } }"}, timeout=PROBE_TIMEOUT)
+        except Exception as exc:
+            return {"ok": False, "detail": f"Connection failed: {exc.__class__.__name__}"}
+        if r.status_code == 200:
+            return {"ok": True, "status": 200, "detail": "Token validated"}
+        if r.status_code in (401, 403):
+            return {"ok": False, "status": r.status_code, "detail": "Invalid token / insufficient scope"}
+        return {"ok": False, "status": r.status_code, "detail": f"Unexpected HTTP {r.status_code}"}
+
+    return _token_http_get(url, headers, "Token validated", probe.get("invalid_statuses", ()))
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────

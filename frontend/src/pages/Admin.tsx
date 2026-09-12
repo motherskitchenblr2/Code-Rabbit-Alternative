@@ -19,6 +19,16 @@ import {
   Cloud,
   Zap,
   Cpu,
+  Triangle,
+  Network,
+  CloudCog,
+  Kanban,
+  Activity,
+  Database,
+  MemoryStick,
+  Container,
+  Gauge,
+  Shield,
 } from 'lucide-react'
 
 // ── API helpers ─────────────────────────────────────────────────────────────
@@ -113,6 +123,19 @@ const PLATFORM_ICONS: Record<string, any> = {
   gitlab: Gitlab,
   bitbucket: Boxes,
   azure_devops: Cloud,
+  vercel: Triangle,
+  netlify: Network,
+  cloudflare: CloudCog,
+  huggingface: Bot,
+  codeberg: GitFork,
+  jira: Kanban,
+  linear: Zap,
+  datadog: Activity,
+  sentry: Shield,
+  postgresql: Database,
+  redis: MemoryStick,
+  qdrant: Container,
+  prometheus: Gauge,
 }
 
 const TRANSPORTS = [
@@ -902,7 +925,7 @@ function TokensSection({ tokens, platforms, onChanged }: {
     <SectionCard
       title="Access Tokens"
       icon={KeyRound}
-      desc="Git credentials for GitHub, GitLab, Bitbucket, and Azure DevOps."
+      desc="Credentials for Git hosts, cloud platforms, databases, and observability tools."
       onAdd={() => { setCreating(true); setEditing(null) }}
     >
       {creating && <TokenForm token={null} platforms={platforms} onDone={onChanged} onCancel={() => setCreating(false)} />}

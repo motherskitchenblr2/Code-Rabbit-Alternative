@@ -25,7 +25,21 @@ import {
   KeyRound,
   AlertCircle,
   CheckCircle2,
-  Plug,
+  Gitlab,
+  GitFork,
+  Boxes,
+  Cloud,
+  Triangle,
+  Network,
+  CloudCog,
+  Bot,
+  Kanban,
+  Zap,
+  Activity,
+  Database,
+  MemoryStick,
+  Container,
+  Gauge,
 } from 'lucide-react'
 
 // ── API helper (mirrors Admin.tsx / AgentTeam.tsx) ───────────────────────────
@@ -545,6 +559,8 @@ interface TokenRecord {
   enabled: boolean
   token_set: boolean
   token_tail: string
+  endpoint_set?: boolean
+  endpoint_tail?: string
   created_at?: number
   updated_at?: number
 }
@@ -572,7 +588,19 @@ type ModalState =
   | { kind: 'webhook'; key: string; mode: 'connect' | 'manage' }
   | null
 
-const TOKEN_INTEGRATIONS: Array<{ platform: string; name: string; desc: string; hint: string; icon: ReactNode }> = [
+type TokenIntegrationMeta = {
+  platform: string
+  name: string
+  desc: string
+  hint: string
+  icon: ReactNode
+  credentialLabel?: string
+  placeholder?: string
+  endpointOptional?: boolean
+  endpointHint?: string
+}
+
+const TOKEN_INTEGRATIONS: TokenIntegrationMeta[] = [
   {
     platform: 'github',
     name: 'GitHub',
@@ -585,7 +613,142 @@ const TOKEN_INTEGRATIONS: Array<{ platform: string; name: string; desc: string; 
     name: 'GitLab',
     desc: 'Alternative Git hosting',
     hint: 'Personal access token (glpat-) scoped to api',
-    icon: <GitBranch className="w-6 h-6 text-neon-cyan" />,
+    icon: <Gitlab className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'bitbucket',
+    name: 'Bitbucket',
+    desc: 'Repo hosting & pipelines',
+    hint: 'Store as username:app-password with repo read access',
+    icon: <Boxes className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'azure_devops',
+    name: 'Azure DevOps',
+    desc: 'Microsoft repo hosting & boards',
+    hint: 'PAT with Code Read scope',
+    icon: <Cloud className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'vercel',
+    name: 'Vercel',
+    desc: 'Frontend deploys & previews',
+    hint: 'API token from vercel.com/account/tokens (read scope)',
+    credentialLabel: 'API Token',
+    placeholder: 'Vercel API token',
+    icon: <Triangle className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'netlify',
+    name: 'Netlify',
+    desc: 'Static site deploys & forms',
+    hint: 'Personal access token from app.netlify.com/user/applications',
+    credentialLabel: 'Personal Access Token',
+    placeholder: 'Netlify access token',
+    icon: <Network className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'cloudflare',
+    name: 'Cloudflare',
+    desc: 'CDN, DNS & Workers',
+    hint: 'API token from dash.cloudflare.com/profile/api-tokens',
+    credentialLabel: 'API Token',
+    placeholder: 'Cloudflare API token',
+    icon: <CloudCog className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'huggingface',
+    name: 'Hugging Face',
+    desc: 'Models, Spaces & datasets',
+    hint: 'Access token from huggingface.co/settings/tokens',
+    placeholder: 'hf_…',
+    icon: <Bot className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'codeberg',
+    name: 'Codeberg',
+    desc: 'Community Git hosting',
+    hint: 'Token from codeberg.org/user/settings/applications',
+    placeholder: 'Codeberg token',
+    icon: <GitFork className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'jira',
+    name: 'Jira',
+    desc: 'Issue tracking & boards',
+    hint: 'Store as email:your-api-token (Atlassian API token); set your site URL in Endpoint',
+    credentialLabel: 'Email:API token',
+    placeholder: 'you@company.com:your-api-token',
+    endpointOptional: true,
+    endpointHint: 'Atlassian site URL, e.g. https://your-domain.atlassian.net',
+    icon: <Kanban className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'linear',
+    name: 'Linear',
+    desc: 'Issue tracking for product teams',
+    hint: 'Personal API key from linear.app/settings/api',
+    credentialLabel: 'API Key',
+    placeholder: 'Linear API key',
+    icon: <Zap className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'datadog',
+    name: 'Datadog',
+    desc: 'Monitoring & observability',
+    hint: 'Datadog API key; override Endpoint for a regional site (https://api.eu.datadoghq.com etc.)',
+    credentialLabel: 'API Key',
+    placeholder: 'Datadog API key',
+    endpointOptional: true,
+    endpointHint: 'Regional API endpoint, e.g. https://api.us3.datadoghq.com',
+    icon: <Activity className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'sentry',
+    name: 'Sentry',
+    desc: 'Error tracking & releases',
+    hint: 'Auth token from sentry.io/settings/auth-tokens (or your self-hosted Sentry)',
+    credentialLabel: 'Auth Token',
+    placeholder: 'sntrys_…',
+    endpointOptional: true,
+    endpointHint: 'Sentry base URL, e.g. https://sentry.io or https://sentry.example.com',
+    icon: <Shield className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'postgresql',
+    name: 'PostgreSQL',
+    desc: 'Relational database',
+    hint: 'postgresql://user:pass@host:5432/dbname — reachability only, credentials are not checked',
+    credentialLabel: 'Connection string',
+    placeholder: 'postgresql://user:pass@host:5432/dbname',
+    icon: <Database className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'redis',
+    name: 'Redis',
+    desc: 'In-memory cache & queue',
+    hint: 'redis://:password@host:6379 — reachability only, credentials are not checked',
+    credentialLabel: 'Connection string',
+    placeholder: 'redis://:password@host:6379',
+    icon: <MemoryStick className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'qdrant',
+    name: 'Qdrant',
+    desc: 'Vector database',
+    hint: 'Full Qdrant base URL, e.g. http://localhost:6333',
+    credentialLabel: 'Endpoint URL',
+    placeholder: 'http://localhost:6333',
+    icon: <Container className="w-6 h-6 text-neon-cyan" />,
+  },
+  {
+    platform: 'prometheus',
+    name: 'Prometheus',
+    desc: 'Metrics & alerting',
+    hint: 'Prometheus base URL, e.g. http://localhost:9090',
+    credentialLabel: 'Endpoint URL',
+    placeholder: 'http://localhost:9090',
+    icon: <Gauge className="w-6 h-6 text-neon-cyan" />,
   },
 ]
 
@@ -605,8 +768,6 @@ const WEBHOOK_INTEGRATIONS: Array<{ kind: string; name: string; desc: string; hi
     icon: <MessageSquare className="w-6 h-6 text-neon-cyan" />,
   },
 ]
-
-const COMING_SOON = ['Jira', 'Linear', 'Datadog', 'Sentry', 'PostgreSQL', 'Redis', 'Qdrant', 'Prometheus']
 
 function IntegrationsSection() {
   const [tokenList, setTokenList] = useState<TokenRecord[]>([])
@@ -684,18 +845,6 @@ function IntegrationsSection() {
               />
             )
           })}
-
-          <div className="card-cyber p-4 border border-dashed border-cyber-700/50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-cyber-800/50 flex items-center justify-center flex-shrink-0">
-                <Plug className="w-6 h-6 text-cyber-500" />
-              </div>
-              <div>
-                <p className="font-medium text-white">More integrations coming soon</p>
-                <p className="text-xs text-cyber-400 mt-0.5">{COMING_SOON.join(' · ')}</p>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
@@ -805,6 +954,7 @@ function TokenConnectModal({ platform, onClose, onSaved }: { platform: string; o
   const meta = TOKEN_INTEGRATIONS.find((i) => i.platform === platform)
   const [label, setLabel] = useState('')
   const [token, setToken] = useState('')
+  const [endpoint, setEndpoint] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [probe, setProbe] = useState<ProbeResult | null>(null)
@@ -822,7 +972,7 @@ function TokenConnectModal({ platform, onClose, onSaved }: { platform: string; o
     try {
       const rec = await api<TokenRecord>('/api/v1/admin/tokens', {
         method: 'POST',
-        body: JSON.stringify({ name: label.trim() || meta?.name, platform, token: token.trim() }),
+        body: JSON.stringify({ name: label.trim() || meta?.name, platform, token: token.trim(), endpoint: endpoint.trim() || undefined }),
       })
       const res = await api<{ result: ProbeResult }>(`/api/v1/admin/tokens/${rec.id}/test`, { method: 'POST' })
       setProbe(res.result)
@@ -845,17 +995,32 @@ function TokenConnectModal({ platform, onClose, onSaved }: { platform: string; o
           <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} className="input-cyber" autoFocus />
         </div>
         <div>
-          <label className="label-cyber">Access Token</label>
+          <label className="label-cyber">{meta?.credentialLabel || 'Access Token'}</label>
           <textarea
             value={token}
             onChange={(e) => setToken(e.target.value)}
             className="input-cyber min-h-[90px] resize-y font-mono"
-            placeholder="ghp_… / glpat-…"
+            placeholder={meta?.placeholder || 'ghp_… / glpat-…'}
             spellCheck={false}
             autoComplete="off"
           />
           <p className="text-xs text-cyber-500 mt-1">{meta?.hint}</p>
         </div>
+        {meta?.endpointOptional && (
+          <div>
+            <label className="label-cyber">API Endpoint (optional)</label>
+            <input
+              type="text"
+              value={endpoint}
+              onChange={(e) => setEndpoint(e.target.value)}
+              className="input-cyber font-mono"
+              placeholder={meta?.endpointHint || 'https://…'}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            {meta.endpointHint && <p className="text-xs text-cyber-500 mt-1">{meta.endpointHint}</p>}
+          </div>
+        )}
         {error && <p className="text-sm text-red-400">{error}</p>}
         <ProbeMessage probe={probe} />
         <div className="flex items-center gap-3 pt-1">
@@ -919,7 +1084,10 @@ function TokenManageModal({ platform, records, onClose, onChanged }: {
                   <KeyRound className="w-4 h-4 text-neon-cyan flex-shrink-0" />
                   {rec.name}
                 </p>
-                <p className="text-xs text-cyber-400 font-mono mt-1">{rec.token_tail || 'No token saved'}</p>
+                <p className="text-xs text-cyber-400 font-mono mt-1">{rec.token_tail || 'No credential saved'}</p>
+                {rec.endpoint_set && rec.endpoint_tail && (
+                  <p className="text-xs text-cyber-500 font-mono mt-0.5">{rec.endpoint_tail}</p>
+                )}
               </div>
               <span className={`badge-cyber ${rec.enabled ? 'bg-neon-green/20 text-neon-green border-neon-green/30' : 'bg-cyber-700 text-cyber-400'} text-xs`}>
                 {rec.enabled ? 'Active' : 'Disabled'}
