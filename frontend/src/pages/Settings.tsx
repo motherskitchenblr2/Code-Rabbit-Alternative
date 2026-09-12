@@ -136,7 +136,7 @@ export default function Settings() {
             {activeSection === 'profile' && <ProfileSection user={user} />}
             {activeSection === 'security' && <SecuritySection />}
             {activeSection === 'notifications' && <NotificationsSection />}
-{activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} />}
+            {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} />}
             {activeSection === 'integrations' && <IntegrationsSection />}
             {activeSection === 'advanced' && <AdvancedSection />}
           </div>
@@ -164,6 +164,9 @@ export default function Settings() {
             })}
           </div>
           <div className="p-4 sm:p-6">
+            {activeSection === 'profile' && <ProfileSection user={user} />}
+            {activeSection === 'security' && <SecuritySection />}
+            {activeSection === 'notifications' && <NotificationsSection />}
             {activeSection === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} />}
             {activeSection === 'integrations' && <IntegrationsSection />}
             {activeSection === 'advanced' && <AdvancedSection />}
