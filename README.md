@@ -1,5 +1,8 @@
 <div align="center">
 
+<img width="1776" height="896" alt="image" src="https://github.com/user-attachments/assets/1110dcb2-4af3-4308-8d51-27846b78db32" />
+
+
 # 🌃 Git-Fix
 
 ### **The Cyberpunk Code Review Engine** — *Security. Quality. Automated.*
