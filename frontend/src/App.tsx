@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { useAuth } from './contexts/AuthContext'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -81,34 +82,37 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={
-        <PublicRoute>
-          <Login />
-        </PublicRoute>
-      } />
-      <Route element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      }>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/repositories" element={<Repositories />} />
-        <Route path="/repositories/:id" element={<RepositoryDetail />} />
-        <Route path="/repositories/:owner/:name/scan" element={<ScanResults />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/admin" element={
-          <AdminOnly>
-            <Admin />
-          </AdminOnly>
+    <>
+      <Routes>
+        <Route path="/login" element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
         } />
-        <Route path="/self-improvement" element={<SelfImprovement />} />
-        <Route path="/agents" element={<AgentTeam />} />
-        <Route path="/analytics" element={<TeamDashboard />} />
-        <Route path="/analytics/compliance" element={<ComplianceReport />} />
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/repositories" element={<Repositories />} />
+          <Route path="/repositories/:id" element={<RepositoryDetail />} />
+          <Route path="/repositories/:owner/:name/scan" element={<ScanResults />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={
+            <AdminOnly>
+              <Admin />
+            </AdminOnly>
+          } />
+          <Route path="/self-improvement" element={<SelfImprovement />} />
+          <Route path="/agents" element={<AgentTeam />} />
+          <Route path="/analytics" element={<TeamDashboard />} />
+          <Route path="/analytics/compliance" element={<ComplianceReport />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Analytics />
+    </>
   )
 }
 
