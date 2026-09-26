@@ -4,6 +4,22 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/app",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/workspace",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/swarm",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/opencode",
+      "destination": "/app.html"
+    },
+    {
       "source": "/landing",
       "destination": "/landing.html"
     },

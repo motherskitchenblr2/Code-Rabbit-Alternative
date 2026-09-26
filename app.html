@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git-Fix // Swarm Workspace — OpenCode Agentic WebUI</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            950: '#04060d',
+                            900: '#070a16',
+                            850: '#0b1022',
+                            800: '#101732',
+                            750: '#161f42',
+                            700: '#1d2956',
+                            600: '#2b3b78',
+                            500: '#3d52a4',
+                            400: '#5871d3',
+                            300: '#7e94f0',
+                            200: '#afbef8',
+                            100: '#dce4fd'
+                        },
+                        neon: {
+                            cyan: '#00f0ff',
+                            magenta: '#ff007f',
+                            pink: '#ff1493',
+                            green: '#00ff88',
+                            amber: '#ffaa00',
+                            purple: '#a855f7',
+                            blue: '#3b82f6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Courier New', 'monospace'],
+                        display: ['Orbitron', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-magenta: #ff007f;
+            --neon-green: #00ff88;
+            --neon-amber: #ffaa00;
+        }
+
+        body {
+            background-color: #04060d;
+            color: #dce4fd;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Subtle matrix grid */
+        .cyber-bg {
+            background-size: 36px 36px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 0, 127, 0.03) 1px, transparent 1px);
+        }
+
+        /* Glow utilities */
+        .glow-cyan { box-shadow: 0 0 20px -3px rgba(0, 240, 255, 0.35); }
+        .glow-magenta { box-shadow: 0 0 20px -3px rgba(255, 0, 127, 0.35); }
+        .glow-green { box-shadow: 0 0 20px -3px rgba(0, 255, 136, 0.35); }
+        .glow-amber { box-shadow: 0 0 20px -3px rgba(255, 170, 0, 0.35); }
+
+        .text-glow-cyan { text-shadow: 0 0 10px rgba(0, 240, 255, 0.6); }
+        .text-glow-magenta { text-shadow: 0 0 10px rgba(255, 0, 127, 0.6); }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #070a16; }
+        ::-webkit-scrollbar-thumb { background: #1d2956; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+        /* Code editor line numbers */
+        .editor-gutter {
+            counter-reset: line-counter;
+        }
+        .editor-line::before {
+            counter-increment: line-counter;
+            content: counter(line-counter);
+            display: inline-block;
+            width: 2.2rem;
+            text-align: right;
+            padding-right: 0.8rem;
+            color: #4b5563;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="cyber-bg h-screen w-screen flex flex-col antialiased selection:bg-neon-magenta selection:text-white">
+
+    <!-- Global Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform -translate-y-16 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-2.5 rounded-lg bg-cyber-900 border border-neon-cyan text-white shadow-2xl glow-cyan text-xs font-mono">
+        <i data-lucide="check-circle" class="w-4 h-4 text-neon-cyan"></i>
+        <span id="toast-text">System Ready</span>
+    </div>
+
+    <!-- Top App Navigation Bar -->
+    <header class="h-14 bg-cyber-950/95 border-b border-cyber-700/80 px-4 flex items-center justify-between z-30 shrink-0">
+        <!-- Left: Brand + Workspace Roster -->
+        <div class="flex items-center gap-4">
+            <a href="./index.html" class="flex items-center gap-2 group">
+                <div class="w-8 h-8 rounded bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 group-hover:glow-cyan transition">
+                    <div class="w-full h-full bg-cyber-950 rounded-[3px] flex items-center justify-center">
+                        <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-display font-black text-sm tracking-wider text-white">GIT-FIX</span>
+                    <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40">SWARM-UI</span>
+                </div>
+            </a>
+
+            <!-- Left Panel Toggle / Drawer Pin Button -->
+            <button id="toggle-left-panel-btn" onclick="toggleLeftPanel()" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-xs font-mono text-slate-300 transition" title="Toggle Navigation Panel">
+                <i data-lucide="sidebar" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                <span class="hidden sm:inline">Panel</span>
+                <span id="left-panel-pin-indicator" class="text-[10px]">📌</span>
+            </button>
+
+            <!-- Active Swarm Agents Live Counter -->
+            <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyber-900 border border-cyber-700 text-xs font-mono">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-neon-green"></span>
+                </span>
+                <span class="text-slate-300">Swarm:</span>
+                <span class="text-neon-cyan font-bold">6 Autonomous Agents Active</span>
+            </div>
+        </div>
+
+        <!-- Center: Core Hub Tabs Selector (Chat, Editor, Tasks, Integrations, Ollama) -->
+        <div class="flex items-center gap-1 bg-cyber-900 border border-cyber-700 rounded-lg p-1 text-xs font-mono">
+            <button onclick="switchHub('chat')" id="hub-btn-chat" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 bg-cyber-750 text-neon-cyan border border-neon-cyan/40">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                <span>Swarm Chat</span>
+            </button>
+            <button onclick="switchHub('editor')" id="hub-btn-editor" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                <span>Editing Hub</span>
+            </button>
+            <button onclick="switchHub('tasks')" id="hub-btn-tasks" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                <span>TODO (<span id="todo-badge">4</span>)</span>
+            </button>
+            <button onclick="switchHub('integrations')" id="hub-btn-integrations" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                <span>AI Integrations</span>
+            </button>
+            <button onclick="switchHub('ollama')" id="hub-btn-ollama" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-neon-green"></i>
+                <span>Ollama Offline</span>
+            </button>
+        </div>
+
+        <!-- Right: Terminal Drawer Control & Repository Links -->
+        <div class="flex items-center gap-2">
+            <!-- Terminal Drawer Trigger -->
+            <button id="toggle-terminal-btn" onclick="toggleTerminal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-600 text-neon-cyan text-xs font-mono font-semibold transition glow-cyan">
+                <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                <span>Terminal</span>
+                <span id="terminal-pin-badge" class="text-[10px] text-neon-magenta font-bold">📌</span>
+            </button>
+
+            <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-white border border-cyber-700 transition" title="GitHub Repo">
+                <i data-lucide="github" class="w-4 h-4"></i>
+            </a>
+            <a href="./index.html" class="p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-neon-cyan border border-cyber-700 transition" title="Landing Page">
+                <i data-lucide="home" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- ========================================================================= -->
+        <!-- LEFT PANEL (Drawer / Collapsible with 📌 Pin and ❌ Close)               -->
+        <!-- ========================================================================= -->
+        <aside id="left-panel" class="w-64 bg-cyber-950 border-r border-cyber-700/80 flex flex-col shrink-0 transition-all duration-300 z-20 overflow-hidden relative">
+            <!-- Panel Header with Pin and Close Controls -->
+            <div class="p-3 border-b border-cyber-700/60 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+                    <i data-lucide="bot" class="w-4 h-4 text-neon-magenta"></i>
+                    <span>Swarm Roster</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <!-- Pin Button "📌" -->
+                    <button onclick="toggleLeftPanelPin()" id="left-pin-btn" class="p-1 rounded hover:bg-cyber-800 text-xs font-mono text-neon-cyan" title="Pin / Hold Panel Open">
+                        📌
+                    </button>
+                    <!-- Close Button "❌" -->
+                    <button onclick="closeLeftPanel()" class="p-1 rounded hover:bg-cyber-800 text-xs font-mono text-slate-400 hover:text-red-400" title="Manually Close Panel">
+                        ❌
+                    </button>
+                </div>
+            </div>
+
+            <!-- Agent Swarm Roster List -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-2.5">
+                <div class="text-[10px] font-mono text-slate-500 uppercase tracking-wider px-1">Active Swarm Specialists</div>
+
+                <!-- Agent 1: Coordinator -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-neon-cyan transition cursor-pointer" onclick="selectAgentTarget('coordinator')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-neon-cyan animate-pulse"></span>
+                            Coordinator
+                        </span>
+                        <span class="text-[10px] text-neon-cyan">Lead</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Multi-agent task decomposition &amp; consensus arbiter.</p>
+                </div>
+
+                <!-- Agent 2: Security Sentinel -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-red-400 transition cursor-pointer" onclick="selectAgentTarget('security')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                            Security Sentinel
+                        </span>
+                        <span class="text-[10px] text-red-400">Auditor</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">AST taint analysis, CVE interception, secret scanning.</p>
+                </div>
+
+                <!-- Agent 3: DevOps & Shell Runner -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-neon-amber transition cursor-pointer" onclick="selectAgentTarget('shell')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-neon-amber"></span>
+                            DevOps Runner
+                        </span>
+                        <span class="text-[10px] text-neon-amber">Shell</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Executes bash commands, package installs &amp; test suites.</p>
+                </div>
+
+                <!-- Agent 4: Code Craftsman -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-neon-magenta transition cursor-pointer" onclick="selectAgentTarget('coder')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-neon-magenta"></span>
+                            Code Craftsman
+                        </span>
+                        <span class="text-[10px] text-neon-magenta">Engineer</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Refactoring, bug fixes &amp; TypeScript/Python generation.</p>
+                </div>
+
+                <!-- Agent 5: QA & Oracle -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-purple-400 transition cursor-pointer" onclick="selectAgentTarget('qa')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                            Test Oracle
+                        </span>
+                        <span class="text-[10px] text-purple-400">QA</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Coverage validation, edge case &amp; regression checks.</p>
+                </div>
+
+                <!-- Agent 6: Ollama Offline -->
+                <div class="p-2.5 rounded-lg bg-cyber-900 border border-cyber-700 hover:border-neon-green transition cursor-pointer" onclick="selectAgentTarget('ollama')">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-neon-green"></span>
+                            Ollama Specialist
+                        </span>
+                        <span class="text-[10px] text-neon-green">Local</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Offline private local LLM weights inference.</p>
+                </div>
+            </div>
+
+            <!-- Workspace Quick Stats Footer -->
+            <div class="p-3 border-t border-cyber-700/60 bg-cyber-900/60 text-xs font-mono">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span>Task Velocity:</span>
+                    <span class="text-neon-green font-bold">&lt; 450ms</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-400 mt-1">
+                    <span>Active LLM:</span>
+                    <span id="active-llm-label" class="text-neon-cyan truncate">Claude 3.5 / Ollama</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ========================================================================= -->
+        <!-- CENTER STAGE (Switches dynamically between the 5 Hubs)                    -->
+        <!-- ========================================================================= -->
+        <main class="flex-1 flex flex-col overflow-hidden relative bg-cyber-900/30">
+
+            <!-- --------------------------------------------------------------------- -->
+            <!-- 1. SWARM CHAT INTERFACE (OpenCode WebUI Style)                        -->
+            <!-- --------------------------------------------------------------------- -->
+            <section id="hub-chat" class="hub-view flex-1 flex flex-col overflow-hidden">
+                <!-- Chat Action Header & Mode Indicator -->
+                <div class="h-10 bg-cyber-950/80 border-b border-cyber-700/60 px-4 flex items-center justify-between text-xs font-mono text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="text-neon-cyan font-bold">Target:</span>
+                        <select id="chat-agent-target" class="bg-cyber-850 border border-cyber-700 text-white rounded px-2 py-0.5 text-xs focus:outline-none focus:border-neon-cyan">
+                            <option value="all">@swarm-all (Full Agent Consensus)</option>
+                            <option value="coordinator">@coordinator (Lead Architect)</option>
+                            <option value="security">@security (Vulnerability Auditor)</option>
+                            <option value="shell">@shell (Terminal &amp; DevOps Runner)</option>
+                            <option value="coder">@coder (Code Craftsman)</option>
+                            <option value="qa">@qa (Test Oracle)</option>
+                            <option value="ollama">@ollama (Offline Local LLM)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="hidden sm:inline text-slate-500">Shell execution:</span>
+                        <span class="text-neon-green flex items-center gap-1">
+                            <i data-lucide="check" class="w-3 h-3"></i>
+                            ENABLED IN CHAT
+                        </span>
+                        <button onclick="clearChat()" class="hover:text-red-400 text-slate-400 ml-2" title="Clear thread">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages Stream Scroll Area -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 font-mono text-xs">
+                    <!-- Welcome Agentic Swarm Message -->
+                    <div class="flex items-start gap-3 max-w-4xl">
+                        <div class="w-8 h-8 rounded-lg bg-neon-cyan/15 border border-neon-cyan/40 text-neon-cyan flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="bot" class="w-4 h-4"></i>
+                        </div>
+                        <div class="flex-1 bg-cyber-950/90 border border-cyber-700 rounded-xl p-4 shadow-lg space-y-2">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-neon-cyan font-bold flex items-center gap-2">
+                                    <span>🧠 Coordinator Agent</span>
+                                    <span class="px-1.5 py-0.2 rounded bg-neon-cyan/10 text-[10px] text-neon-cyan">Swarm Leader</span>
+                                </span>
+                                <span class="text-slate-500">Live Agentic Session</span>
+                            </div>
+                            <p class="text-slate-200 leading-relaxed text-xs font-sans">
+                                Welcome to the <strong class="text-neon-cyan">OpenCode Swarm Workspace</strong>. All specialized agents and sub-agents are synchronized. You can direct tasks to individual specialists, run shell commands directly in this thread, edit repository code in the <em>Editing Hub</em>, track action items in the <em>TODO Tab</em>, or invoke offline local models via the <em>Ollama Hub</em>.
+                            </p>
+                            <!-- Quick Action Buttons -->
+                            <div class="pt-2 flex flex-wrap gap-2">
+                                <button onclick="sendQuickPrompt('Run AST Security Scan across repository diffs')" class="px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-neon-cyan text-[11px] transition">
+                                    🛡️ Run AST Security Audit
+                                </button>
+                                <button onclick="sendQuickPrompt('Check git status and active branch')" class="px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-neon-amber text-[11px] transition">
+                                    💻 Shell: git status
+                                </button>
+                                <button onclick="sendQuickPrompt('Inspect TODO tasks list and report next milestone')" class="px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-neon-green text-[11px] transition">
+                                    ✅ Check Task Progress
+                                </button>
+                                <button onclick="sendQuickPrompt('Connect to local Ollama server and list models')" class="px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-purple-400 text-[11px] transition">
+                                    🦙 Probe Local Ollama Models
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Tray (OpenCode Style with Shell Pill & Model Tag) -->
+                <div class="p-3 sm:p-4 bg-cyber-950/90 border-t border-cyber-700/80 shrink-0">
+                    <div class="max-w-5xl mx-auto space-y-2">
+                        <!-- Quick Tool Indicators -->
+                        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-500">Shortcut:</span>
+                                <button onclick="insertCommand('npm test')" class="hover:text-neon-cyan">npm test</button> •
+                                <button onclick="insertCommand('git diff')" class="hover:text-neon-cyan">git diff</button> •
+                                <button onclick="insertCommand('python -m backend.self_improvement.cli status')" class="hover:text-neon-cyan">cli status</button>
+                            </div>
+                            <span class="text-slate-500 hidden sm:inline">Press Enter to dispatch to Swarm</span>
+                        </div>
+
+                        <!-- Text Input Form -->
+                        <form onsubmit="handleChatSubmit(event)" class="relative flex items-center">
+                            <textarea id="chat-input" rows="2" placeholder="Ask swarm of agents, or type command (e.g. /run npm install, /fix auth_handler.py, /pull llama3.2)..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-xl p-3 pr-28 text-xs font-mono text-white placeholder-slate-500 focus:outline-none resize-none transition shadow-inner"></textarea>
+                            
+                            <div class="absolute right-2.5 flex items-center gap-1.5">
+                                <button type="button" onclick="openTerminalCommandPrompt()" class="p-2 rounded-lg bg-cyber-800 hover:bg-cyber-750 text-slate-300 hover:text-neon-green transition" title="Execute terminal command in chat">
+                                    <i data-lucide="terminal" class="w-4 h-4"></i>
+                                </button>
+                                <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-blue-400 hover:to-neon-cyan text-cyber-950 font-bold text-xs font-mono transition shadow-lg glow-cyan flex items-center gap-1.5">
+                                    <span>Dispatch</span>
+                                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------------- -->
+            <!-- 2. EDITING HUB TAB (Complete Code Editing & Customization)            -->
+            <!-- --------------------------------------------------------------------- -->
+            <section id="hub-editor" class="hub-view flex-1 hidden flex-col overflow-hidden">
+                <!-- Editor Toolbar -->
+                <div class="h-10 bg-cyber-950 border-b border-cyber-700 px-4 flex items-center justify-between text-xs font-mono">
+                    <div class="flex items-center gap-3">
+                        <span class="text-neon-cyan font-bold flex items-center gap-1.5">
+                            <i data-lucide="file-code" class="w-4 h-4 text-neon-cyan"></i>
+                            <span id="current-editor-file">landing.html</span>
+                        </span>
+                        <span class="text-slate-500">|</span>
+                        <span class="text-slate-400">Language: <strong class="text-white" id="editor-lang">HTML / Tailwind</strong></span>
+                        <span class="text-[10px] text-neon-green px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/30">Synced with Repo</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="requestAgentFix()" class="px-2.5 py-1 rounded bg-neon-magenta/20 hover:bg-neon-magenta/30 border border-neon-magenta/50 text-neon-magenta text-xs font-bold transition flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i>
+                            <span>Agent Auto-Fix Bug</span>
+                        </button>
+                        <button onclick="saveEditorCode()" class="px-3 py-1 rounded bg-neon-cyan text-cyber-950 font-bold text-xs transition hover:bg-white flex items-center gap-1">
+                            <i data-lucide="save" class="w-3 h-3"></i>
+                            <span>Save File</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Editor Workspace: File Explorer Sidebar + Code Textarea -->
+                <div class="flex-1 flex overflow-hidden">
+                    <!-- File Explorer Tree -->
+                    <div class="w-56 bg-cyber-950 border-r border-cyber-700/80 p-3 overflow-y-auto text-xs font-mono space-y-1 shrink-0">
+                        <div class="text-[10px] uppercase text-slate-500 tracking-wider mb-2">Repository Files</div>
+                        <div onclick="openFileInEditor('landing.html')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-neon-cyan font-bold flex items-center gap-2 bg-cyber-900 border border-cyber-700">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>landing.html</span>
+                        </div>
+                        <div onclick="openFileInEditor('index.html')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-slate-300 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>index.html</span>
+                        </div>
+                        <div onclick="openFileInEditor('vercel.json')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-slate-300 flex items-center gap-2">
+                            <i data-lucide="file-json" class="w-3.5 h-3.5 text-neon-amber"></i>
+                            <span>vercel.json</span>
+                        </div>
+                        <div onclick="openFileInEditor('.coderabbit.yaml')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-slate-300 flex items-center gap-2">
+                            <i data-lucide="file-code" class="w-3.5 h-3.5 text-neon-magenta"></i>
+                            <span>.coderabbit.yaml</span>
+                        </div>
+                        <div onclick="openFileInEditor('docker-compose.yml')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-slate-300 flex items-center gap-2">
+                            <i data-lucide="container" class="w-3.5 h-3.5 text-neon-green"></i>
+                            <span>docker-compose.yml</span>
+                        </div>
+                        <div onclick="openFileInEditor('backend/app.py')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-slate-300 flex items-center gap-2">
+                            <i data-lucide="file-code" class="w-3.5 h-3.5 text-blue-400"></i>
+                            <span>backend/app.py</span>
+                        </div>
+                    </div>
+
+                    <!-- Code Textarea Area -->
+                    <div class="flex-1 flex flex-col bg-[#070a14] p-4 overflow-hidden">
+                        <textarea id="code-editor-textarea" spellcheck="false" class="flex-1 w-full h-full bg-transparent font-mono text-xs text-slate-200 focus:outline-none resize-none leading-relaxed selection:bg-neon-magenta selection:text-white" placeholder="// Code will load here..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------------- -->
+            <!-- 3. "TODO" TASK MANAGER HUB (Avoid Missing or Skipping Steps)          -->
+            <!-- --------------------------------------------------------------------- -->
+            <section id="hub-tasks" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+                <!-- Task Progress Header -->
+                <div class="bg-cyber-950 border border-cyber-700 rounded-2xl p-6 mb-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <span class="text-xs font-mono uppercase text-neon-cyan tracking-wider font-bold">Execution Milestone Tracker</span>
+                            <h2 class="text-2xl font-display font-bold text-white mt-1">Swarm Task &amp; TODO Hub</h2>
+                            <p class="text-xs font-mono text-slate-400 mt-1">Real-time status tracking ensuring zero tasks are skipped or missed.</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-display font-black text-neon-green glow-green" id="todo-percent">75%</div>
+                            <div class="text-[11px] font-mono text-slate-400">Milestone Completed</div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-cyber-900 h-2.5 rounded-full overflow-hidden border border-cyber-700">
+                        <div id="todo-progress-bar" class="bg-gradient-to-r from-neon-cyan via-neon-green to-neon-amber h-full rounded-full transition-all duration-500" style="width: 75%"></div>
+                    </div>
+                </div>
+
+                <!-- Add New Task Form -->
+                <form onsubmit="addNewTodo(event)" class="bg-cyber-950 border border-cyber-700 rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-3">
+                    <input id="new-todo-title" type="text" placeholder="Add next task (e.g. 'Integrate Ollama local model streamer', 'Patch AST nil pointer check')..." required class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-neon-cyan">
+                    <select id="new-todo-agent" class="bg-cyber-900 border border-cyber-700 text-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-neon-cyan">
+                        <option value="coordinator">Assign: @coordinator</option>
+                        <option value="security">Assign: @security</option>
+                        <option value="coder">Assign: @coder</option>
+                        <option value="shell">Assign: @shell</option>
+                        <option value="ollama">Assign: @ollama</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-neon-cyan text-cyber-950 font-bold font-mono text-xs hover:bg-white transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Add Task</span>
+                    </button>
+                </form>
+
+                <!-- Task List Items -->
+                <div id="todo-list" class="space-y-3 font-mono text-xs">
+                    <!-- Task Item 1 -->
+                    <div class="p-4 rounded-xl bg-cyber-950 border border-cyber-700/80 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" checked onchange="toggleTodo(this)" class="w-4 h-4 rounded accent-neon-green cursor-pointer">
+                            <div>
+                                <span class="line-through text-slate-400">Clone and configure repository landing page</span>
+                                <div class="text-[10px] text-slate-500 mt-0.5">Assigned to: <strong class="text-neon-cyan">@coordinator</strong> • Priority: High</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-green-500/10 text-neon-green border border-green-500/30">COMPLETED</span>
+                    </div>
+
+                    <!-- Task Item 2 -->
+                    <div class="p-4 rounded-xl bg-cyber-950 border border-cyber-700/80 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" checked onchange="toggleTodo(this)" class="w-4 h-4 rounded accent-neon-green cursor-pointer">
+                            <div>
+                                <span class="line-through text-slate-400">Install Vercel MCP server and fix deployment configuration</span>
+                                <div class="text-[10px] text-slate-500 mt-0.5">Assigned to: <strong class="text-neon-amber">@shell</strong> • Priority: Critical</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-green-500/10 text-neon-green border border-green-500/30">COMPLETED</span>
+                    </div>
+
+                    <!-- Task Item 3 -->
+                    <div class="p-4 rounded-xl bg-cyber-950 border border-cyber-700/80 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" checked onchange="toggleTodo(this)" class="w-4 h-4 rounded accent-neon-green cursor-pointer">
+                            <div>
+                                <span class="line-through text-slate-400">Fix banner image overlay popup and reposition telemetry bar</span>
+                                <div class="text-[10px] text-slate-500 mt-0.5">Assigned to: <strong class="text-neon-magenta">@coder</strong> • Priority: Medium</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-green-500/10 text-neon-green border border-green-500/30">COMPLETED</span>
+                    </div>
+
+                    <!-- Task Item 4 -->
+                    <div class="p-4 rounded-xl bg-cyber-950 border border-neon-cyan/60 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" onchange="toggleTodo(this)" class="w-4 h-4 rounded accent-neon-green cursor-pointer">
+                            <div>
+                                <span class="text-white font-bold">OpenCode WebUI Chat, Terminal Drawer with Pin/Close &amp; Ollama Puller</span>
+                                <div class="text-[10px] text-slate-400 mt-0.5">Assigned to: <strong class="text-neon-cyan">@all-swarm</strong> • Priority: Urgent</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40 animate-pulse">IN PROGRESS</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------------- -->
+            <!-- 4. INTEGRATIONS HUB (Multimodal AI API Keys & Auto-Validation)       -->
+            <!-- --------------------------------------------------------------------- -->
+            <section id="hub-integrations" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+                <div class="mb-6">
+                    <span class="text-xs font-mono uppercase text-neon-cyan tracking-wider font-bold">Zero-Config AI Gateway</span>
+                    <h2 class="text-2xl font-display font-bold text-white mt-1">Multimodal AI Integrations</h2>
+                    <p class="text-xs font-mono text-slate-400 mt-1">Paste any API key — Git-Fix automatically makes a probe ping to validate and activate the provider.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Provider 1: OpenAI -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                                <span class="font-display font-bold text-white text-sm">OpenAI</span>
+                            </div>
+                            <span id="status-openai" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">GPT-4o, o1, GPT-4o-mini (Multimodal Vision &amp; Code)</p>
+                        <input type="password" oninput="autoValidateKey('openai', this.value)" placeholder="sk-proj-..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+
+                    <!-- Provider 2: Anthropic Claude -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+                                <span class="font-display font-bold text-white text-sm">Anthropic Claude</span>
+                            </div>
+                            <span id="status-anthropic" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">Claude 3.5 Sonnet, Claude 3.7 Sonnet (Advanced Reasoning)</p>
+                        <input type="password" oninput="autoValidateKey('anthropic', this.value)" placeholder="sk-ant-api03-..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+
+                    <!-- Provider 3: DeepSeek -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                                <span class="font-display font-bold text-white text-sm">DeepSeek</span>
+                            </div>
+                            <span id="status-deepseek" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">DeepSeek R1, DeepSeek V3 (High Efficiency Code &amp; Math)</p>
+                        <input type="password" oninput="autoValidateKey('deepseek', this.value)" placeholder="sk-..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+
+                    <!-- Provider 4: Google Gemini -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                                <span class="font-display font-bold text-white text-sm">Google Gemini</span>
+                            </div>
+                            <span id="status-gemini" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">Gemini 2.0 Flash, Gemini 1.5 Pro (2M Context Window)</p>
+                        <input type="password" oninput="autoValidateKey('gemini', this.value)" placeholder="AIzaSy..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+
+                    <!-- Provider 5: Groq -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                                <span class="font-display font-bold text-white text-sm">Groq LPU</span>
+                            </div>
+                            <span id="status-groq" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">Llama 3.3 70B @ 800 tokens/sec</p>
+                        <input type="password" oninput="autoValidateKey('groq', this.value)" placeholder="gsk_..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+
+                    <!-- Provider 6: OpenRouter -->
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-neon-cyan"></span>
+                                <span class="font-display font-bold text-white text-sm">OpenRouter</span>
+                            </div>
+                            <span id="status-openrouter" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700">Not Tested</span>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-400">Unified API routing across 200+ global models</p>
+                        <input type="password" oninput="autoValidateKey('openrouter', this.value)" placeholder="sk-or-v1-..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-lg p-2.5 text-xs font-mono text-white focus:outline-none">
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------------- -->
+            <!-- 5. OLLAMA API & OFFLINE AI MODELS PULLING SYSTEM                      -->
+            <!-- --------------------------------------------------------------------- -->
+            <section id="hub-ollama" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+                <!-- Ollama Connection Banner -->
+                <div class="bg-cyber-950 border border-cyber-700 rounded-2xl p-6 mb-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-neon-green animate-ping"></span>
+                                <span class="text-xs font-mono uppercase text-neon-green tracking-wider font-bold">Local Offline Inference Engine</span>
+                            </div>
+                            <h2 class="text-2xl font-display font-bold text-white mt-1">Ollama System &amp; Model Puller</h2>
+                            <p class="text-xs font-mono text-slate-400 mt-1">Run 100% private, offline code analysis on local hardware with zero external API calls.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input id="ollama-host-input" type="text" value="http://localhost:11434" class="bg-cyber-900 border border-cyber-700 rounded-lg px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-neon-green">
+                            <button onclick="checkOllamaConnection()" class="px-3 py-1.5 rounded-lg bg-neon-green text-cyber-950 font-bold font-mono text-xs hover:bg-white transition flex items-center gap-1">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                <span>Check</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Puller Tray -->
+                <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5 mb-6 space-y-4">
+                    <h3 class="text-sm font-display font-bold text-white flex items-center gap-2">
+                        <i data-lucide="download-cloud" class="w-4 h-4 text-neon-cyan"></i>
+                        <span>Offline Model Pulling System</span>
+                    </h3>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input id="ollama-model-name" type="text" placeholder="Enter model tag (e.g. deepseek-r1:7b, qwen2.5-coder:7b, llama3.2)..." class="flex-1 bg-cyber-900 border border-cyber-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-neon-cyan">
+                        <button onclick="pullOllamaModel()" id="pull-model-btn" class="px-5 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-blue-400 hover:to-neon-cyan text-cyber-950 font-bold font-mono text-xs transition flex items-center justify-center gap-2 glow-cyan">
+                            <i data-lucide="arrow-down-circle" class="w-4 h-4"></i>
+                            <span>Pull Model</span>
+                        </button>
+                    </div>
+
+                    <!-- Quick Pick Recommendations -->
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono text-slate-400">
+                        <span>Popular:</span>
+                        <button onclick="setPullTag('deepseek-r1:8b')" class="px-2 py-0.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-cyber-700">deepseek-r1:8b</button>
+                        <button onclick="setPullTag('qwen2.5-coder:7b')" class="px-2 py-0.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-magenta border border-cyber-700">qwen2.5-coder:7b</button>
+                        <button onclick="setPullTag('llama3.2:3b')" class="px-2 py-0.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-green border border-cyber-700">llama3.2:3b</button>
+                        <button onclick="setPullTag('codellama:7b')" class="px-2 py-0.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-amber border border-cyber-700">codellama:7b</button>
+                    </div>
+
+                    <!-- Live Animated Download Progress Stream -->
+                    <div id="ollama-pull-progress-box" class="hidden bg-cyber-900 border border-cyber-700 rounded-lg p-4 space-y-2 font-mono text-xs">
+                        <div class="flex items-center justify-between">
+                            <span id="ollama-pull-status" class="text-neon-cyan font-bold">Pulling manifest...</span>
+                            <span id="ollama-pull-percent" class="text-neon-green font-bold">0%</span>
+                        </div>
+                        <div class="w-full bg-cyber-950 h-2 rounded-full overflow-hidden border border-cyber-800">
+                            <div id="ollama-pull-bar" class="bg-gradient-to-r from-neon-cyan to-neon-green h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div id="ollama-pull-speed" class="text-[10px] text-slate-400 flex items-center justify-between">
+                            <span>Layers: sha256:7f9201...</span>
+                            <span>Speed: 38.4 MB/s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Installed Local Models Inventory -->
+                <div class="bg-cyber-950 border border-cyber-700 rounded-xl p-5">
+                    <h3 class="text-sm font-display font-bold text-white mb-3 flex items-center justify-between">
+                        <span>Installed Local Models Inventory</span>
+                        <span class="text-xs font-mono text-neon-green">4 Models Ready Offline</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left font-mono text-xs text-slate-300">
+                            <thead class="bg-cyber-900 border-b border-cyber-700 text-neon-cyan">
+                                <tr>
+                                    <th class="p-3">Model Tag</th>
+                                    <th class="p-3">Parameters</th>
+                                    <th class="p-3">Size</th>
+                                    <th class="p-3">Format</th>
+                                    <th class="p-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ollama-models-table" class="divide-y divide-cyber-800">
+                                <tr class="hover:bg-cyber-900/50">
+                                    <td class="p-3 font-bold text-white">llama3.2:latest</td>
+                                    <td class="p-3 text-slate-400">3.2B</td>
+                                    <td class="p-3 text-neon-amber">2.0 GB</td>
+                                    <td class="p-3 text-slate-400">Q4_K_M</td>
+                                    <td class="p-3"><button onclick="setActiveOllamaModel('llama3.2:latest')" class="px-2.5 py-1 rounded bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan hover:text-black transition">Set Active</button></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50">
+                                    <td class="p-3 font-bold text-white">qwen2.5-coder:7b</td>
+                                    <td class="p-3 text-slate-400">7.6B</td>
+                                    <td class="p-3 text-neon-amber">4.7 GB</td>
+                                    <td class="p-3 text-slate-400">Q4_K_M</td>
+                                    <td class="p-3"><button onclick="setActiveOllamaModel('qwen2.5-coder:7b')" class="px-2.5 py-1 rounded bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan hover:text-black transition">Set Active</button></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50">
+                                    <td class="p-3 font-bold text-white">deepseek-r1:8b</td>
+                                    <td class="p-3 text-slate-400">8.0B</td>
+                                    <td class="p-3 text-neon-amber">4.9 GB</td>
+                                    <td class="p-3 text-slate-400">Q4_K_M</td>
+                                    <td class="p-3"><button onclick="setActiveOllamaModel('deepseek-r1:8b')" class="px-2.5 py-1 rounded bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan hover:text-black transition">Set Active</button></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50">
+                                    <td class="p-3 font-bold text-white">codellama:7b</td>
+                                    <td class="p-3 text-slate-400">6.7B</td>
+                                    <td class="p-3 text-neon-amber">3.8 GB</td>
+                                    <td class="p-3 text-slate-400">Q4_0</td>
+                                    <td class="p-3"><button onclick="setActiveOllamaModel('codellama:7b')" class="px-2.5 py-1 rounded bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan hover:text-black transition">Set Active</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ========================================================================= -->
+        <!-- TERMINAL DRAWER (Can be docked at Bottom or Right side; has 📌 & ❌)      -->
+        <!-- ========================================================================= -->
+        <div id="terminal-drawer" class="terminal-bottom absolute bottom-0 left-0 right-0 h-64 bg-cyber-950 border-t border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl">
+            <!-- Terminal Header Controls -->
+            <div class="h-9 bg-cyber-900 border-b border-cyber-700/80 px-4 flex items-center justify-between text-xs font-mono">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    </div>
+                    <span class="text-white font-bold flex items-center gap-1">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                        <span>root@gitfix-swarm-node:~#</span>
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- Layout Mode Switcher (Bottom vs Right Side) -->
+                    <button onclick="toggleTerminalDockPosition()" id="terminal-dock-btn" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-700 text-slate-300 hover:text-neon-cyan text-[11px] transition flex items-center gap-1" title="Switch Dock Position (Bottom / Right Side)">
+                        <i data-lucide="layout-panel-left" class="w-3 h-3"></i>
+                        <span id="dock-label">Dock: Bottom</span>
+                    </button>
+
+                    <!-- Pin Button "📌" -->
+                    <button onclick="toggleTerminalPin()" id="terminal-pin-btn" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-700 text-neon-magenta text-[11px] transition" title="Pin / Hold Terminal Open">
+                        📌 Pin
+                    </button>
+
+                    <!-- Clear Buffer Button -->
+                    <button onclick="clearTerminalBuffer()" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-700 text-slate-400 hover:text-white text-[11px] transition" title="Clear terminal">
+                        Clear
+                    </button>
+
+                    <!-- Close Button "❌" -->
+                    <button onclick="closeTerminal()" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-red-900/60 text-slate-300 hover:text-red-400 text-[11px] transition" title="Manually Close Terminal">
+                        ❌
+                    </button>
+                </div>
+            </div>
+
+            <!-- Terminal Output Buffer -->
+            <div id="terminal-stdout" class="flex-1 p-3 bg-[#04060e] font-mono text-xs text-slate-300 overflow-y-auto space-y-1 selection:bg-neon-cyan selection:text-black">
+                <div class="text-slate-500"># Git-Fix Swarm Terminal Session [TTY-1]</div>
+                <div class="text-slate-500"># Shell execution environment initialized. Type 'help' for available commands.</div>
+                <div class="text-neon-green">$ swarm-engine --status</div>
+                <div class="text-slate-300">[OK] 6 Swarm agents online. SQLite memory: ~/.gitfix/memory/memory.db loaded.</div>
+            </div>
+
+            <!-- Terminal Input Prompt -->
+            <form onsubmit="handleTerminalInput(event)" class="h-9 bg-cyber-900 border-t border-cyber-700/80 px-3 flex items-center gap-2">
+                <span class="text-neon-cyan font-mono text-xs font-bold">$</span>
+                <input id="terminal-input" type="text" placeholder="Type shell command (e.g. ls, git status, npm test, ollama list, clear)..." class="flex-1 bg-transparent text-white font-mono text-xs focus:outline-none placeholder-slate-500">
+                <button type="submit" class="text-slate-400 hover:text-neon-cyan text-xs font-mono">
+                    <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interactive Script -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = msg;
+            toast.classList.remove('-translate-y-16', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-16', 'opacity-0');
+            }, 3000);
+        }
+
+        // =========================================================================
+        // HUB NAVIGATION
+        // =========================================================================
+        function switchHub(hubName) {
+            document.querySelectorAll('.hub-view').forEach(view => view.classList.add('hidden'));
+            document.querySelectorAll('.hub-btn').forEach(btn => {
+                btn.classList.remove('bg-cyber-750', 'text-neon-cyan', 'border', 'border-neon-cyan/40');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeView = document.getElementById(`hub-${hubName}`);
+            const activeBtn = document.getElementById(`hub-btn-${hubName}`);
+            if (activeView) activeView.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('bg-cyber-750', 'text-neon-cyan', 'border', 'border-neon-cyan/40');
+            }
+
+            if (hubName === 'editor') {
+                loadInitialEditorContent();
+            }
+
+            showToast(`Opened ${hubName.toUpperCase()} Hub`);
+        }
+
+        // =========================================================================
+        // LEFT PANEL CONTROLS (📌 PIN & ❌ CLOSE)
+        // =========================================================================
+        let leftPanelPinned = true;
+        let leftPanelOpen = true;
+
+        function toggleLeftPanel() {
+            leftPanelOpen = !leftPanelOpen;
+            applyLeftPanelState();
+        }
+
+        function closeLeftPanel() {
+            leftPanelOpen = false;
+            applyLeftPanelState();
+            showToast("Left panel closed");
+        }
+
+        function toggleLeftPanelPin() {
+            leftPanelPinned = !leftPanelPinned;
+            const pinIndicator = document.getElementById('left-panel-pin-indicator');
+            const pinBtn = document.getElementById('left-pin-btn');
+            if (leftPanelPinned) {
+                pinIndicator.textContent = "📌";
+                pinBtn.classList.add('text-neon-cyan');
+                showToast("Left panel PINNED open");
+            } else {
+                pinIndicator.textContent = "";
+                pinBtn.classList.remove('text-neon-cyan');
+                showToast("Left panel UNPINNED (auto-hides on mobile)");
+            }
+        }
+
+        function applyLeftPanelState() {
+            const panel = document.getElementById('left-panel');
+            if (leftPanelOpen) {
+                panel.classList.remove('-ml-64');
+            } else {
+                panel.classList.add('-ml-64');
+            }
+        }
+
+        function selectAgentTarget(agent) {
+            document.getElementById('chat-agent-target').value = agent;
+            switchHub('chat');
+            showToast(`Target agent set to: @${agent}`);
+        }
+
+        // =========================================================================
+        // TERMINAL DRAWER CONTROLS (BOTTOM / RIGHT DOCK + 📌 PIN + ❌ CLOSE)
+        // =========================================================================
+        let terminalOpen = true;
+        let terminalPinned = true;
+        let terminalDockPosition = 'bottom'; // 'bottom' or 'right'
+
+        function toggleTerminal() {
+            terminalOpen = !terminalOpen;
+            applyTerminalState();
+        }
+
+        function closeTerminal() {
+            terminalOpen = false;
+            applyTerminalState();
+            showToast("Terminal closed");
+        }
+
+        function toggleTerminalPin() {
+            terminalPinned = !terminalPinned;
+            const badge = document.getElementById('terminal-pin-badge');
+            const pinBtn = document.getElementById('terminal-pin-btn');
+            if (terminalPinned) {
+                badge.style.display = 'inline';
+                pinBtn.classList.add('text-neon-magenta');
+                showToast("Terminal PINNED open");
+            } else {
+                badge.style.display = 'none';
+                pinBtn.classList.remove('text-neon-magenta');
+                showToast("Terminal UNPINNED");
+            }
+        }
+
+        function toggleTerminalDockPosition() {
+            const drawer = document.getElementById('terminal-drawer');
+            const dockLabel = document.getElementById('dock-label');
+
+            if (terminalDockPosition === 'bottom') {
+                // Switch to Right Side
+                terminalDockPosition = 'right';
+                dockLabel.textContent = "Dock: Right";
+                drawer.className = "terminal-right absolute top-0 right-0 bottom-0 w-80 sm:w-96 bg-cyber-950 border-l border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl";
+                showToast("Terminal docked to RIGHT SIDE");
+            } else {
+                // Switch to Bottom
+                terminalDockPosition = 'bottom';
+                dockLabel.textContent = "Dock: Bottom";
+                drawer.className = "terminal-bottom absolute bottom-0 left-0 right-0 h-64 bg-cyber-950 border-t border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl";
+                showToast("Terminal docked to BOTTOM");
+            }
+        }
+
+        function applyTerminalState() {
+            const drawer = document.getElementById('terminal-drawer');
+            if (terminalOpen) {
+                drawer.style.display = 'flex';
+            } else {
+                drawer.style.display = 'none';
+            }
+        }
+
+        function clearTerminalBuffer() {
+            const stdout = document.getElementById('terminal-stdout');
+            stdout.innerHTML = '<div class="text-slate-500"># Terminal buffer cleared.</div>';
+        }
+
+        function handleTerminalInput(e) {
+            e.preventDefault();
+            const input = document.getElementById('terminal-input');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            appendTerminalOutput(`$ ${cmd}`, 'text-neon-cyan');
+            input.value = '';
+
+            // Handle commands
+            executeShellCommand(cmd);
+        }
+
+        function appendTerminalOutput(text, colorClass = 'text-slate-300') {
+            const stdout = document.getElementById('terminal-stdout');
+            const div = document.createElement('div');
+            div.className = colorClass;
+            div.textContent = text;
+            stdout.appendChild(div);
+            stdout.scrollTop = stdout.scrollHeight;
+        }
+
+        function executeShellCommand(cmd) {
+            const lower = cmd.toLowerCase().trim();
+            if (lower === 'clear') {
+                clearTerminalBuffer();
+                return;
+            }
+            if (lower === 'help') {
+                appendTerminalOutput('Available commands: ls, git status, npm test, python -m backend.self_improvement.cli status, ollama list, ollama pull <model>, clear');
+                return;
+            }
+            if (lower.startsWith('git status')) {
+                appendTerminalOutput('On branch main\nYour branch is up to date with origin/main.\nChanges committed: landing.html, index.html, simulator.html, vercel.json\nClean working directory.', 'text-neon-green');
+                return;
+            }
+            if (lower.startsWith('ls')) {
+                appendTerminalOutput('backend/  frontend/  scripts/  Media/  index.html  landing.html  simulator.html  vercel.json  package.json  README.md', 'text-white');
+                return;
+            }
+            if (lower.startsWith('ollama list')) {
+                appendTerminalOutput('NAME                ID              SIZE      MODIFIED\nllama3.2:latest     a849c1736568    2.0 GB    2 hours ago\nqwen2.5-coder:7b    d123a9482104    4.7 GB    1 day ago\ndeepseek-r1:8b      e941b2190184    4.9 GB    3 days ago', 'text-neon-green');
+                return;
+            }
+            if (lower.startsWith('npm test')) {
+                appendTerminalOutput('> gitfix-frontend@1.0.0 test\n> vitest run\n\n ✓ tests/ast.spec.ts (14 tests passed)\n ✓ tests/agent_consensus.spec.ts (8 tests passed)\n ✓ tests/security_scanner.spec.ts (22 tests passed)\n\nTest Files  3 passed (3)\n     Tests  44 passed (44)\n  Duration  412ms', 'text-neon-green');
+                return;
+            }
+            if (lower.includes('cli status')) {
+                appendTerminalOutput('=== BRAIN STATUS: ACTIVE ===\n* Memory DB: ~/.gitfix/memory/memory.db (SQLite)\n* Episodic Memories: 1,428\n* Semantic Lessons: 342 (Confidence: 0.93)\n* Learned Reflexes: 18\n* Skill Level: PROFICIENT (Level 4)', 'text-neon-cyan');
+                return;
+            }
+
+            // Default simulated command execution
+            appendTerminalOutput(`Executing '${cmd}'...`);
+            setTimeout(() => {
+                appendTerminalOutput(`[Process completed with exit code 0]`, 'text-neon-green');
+            }, 400);
+        }
+
+        // =========================================================================
+        // SWARM CHAT & SHELL SUPPORT IN CHAT
+        // =========================================================================
+        function insertCommand(cmd) {
+            const input = document.getElementById('chat-input');
+            input.value = `/run ${cmd}`;
+            input.focus();
+        }
+
+        function openTerminalCommandPrompt() {
+            const input = document.getElementById('chat-input');
+            input.value = `/run `;
+            input.focus();
+        }
+
+        function clearChat() {
+            const stream = document.getElementById('chat-messages');
+            stream.innerHTML = '<div class="text-slate-500 font-mono text-xs">Chat thread cleared.</div>';
+            showToast("Thread cleared");
+        }
+
+        function sendQuickPrompt(promptText) {
+            document.getElementById('chat-input').value = promptText;
+            handleChatSubmit(new Event('submit'));
+        }
+
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            const target = document.getElementById('chat-agent-target').value;
+            input.value = '';
+
+            // Render User Message
+            renderUserMessage(prompt);
+
+            // Execute in Swarm
+            setTimeout(() => {
+                renderSwarmResponse(prompt, target);
+            }, 500);
+        }
+
+        function renderUserMessage(text) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'flex items-start gap-3 max-w-4xl justify-end ml-auto';
+            msgDiv.innerHTML = `
+                <div class="bg-cyber-850 border border-cyber-700 rounded-xl p-3.5 text-white shadow-md text-xs font-mono">
+                    <div class="text-[10px] text-neon-cyan font-bold mb-1">USER DISPATCH:</div>
+                    <p>${escapeHtml(text)}</p>
+                </div>
+                <div class="w-8 h-8 rounded-lg bg-neon-cyan text-cyber-950 font-bold flex items-center justify-center shrink-0 text-xs">
+                    U
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderSwarmResponse(prompt, target) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'flex items-start gap-3 max-w-4xl';
+
+            const isShell = prompt.startsWith('/run ') || prompt.toLowerCase().includes('git status') || prompt.toLowerCase().includes('npm');
+
+            if (isShell) {
+                const cmd = prompt.replace('/run ', '').trim();
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-lg bg-neon-amber/20 border border-neon-amber/40 text-neon-amber flex items-center justify-center shrink-0">
+                        <i data-lucide="terminal" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1 bg-cyber-950 border border-neon-amber/40 rounded-xl p-4 shadow-lg space-y-3">
+                        <div class="flex items-center justify-between text-xs font-mono">
+                            <span class="text-neon-amber font-bold flex items-center gap-1.5">
+                                <span>DevOps &amp; Shell Agent</span>
+                                <span class="px-1.5 py-0.2 rounded bg-neon-amber/15 text-[10px]">Command Runner</span>
+                            </span>
+                            <span class="text-neon-green font-bold">EXIT CODE 0</span>
+                        </div>
+                        <div class="bg-[#03050c] border border-cyber-800 rounded-lg p-3 font-mono text-xs text-neon-green overflow-x-auto">
+                            <span class="text-slate-500">$ ${escapeHtml(cmd)}</span><br>
+                            ${getSimulatedCommandOutput(cmd)}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="appendTerminalOutput('$ ${escapeHtml(cmd)}'); executeShellCommand('${escapeHtml(cmd)}')" class="text-[11px] px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 font-mono transition">Send to Terminal Drawer</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-lg bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan flex items-center justify-center shrink-0">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1 bg-cyber-950 border border-cyber-700 rounded-xl p-4 shadow-lg space-y-2">
+                        <div class="flex items-center justify-between text-xs font-mono">
+                            <span class="text-neon-cyan font-bold flex items-center gap-1.5">
+                                <span>Swarm Coordinator // Consensus</span>
+                                <span class="px-1.5 py-0.2 rounded bg-neon-cyan/15 text-[10px]">Confidence 0.96</span>
+                            </span>
+                            <span class="text-slate-500">Latency: 280ms</span>
+                        </div>
+                        <p class="text-slate-200 text-xs font-sans leading-relaxed">
+                            Task analyzed across the swarm. Security Auditor verified clean taint flow, DevOps verified dependencies, and Code Craftsman generated the optimized implementation.
+                        </p>
+                        <div class="p-2.5 rounded bg-cyber-900 border border-cyber-800 text-[11px] font-mono text-neon-green">
+                            ✓ Verified zero OWASP Top-10 regressions<br>
+                            ✓ Synced with TODO Task Manager<br>
+                            ✓ Ready for review in Editing Hub
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function getSimulatedCommandOutput(cmd) {
+            const lower = cmd.toLowerCase();
+            if (lower.includes('npm')) {
+                return '[+] Checked 319 packages. Zero vulnerabilities detected.<br>[+] Dependencies up to date.';
+            }
+            if (lower.includes('git')) {
+                return 'On branch main. Commit e305f46 pushed to origin. Working tree clean.';
+            }
+            if (lower.includes('ollama')) {
+                return 'Connected to Ollama service (127.0.0.1:11434). 4 local models available.';
+            }
+            return '[+] Command executed successfully in ephemeral container.';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+        }
+
+        // =========================================================================
+        // EDITING HUB CODE EDITOR
+        // =========================================================================
+        const fileSamples = {
+            'landing.html': `<!-- Git-Fix Cyberpunk Code Review Engine -->\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Git-Fix — Automated Security</title>\n</head>\n<body>\n  <h1>Cyberpunk Code Review Engine</h1>\n</body>\n</html>`,
+            'index.html': `<!-- Git-Fix Production Entrypoint -->\n<!DOCTYPE html>\n<html>...</html>`,
+            'vercel.json': `{\n  "$schema": "https://openapi.vercel.sh/vercel.json",\n  "name": "code-rabbit-alternative",\n  "cleanUrls": true,\n  "rewrites": [\n    { "source": "/landing", "destination": "/landing.html" },\n    { "source": "/simulator", "destination": "/simulator.html" }\n  ]\n}`,
+            '.coderabbit.yaml': `version: "2"\nreviews:\n  request_changes_workflow: true\n  high_level_summary: true\n  poem: true\n  review_status: true\n  collapse_walkthrough: false\nchat:\n  auto_reply: true`,
+            'docker-compose.yml': `version: "3.8"\nservices:\n  api:\n    build: .\n    ports:\n      - "5000:5000"\n    environment:\n      - REDIS_URL=redis://redis:6379\n  redis:\n    image: redis:7-alpine\n    ports:\n      - "6379:6379"`,
+            'backend/app.py': `from flask import Flask, jsonify, request\n\napp = Flask(__name__)\n\n@app.route("/api/health")\ndef health():\n    return jsonify({"status": "healthy", "swarm": "operational"})`
+        };
+
+        function loadInitialEditorContent() {
+            const textarea = document.getElementById('code-editor-textarea');
+            if (!textarea.value) {
+                textarea.value = fileSamples['landing.html'];
+            }
+        }
+
+        function openFileInEditor(filename) {
+            document.getElementById('current-editor-file').textContent = filename;
+            const textarea = document.getElementById('code-editor-textarea');
+            textarea.value = fileSamples[filename] || `// File contents of ${filename}`;
+            showToast(`Opened ${filename}`);
+        }
+
+        function saveEditorCode() {
+            const filename = document.getElementById('current-editor-file').textContent;
+            showToast(`Saved changes to ${filename} (Local Workspace)`);
+        }
+
+        function requestAgentFix() {
+            const filename = document.getElementById('current-editor-file').textContent;
+            showToast(`Swarm Agent analyzed ${filename} — 0 syntax flaws detected!`);
+        }
+
+        // =========================================================================
+        // "TODO" TASK MANAGER (Avoid Missing / Skipping Steps)
+        // =========================================================================
+        function updateTodoStats() {
+            const checkboxes = document.querySelectorAll('#todo-list input[type="checkbox"]');
+            const total = checkboxes.length;
+            const completed = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('todo-percent').textContent = `${percent}%`;
+            document.getElementById('todo-progress-bar').style.width = `${percent}%`;
+            document.getElementById('todo-badge').textContent = total - completed;
+        }
+
+        function toggleTodo(cb) {
+            const label = cb.parentElement.querySelector('span');
+            if (cb.checked) {
+                label.classList.add('line-through', 'text-slate-400');
+                label.classList.remove('text-white', 'font-bold');
+            } else {
+                label.classList.remove('line-through', 'text-slate-400');
+                label.classList.add('text-white', 'font-bold');
+            }
+            updateTodoStats();
+            showToast(cb.checked ? "Task marked completed" : "Task reopened");
+        }
+
+        function addNewTodo(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-todo-title');
+            const agent = document.getElementById('new-todo-agent').value;
+            const title = input.value.trim();
+            if (!title) return;
+
+            const list = document.getElementById('todo-list');
+            const item = document.createElement('div');
+            item.className = 'p-4 rounded-xl bg-cyber-950 border border-cyber-700/80 flex items-center justify-between gap-4';
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" onchange="toggleTodo(this)" class="w-4 h-4 rounded accent-neon-green cursor-pointer">
+                    <div>
+                        <span class="text-white font-bold">${escapeHtml(title)}</span>
+                        <div class="text-[10px] text-slate-400 mt-0.5">Assigned to: <strong class="text-neon-cyan">@${agent}</strong> • Priority: High</div>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-500/10 text-neon-amber border border-yellow-500/30">PENDING</span>
+            `;
+            list.appendChild(item);
+            input.value = '';
+            updateTodoStats();
+            showToast("New task assigned to swarm");
+        }
+
+        // =========================================================================
+        // INTEGRATIONS & AUTOMATIC KEY VALIDATION
+        // =========================================================================
+        const validationTimeouts = {};
+
+        function autoValidateKey(provider, key) {
+            clearTimeout(validationTimeouts[provider]);
+            const badge = document.getElementById(`status-${provider}`);
+            if (!key || key.length < 6) {
+                badge.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-800 text-slate-400 border border-cyber-700";
+                badge.textContent = "Not Tested";
+                return;
+            }
+
+            badge.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-500/20 text-neon-amber border border-yellow-500/40 animate-pulse";
+            badge.textContent = "Validating...";
+
+            // Debounced simulated probe API call to provider endpoint
+            validationTimeouts[provider] = setTimeout(() => {
+                badge.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-green-500/20 text-neon-green border border-green-500/40 font-bold";
+                badge.textContent = "● Valid & Active (94ms)";
+                showToast(`[${provider.toUpperCase()}] API Key verified and active!`);
+            }, 600);
+        }
+
+        // =========================================================================
+        // OLLAMA OFFLINE MODEL PULLING SYSTEM
+        // =========================================================================
+        function checkOllamaConnection() {
+            showToast("Ollama connected at http://localhost:11434 (v0.5.12)");
+        }
+
+        function setPullTag(tag) {
+            document.getElementById('ollama-model-name').value = tag;
+        }
+
+        function pullOllamaModel() {
+            const input = document.getElementById('ollama-model-name');
+            const modelTag = input.value.trim();
+            if (!modelTag) {
+                showToast("Please enter a model name (e.g. deepseek-r1:8b)");
+                return;
+            }
+
+            const progressBox = document.getElementById('ollama-pull-progress-box');
+            const statusLabel = document.getElementById('ollama-pull-status');
+            const percentLabel = document.getElementById('ollama-pull-percent');
+            const bar = document.getElementById('ollama-pull-bar');
+            const btn = document.getElementById('pull-model-btn');
+
+            progressBox.classList.remove('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            let progress = 0;
+            statusLabel.textContent = `Pulling manifest for ${modelTag}...`;
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 12) + 8;
+                if (progress > 100) progress = 100;
+
+                percentLabel.textContent = `${progress}%`;
+                bar.style.width = `${progress}%`;
+
+                if (progress < 30) {
+                    statusLabel.textContent = `Downloading layer weights...`;
+                } else if (progress < 85) {
+                    statusLabel.textContent = `Downloading sha256 tensor shards...`;
+                } else if (progress < 100) {
+                    statusLabel.textContent = `Verifying checksums and GGUF quantization...`;
+                } else {
+                    clearInterval(interval);
+                    statusLabel.textContent = `Success! Model ${modelTag} ready for offline inference.`;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                    showToast(`Model ${modelTag} downloaded and ready for offline agents!`);
+                    addModelToTable(modelTag);
+                }
+            }, 300);
+        }
+
+        function addModelToTable(tag) {
+            const table = document.getElementById('ollama-models-table');
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-cyber-900/50';
+            tr.innerHTML = `
+                <td class="p-3 font-bold text-white">${escapeHtml(tag)}</td>
+                <td class="p-3 text-slate-400">Custom</td>
+                <td class="p-3 text-neon-green">Downloaded</td>
+                <td class="p-3 text-slate-400">Q4_K_M</td>
+                <td class="p-3"><button onclick="setActiveOllamaModel('${escapeHtml(tag)}')" class="px-2.5 py-1 rounded bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan hover:text-black transition">Set Active</button></td>
+            `;
+            table.insertBefore(tr, table.firstChild);
+        }
+
+        function setActiveOllamaModel(tag) {
+            document.getElementById('active-llm-label').textContent = `Ollama (${tag})`;
+            showToast(`Swarm active offline model switched to: ${tag}`);
+        }
+    </script>
+</body>
+</html>
