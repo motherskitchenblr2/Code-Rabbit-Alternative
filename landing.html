@@ -1,1244 +1,1603 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git-Fix - The Cyberpunk Code Review Engine</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    <title>Git-Fix — The Cyberpunk Code Review Engine | Automated AI Security & Quality</title>
+    
+    <!-- Meta tags for SEO & Social Sharing -->
+    <meta name="description" content="Git-Fix: The Cyberpunk Code Review Engine. Next-gen automated multi-agent code critique, AST analysis, and zero-retention security scanning.">
+    <meta name="keywords" content="Code Review, AI Code Review, CodeRabbit Alternative, Cybersecurity, AST, Static Analysis, Git-Fix">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            950: '#050711',
+                            900: '#0a0d1d',
+                            850: '#0f142b',
+                            800: '#151b3b',
+                            700: '#1c2552',
+                            600: '#273473',
+                            500: '#384aa3',
+                            400: '#5269d4',
+                            300: '#758cf2',
+                            200: '#a3b4f7',
+                            100: '#d1dbfc',
+                            50: '#eef2ff'
+                        },
+                        neon: {
+                            magenta: '#ff007f',
+                            pink: '#ff1493',
+                            cyan: '#00f0ff',
+                            electric: '#00d4ff',
+                            amber: '#ffaa00',
+                            gold: '#ffd700',
+                            green: '#00ff88',
+                            emerald: '#10b981',
+                            purple: '#a855f7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Courier New', 'monospace'],
+                        display: ['Orbitron', 'sans-serif']
+                    }
+                }
+            }
         }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
+    <style>
         :root {
-            --primary: #ff00ff;
-            --secondary: #00ffff;
-            --accent: #00ff00;
-            --dark-bg: #000000;
-            --dark-surface: #1a1f3a;
-            --dark-border: #2d3561;
-            --text-primary: #ffffff;
-            --text-secondary: #a0aac0;
-            --success: #00ff00;
-            --warning: #ffaa00;
-            --danger: #ff4444;
+            --neon-magenta: #ff007f;
+            --neon-cyan: #00f0ff;
+            --neon-amber: #ffaa00;
+            --neon-green: #00ff88;
+            --bg-dark: #070913;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--dark-bg) 0%, #0f1433 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
             overflow-x: hidden;
         }
 
-        /* Navigation */
-        nav {
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--dark-border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        /* Cyberpunk Grid Background */
+        .cyber-grid-bg {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 0, 127, 0.04) 1px, transparent 1px);
         }
 
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        /* Glowing Effects */
+        .glow-box-cyan {
+            box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.35);
+        }
+        .glow-box-magenta {
+            box-shadow: 0 0 25px -5px rgba(255, 0, 127, 0.35);
+        }
+        .glow-box-amber {
+            box-shadow: 0 0 25px -5px rgba(255, 170, 0, 0.35);
+        }
+        .glow-box-green {
+            box-shadow: 0 0 25px -5px rgba(0, 255, 136, 0.35);
         }
 
-        nav a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            margin: 0 1.5rem;
-            transition: color 0.3s;
-            font-weight: 500;
+        .glow-text-cyan {
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.7);
+        }
+        .glow-text-magenta {
+            text-shadow: 0 0 15px rgba(255, 0, 127, 0.7);
         }
 
-        nav a:hover {
-            color: var(--secondary);
+        /* Scanline animation overlay */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 99;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 4px, 6px 100%;
+            opacity: 0.6;
         }
 
-        .nav-cta {
-            background: var(--primary);
-            color: #000000;
-            padding: 0.8rem 1.5rem;
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070913;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1c2552;
             border-radius: 4px;
-            font-weight: 600;
-            transition: all 0.3s;
         }
-
-        .nav-cta:hover {
-            background: var(--secondary);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 6rem 2rem;
-            text-align: center;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .hero-badge {
-            display: inline-block;
-            background: rgba(255, 0, 255, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-bottom: 2rem;
-            font-weight: 600;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            margin: 1rem 0;
-            line-height: 1.2;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 1.3rem;
-            color: var(--text-secondary);
-            margin: 1.5rem 0 2rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .hero-image {
-            max-width: 100%;
-            height: auto;
-            margin: 2rem 0;
-            border-radius: 8px;
-            border: 1px solid var(--dark-border);
-            box-shadow: 0 0 40px rgba(255, 0, 255, 0.2);
-        }
-
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, rgba(255, 0, 255, 0.1), rgba(0, 255, 255, 0.1));
-            border: 1px solid var(--dark-border);
-            padding: 2rem;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .stat-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
-            transform: translateY(-5px);
-        }
-
-        .stat-number {
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            margin: 2rem 0;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: #000;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--secondary);
-            border: 2px solid var(--secondary);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(0, 255, 255, 0.1);
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
-        }
-
-        /* Problem/Solution Section */
-        .problem-solution {
-            padding: 4rem 2rem;
-            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
-            border-top: 1px solid var(--dark-border);
-            border-bottom: 1px solid var(--dark-border);
-        }
-
-        .ps-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .ps-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .ps-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-        }
-
-        .ps-box {
-            background: rgba(26, 31, 58, 0.6);
-            border: 1px solid var(--dark-border);
-            padding: 2rem;
-            border-radius: 8px;
-        }
-
-        .ps-box h3 {
-            font-size: 1.8rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .ps-box ul {
-            list-style: none;
-        }
-
-        .ps-box li {
-            padding: 0.7rem 0;
-            color: var(--text-secondary);
-        }
-
-        .ps-box li::before {
-            content: "• ";
-            color: var(--primary);
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-
-        .problem h3 {
-            color: #ff4444;
-        }
-
-        .solution h3 {
-            color: var(--accent);
-        }
-
-        /* Capabilities Section */
-        .capabilities {
-            padding: 4rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            font-size: 2.5rem;
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .capabilities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-        }
-
-        .capability-card {
-            background: linear-gradient(135deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
-            border: 1px solid var(--dark-border);
-            padding: 2rem;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .capability-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.15);
-            transform: translateY(-8px);
-        }
-
-        .capability-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .capability-card h4 {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            color: var(--secondary);
-        }
-
-        .capability-card ul {
-            list-style: none;
-            font-size: 0.95rem;
-        }
-
-        .capability-card li {
-            padding: 0.5rem 0;
-            color: var(--text-secondary);
-        }
-
-        .capability-card li::before {
-            content: "✓ ";
-            color: var(--accent);
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-
-        /* Features Section */
-        .features {
-            padding: 4rem 2rem;
-            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
-            border-top: 1px solid var(--dark-border);
-        }
-
-        .features-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .feature-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            align-items: center;
-            margin: 3rem 0;
-        }
-
-        .feature-content h3 {
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            color: var(--secondary);
-        }
-
-        .feature-content p {
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            line-height: 1.8;
-        }
-
-        .feature-list {
-            list-style: none;
-            margin-top: 1.5rem;
-        }
-
-        .feature-list li {
-            padding: 0.7rem 0;
-            color: var(--text-secondary);
-            padding-left: 2rem;
-            position: relative;
-        }
-
-        .feature-list li::before {
-            content: "→";
-            position: absolute;
-            left: 0;
-            color: var(--secondary);
-            font-weight: bold;
-        }
-
-        /* Performance Section */
-        .performance {
-            padding: 4rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .perf-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 2rem;
-            background: rgba(26, 31, 58, 0.6);
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--dark-border);
-        }
-
-        .perf-table th {
-            background: rgba(255, 0, 255, 0.1);
-            padding: 1.2rem;
-            text-align: left;
-            border-bottom: 1px solid var(--dark-border);
-            color: var(--secondary);
-            font-weight: 600;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f0ff;
         }
 
-        .perf-table td {
-            padding: 1.2rem;
-            border-bottom: 1px solid var(--dark-border);
-            color: var(--text-secondary);
+        /* Badge pulsing */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
         }
-
-        .perf-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: rgba(0, 255, 0, 0.2);
-            color: var(--accent);
-        }
-
-        .status-warning {
-            background: rgba(255, 170, 0, 0.2);
-            color: var(--warning);
-        }
-
-        /* Security Section */
-        .security {
-            padding: 4rem 2rem;
-            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
-            border-top: 1px solid var(--dark-border);
-        }
-
-        .security-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .security-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .security-item {
-            background: rgba(26, 31, 58, 0.6);
-            border: 1px solid var(--dark-border);
-            padding: 1.5rem;
-            border-radius: 8px;
-            display: flex;
-            gap: 1rem;
-        }
-
-        .security-item-icon {
-            color: var(--accent);
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .security-item-text h4 {
-            color: var(--text-primary);
-            margin-bottom: 0.3rem;
-        }
-
-        .security-item-text p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Deployment Section */
-        .deployment {
-            padding: 4rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .deployment-tabs {
-            display: flex;
-            gap: 1rem;
-            margin: 2rem 0;
-            border-bottom: 1px solid var(--dark-border);
-        }
-
-        .tab-button {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .tab-button.active {
-            color: var(--secondary);
-            border-bottom-color: var(--secondary);
-        }
-
-        .tab-content {
-            display: none;
-            margin-top: 2rem;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .code-block {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--dark-border);
-            padding: 1.5rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        .code-block code {
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
-
-        /* Roadmap Section */
-        .roadmap {
-            padding: 4rem 2rem;
-            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
-            border-top: 1px solid var(--dark-border);
-        }
-
-        .roadmap-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .roadmap-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .roadmap-item {
-            background: rgba(26, 31, 58, 0.6);
-            border: 1px solid var(--accent);
-            padding: 1.5rem;
-            border-radius: 8px;
-            display: flex;
-            gap: 1rem;
-        }
-
-        .roadmap-check {
-            color: var(--accent);
-            font-weight: bold;
-            font-size: 1.3rem;
-            flex-shrink: 0;
-        }
-
-        .roadmap-item-text {
-            flex: 1;
-        }
-
-        .roadmap-item-text h4 {
-            color: var(--text-primary);
-            margin-bottom: 0.3rem;
-        }
-
-        .roadmap-item-text p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Support Section */
-        .support {
-            padding: 4rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .support-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .support-card {
-            background: linear-gradient(135deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
-            border: 1px solid var(--dark-border);
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-            transition: all 0.3s;
-        }
-
-        .support-card:hover {
-            border-color: var(--secondary);
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
-            transform: translateY(-8px);
-        }
-
-        .support-card-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .support-card h4 {
-            color: var(--secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .support-card p {
-            color: var(--text-secondary);
-        }
-
-        .support-card a {
-            color: var(--secondary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s;
-        }
-
-        .support-card a:hover {
-            color: var(--primary);
-        }
-
-        /* Footer */
-        footer {
-            background: rgba(10, 14, 39, 0.95);
-            border-top: 1px solid var(--dark-border);
-            padding: 3rem 2rem;
-            text-align: center;
-            color: var(--text-secondary);
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .footer-section {
-            margin: 2rem 0;
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 2rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 2rem 0;
-        }
-
-        .footer-links a {
-            color: var(--secondary);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        .footer-links a:hover {
-            color: var(--primary);
-        }
-
-        .tech-stack {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 2rem 0;
-        }
-
-        .tech-badge {
-            background: rgba(255, 0, 255, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--secondary);
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            transition: all 0.3s;
-        }
-
-        .tech-badge:hover {
-            background: rgba(255, 0, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
-        }
-
-        .copyright {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--dark-border);
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite ease-in-out;
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-
-            .ps-grid,
-            .feature-row {
-                grid-template-columns: 1fr;
-            }
-
-            nav {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            nav a {
-                margin: 0.5rem;
-            }
-
-            .cta-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                text-align: center;
-            }
 
-            .section-title {
-                font-size: 2rem;
-            }
+        /* Terminal styling */
+        .cyber-term {
+            font-family: 'JetBrains Mono', monospace;
+            background: #080b18;
+            border: 1px solid #1e2858;
         }
     </style>
 </head>
-<body>
-    <!-- Navigation -->
-    <nav>
-        <div class="logo">⚡ Git-Fix</div>
-        <div>
-            <a href="#capabilities">Features</a>
-            <a href="#performance">Performance</a>
-            <a href="#security">Security</a>
-            <a href="#deployment">Deploy</a>
-            <a href="https://github.com/motherskitchenblr2/git-fix" class="nav-cta">GitHub</a>
-        </div>
-    </nav>
+<body class="cyber-grid-bg min-h-screen relative selection:bg-neon-magenta selection:text-white">
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-badge">🚀 Next-Gen Code Review Engine</div>
-        <h1>The Cyberpunk Code Review Engine</h1>
-        <p class="hero-subtitle">Security. Quality. Automated. — <em>Where code review becomes an art form</em></p>
-        
-        <img src="https://github.com/user-attachments/assets/1110dcb2-4af3-4308-8d51-27846b78db32" alt="Dashboard Preview" class="hero-image">
+    <!-- Ambient Scanline Overlay -->
+    <div class="scanlines"></div>
 
-        <div class="hero-stats">
-            <div class="stat-card">
-                <div class="stat-number">98%</div>
-                <div class="stat-label">Critical Catch Rate</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">&lt; 500ms</div>
-                <div class="stat-label">Review Latency</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">20+</div>
-                <div class="stat-label">Vulnerability Types</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">0</div>
-                <div class="stat-label">Data Retention</div>
-            </div>
-        </div>
+    <!-- Live Toast Notification Container -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-5 py-3 rounded-lg bg-cyber-900 border border-neon-cyan text-white shadow-2xl glow-box-cyan">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-neon-cyan"></i>
+        <span id="toast-msg" class="text-sm font-mono font-medium">Action completed successfully</span>
+    </div>
 
-        <div class="cta-buttons">
-            <a href="https://gitfix.io" class="btn btn-primary">🚀 Live Demo</a>
-            <a href="https://github.com/motherskitchenblr2/git-fix" class="btn btn-secondary">📖 View on GitHub</a>
-        </div>
-    </section>
-
-    <!-- Problem/Solution -->
-    <section class="problem-solution">
-        <div class="ps-container">
-            <h2 class="ps-title">⚡ Why Git-Fix?</h2>
-            <div class="ps-grid">
-                <div class="ps-box problem">
-                    <h3>🔴 The Problem</h3>
-                    <ul>
-                        <li><strong>87%</strong> of security bugs slip through code review</li>
-                        <li>Manual review takes <strong>4.2 hours</strong> per PR on average</li>
-                        <li><strong>$4.35M</strong> average cost of a data breach (IBM 2024)</li>
-                        <li>Developers skip reviews due to time pressure</li>
-                    </ul>
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-cyber-950/85 border-b border-cyber-700/60 transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-11 h-11 rounded-lg bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 shadow-lg group-hover:glow-box-cyan transition duration-300">
+                    <div class="w-full h-full bg-cyber-950 rounded-[7px] flex items-center justify-center">
+                        <i data-lucide="zap" class="w-6 h-6 text-neon-cyan group-hover:text-neon-magenta transition"></i>
+                    </div>
                 </div>
-                <div class="ps-box solution">
-                    <h3>🟢 The Solution</h3>
-                    <ul>
-                        <li><strong>&lt; 500ms</strong> automated review per PR</li>
-                        <li><strong>98% accuracy</strong> catching critical vulnerabilities</li>
-                        <li><strong>Zero-retention</strong> — your code never leaves your infrastructure</li>
-                        <li><strong>AI-powered</strong> multi-agent critique ensemble</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Capabilities -->
-    <section class="capabilities" id="capabilities">
-        <h2 class="section-title">🎯 Core Capabilities</h2>
-        <div class="capabilities-grid">
-            <div class="capability-card">
-                <div class="capability-icon">🛡️</div>
-                <h4>Security-First</h4>
-                <ul>
-                    <li>98% catch rate for critical vulns</li>
-                    <li>20+ vulnerability types detected</li>
-                    <li>Zero-retention sandbox</li>
-                </ul>
-            </div>
-            <div class="capability-card">
-                <div class="capability-icon">🤖</div>
-                <h4>AI-Powered</h4>
-                <ul>
-                    <li>Multi-agent LLM ensemble</li>
-                    <li>Claude 3.5 + DeepSeek + GPT-4o</li>
-                    <li>Confidence-weighted filtering (≥0.85)</li>
-                </ul>
-            </div>
-            <div class="capability-card">
-                <div class="capability-icon">📊</div>
-                <h4>Real-Time</h4>
-                <ul>
-                    <li>&lt; 500ms per PR review</li>
-                    <li>WebSocket live updates</li>
-                    <li>WebSocket pipeline streaming</li>
-                </ul>
-            </div>
-            <div class="capability-card">
-                <div class="capability-icon">🔧</div>
-                <h4>Developer-First</h4>
-                <ul>
-                    <li>Pre-commit hooks for instant feedback</li>
-                    <li>Zero-config setup in 60 seconds</li>
-                    <li>Custom rules via .gitfix.yaml</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="features">
-        <div class="features-container">
-            <h2 class="section-title">🎨 Cyberpunk Dashboard</h2>
-            <div class="feature-row">
                 <div>
-                    <img src="https://github.com/motherskitchenblr2/git-fix/raw/main/assets/dashboard-preview.gif" alt="Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid var(--dark-border);">
+                    <div class="flex items-center gap-2">
+                        <span class="font-display font-extrabold text-xl tracking-wider text-white group-hover:text-neon-cyan transition">GIT-FIX</span>
+                        <span class="text-[10px] uppercase font-mono font-bold tracking-widest px-2 py-0.5 rounded bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/40">v1.0</span>
+                    </div>
+                    <span class="text-xs text-slate-400 font-mono hidden sm:block">The Cyberpunk Code Review Engine</span>
                 </div>
-                <div class="feature-content">
-                    <h3>Real-Time Monitoring</h3>
-                    <p>Live pipeline monitoring • Live findings feed • Interactive charts • WebSocket streaming</p>
-                    <ul class="feature-list">
-                        <li>📊 Real-time Stats (Total scans, issues found, critical issues)</li>
-                        <li>📈 Interactive Charts (Scan activity, severity, language breakdown)</li>
-                        <li>🔍 Live Findings Feed (WebSocket streaming with severity badges)</li>
-                        <li>🔀 Pipeline Visualization (5-stage pipeline with live status)</li>
-                        <li>⚙️ Repository Settings (Auto-review, path filters, custom rules)</li>
-                        <li>🎨 Cyberpunk Theme (Dark/light mode, animations, particle effects)</li>
-                    </ul>
-                </div>
+            </a>
+
+            <!-- Desktop Navigation Links -->
+            <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-300">
+                <a href="#problem-solution" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="compass" class="w-4 h-4 text-neon-cyan"></i>Why Git-Fix</a>
+                <a href="#capabilities" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="cpu" class="w-4 h-4 text-neon-magenta"></i>Capabilities</a>
+                <a href="#architecture" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="network" class="w-4 h-4 text-neon-cyan"></i>Architecture</a>
+                <a href="#self-improvement" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="brain-circuit" class="w-4 h-4 text-neon-amber"></i>Self-Improvement</a>
+                <a href="#security" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-neon-green"></i>Security</a>
+                <a href="#deployment" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-slate-400"></i>Deploy</a>
+            </nav>
+
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-3">
+                <!-- Live Interactive Simulator Link -->
+                <a href="./index.html" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-neon-cyan/40 hover:border-neon-cyan transition text-xs font-mono font-semibold glow-box-cyan">
+                    <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                    <span>Live Simulator</span>
+                </a>
+
+                <!-- GitHub Repo Direct Link -->
+                <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-neon-magenta to-pink-600 hover:from-pink-600 hover:to-neon-magenta text-white font-semibold text-xs transition duration-200 shadow-lg shadow-neon-magenta/25 hover:glow-box-magenta">
+                    <i data-lucide="github" class="w-4 h-4"></i>
+                    <span class="font-display tracking-wide">Star on GitHub</span>
+                </a>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-lg bg-cyber-850 border border-cyber-700 text-slate-300 hover:text-white" aria-label="Toggle navigation">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
             </div>
         </div>
-    </section>
 
-    <!-- Performance -->
-    <section class="performance" id="performance">
-        <h2 class="section-title">📊 Performance Benchmarks</h2>
-        <table class="perf-table">
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Target</th>
-                    <th>Current</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>⚡ Avg Review Latency</td>
-                    <td>&lt; 500ms</td>
-                    <td><strong>620ms</strong></td>
-                    <td><span class="status-badge status-warning">🟡 Optimizing</span></td>
-                </tr>
-                <tr>
-                    <td>🎯 Critical Catch Rate</td>
-                    <td>98%</td>
-                    <td><strong>98.2%</strong></td>
-                    <td><span class="status-badge status-success">✅ Exceeds</span></td>
-                </tr>
-                <tr>
-                    <td>🚫 False Positive Rate</td>
-                    <td>&lt; 5%</td>
-                    <td><strong>4.8%</strong></td>
-                    <td><span class="status-badge status-success">✅ On Target</span></td>
-                </tr>
-                <tr>
-                    <td>🌐 Supported Languages</td>
-                    <td>12</td>
-                    <td><strong>6</strong></td>
-                    <td><span class="status-badge status-warning">🟡 Expanding</span></td>
-                </tr>
-                <tr>
-                    <td>🔄 CI/CD Integration</td>
-                    <td>✅ Ready</td>
-                    <td><strong>✅ Ready</strong></td>
-                    <td><span class="status-badge status-success">✅ Ready</span></td>
-                </tr>
-                <tr>
-                    <td>🔒 Zero-Retention</td>
-                    <td>✅ Guaranteed</td>
-                    <td><strong>✅ Verified</strong></td>
-                    <td><span class="status-badge status-success">✅ Guaranteed</span></td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
+        <!-- Mobile Dropdown Navigation -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-cyber-950/95 border-b border-cyber-700 px-6 py-5 space-y-3">
+            <a href="#problem-solution" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Why Git-Fix</a>
+            <a href="#capabilities" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Capabilities</a>
+            <a href="#architecture" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Architecture & Pipeline</a>
+            <a href="#self-improvement" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Self-Improvement Engine</a>
+            <a href="#security" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Security Controls</a>
+            <a href="#deployment" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Quick Start & Deployment</a>
+            <a href="./index.html" class="block py-2.5 px-4 rounded bg-cyber-850 text-neon-cyan font-mono text-center text-sm border border-neon-cyan/40">Open Live Simulator</a>
+            <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="block py-2.5 px-4 rounded bg-neon-magenta text-white font-mono text-center text-sm font-bold">View GitHub Repository</a>
+        </div>
+    </header>
 
-    <!-- Security -->
-    <section class="security" id="security">
-        <div class="security-container">
-            <h2 class="section-title">🔐 Security Hardened</h2>
-            <div class="security-grid">
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>No Hardcoded Secrets</h4>
-                        <p>All secrets via environment variables / Vault</p>
+    <main>
+        <!-- HERO SECTION -->
+        <section class="relative pt-12 pb-24 lg:pt-20 lg:pb-32 overflow-hidden border-b border-cyber-700/50">
+            <!-- Glow Backdrops -->
+            <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[450px] bg-gradient-to-tr from-neon-magenta/15 via-neon-cyan/15 to-transparent blur-[120px] pointer-events-none rounded-full"></div>
+            
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <!-- Announcement Badge -->
+                <div class="flex justify-center mb-6">
+                    <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-cyber-850/90 border border-cyber-600/80 shadow-inner backdrop-blur-md">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-neon-green"></span>
+                        </span>
+                        <span class="text-xs font-mono text-slate-300">Next-Gen Autonomous Review • Zero Data Retention</span>
+                        <span class="text-[11px] font-mono text-neon-cyan font-bold pl-2 border-l border-cyber-700">AST + Multi-LLM</span>
                     </div>
                 </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Rate Limiting</h4>
-                        <p>Per-endpoint limits (10-100 req/min)</p>
+
+                <!-- Main Hero Headings -->
+                <div class="text-center max-w-4xl mx-auto space-y-4">
+                    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-display font-black tracking-tight text-white leading-tight uppercase">
+                        The Cyberpunk <br class="hidden sm:inline">
+                        <span class="bg-gradient-to-r from-neon-cyan via-white to-neon-magenta bg-clip-text text-transparent glow-text-cyan">
+                            Code Review Engine
+                        </span>
+                    </h1>
+                    
+                    <p class="text-lg sm:text-xl text-slate-300 font-light max-w-3xl mx-auto leading-relaxed pt-2">
+                        <span class="text-white font-medium">Security. Quality. Automated.</span> — Where deep multi-agent reasoning, AST syntax parsing, and zero-retention infrastructure turn code review into an art form.
+                    </p>
+                </div>
+
+                <!-- Badges Row from README -->
+                <div class="flex flex-wrap items-center justify-center gap-2.5 pt-6 pb-8">
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Git--Fix-ff007f?style=for-the-badge&logo=git&logoColor=white" alt="Git-Fix">
+                    </a>
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/actions" target="_blank" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/CI%2FCD-Passing-00f0ff?style=for-the-badge&logo=githubactions&logoColor=black" alt="Build Status">
+                    </a>
+                    <a href="./LICENSE" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/License-MIT-00ff88?style=for-the-badge&logo=opensourceinitiative&logoColor=black" alt="License MIT">
+                    </a>
+                    <a href="https://www.python.org" target="_blank" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+">
+                    </a>
+                    <a href="https://nodejs.org" target="_blank" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Node-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node 18+">
+                    </a>
+                    <a href="#deployment" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready">
+                    </a>
+                    <a href="#security" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Security-Hardened-ffaa00?style=for-the-badge&logo=shield&logoColor=black" alt="Security Hardened">
+                    </a>
+                    <a href="#benchmarks" class="hover:opacity-90 transition">
+                        <img src="https://img.shields.io/badge/Coverage-95%25-ff007f?style=for-the-badge&logo=codecov&logoColor=white" alt="Coverage 95%">
+                    </a>
+                </div>
+
+                <!-- Main CTA Action Buttons (Fully Wired to Real URLs & Paths) -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2 pb-12">
+                    <!-- Primary Button: Open interactive app simulator -->
+                    <a href="./index.html" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-blue-400 hover:to-neon-cyan text-cyber-950 font-display font-bold text-sm tracking-wider uppercase transition duration-300 shadow-xl shadow-neon-cyan/20 flex items-center justify-center gap-3 glow-box-cyan">
+                        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        <span>Launch Live Simulator</span>
+                    </a>
+
+                    <!-- Secondary Button: GitHub repository -->
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-cyber-850 hover:bg-cyber-800 text-white font-display font-bold text-sm tracking-wider uppercase transition duration-300 border border-cyber-600 hover:border-neon-magenta flex items-center justify-center gap-3 hover:glow-box-magenta">
+                        <i data-lucide="github" class="w-5 h-5 text-neon-magenta"></i>
+                        <span>GitHub Repository</span>
+                    </a>
+
+                    <!-- Tertiary Button: Docker Quickstart anchor -->
+                    <a href="#deployment" class="w-full sm:w-auto px-6 py-4 rounded-xl bg-cyber-900 hover:bg-cyber-850 text-slate-300 hover:text-white font-mono text-sm transition border border-cyber-700 flex items-center justify-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-neon-green"></i>
+                        <span>Quick Setup Guide</span>
+                    </a>
+                </div>
+
+                <!-- 4 Highlight Stat Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                    <div class="bg-cyber-900/80 backdrop-blur-md border border-cyber-700/80 rounded-xl p-5 text-center hover:border-neon-cyan transition duration-300">
+                        <div class="text-3xl lg:text-4xl font-display font-black text-neon-cyan glow-text-cyan">98.2%</div>
+                        <div class="text-xs font-mono uppercase tracking-wider text-slate-400 mt-1">Critical Catch Rate</div>
+                        <div class="text-[11px] text-neon-green font-mono mt-0.5">Exceeds 98% SLA</div>
+                    </div>
+                    <div class="bg-cyber-900/80 backdrop-blur-md border border-cyber-700/80 rounded-xl p-5 text-center hover:border-neon-magenta transition duration-300">
+                        <div class="text-3xl lg:text-4xl font-display font-black text-neon-magenta glow-text-magenta">&lt; 500ms</div>
+                        <div class="text-xs font-mono uppercase tracking-wider text-slate-400 mt-1">Target PR Latency</div>
+                        <div class="text-[11px] text-slate-400 font-mono mt-0.5">Lightning Fast AST</div>
+                    </div>
+                    <div class="bg-cyber-900/80 backdrop-blur-md border border-cyber-700/80 rounded-xl p-5 text-center hover:border-neon-amber transition duration-300">
+                        <div class="text-3xl lg:text-4xl font-display font-black text-neon-amber">20+</div>
+                        <div class="text-xs font-mono uppercase tracking-wider text-slate-400 mt-1">Vulnerability Types</div>
+                        <div class="text-[11px] text-neon-amber font-mono mt-0.5">OWASP & CWE Top-25</div>
+                    </div>
+                    <div class="bg-cyber-900/80 backdrop-blur-md border border-cyber-700/80 rounded-xl p-5 text-center hover:border-neon-green transition duration-300">
+                        <div class="text-3xl lg:text-4xl font-display font-black text-neon-green">0</div>
+                        <div class="text-xs font-mono uppercase tracking-wider text-slate-400 mt-1">Data Retention</div>
+                        <div class="text-[11px] text-neon-green font-mono mt-0.5">Local Ephemeral Vault</div>
                     </div>
                 </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Security Headers</h4>
-                        <p>CSP, HSTS, X-Frame-Options, X-Content-Type-Options</p>
+
+                <!-- Showcase Media / Banner Display with Real Fallbacks -->
+                <div class="mt-14 max-w-5xl mx-auto relative group">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-amber rounded-2xl blur-lg opacity-35 group-hover:opacity-70 transition duration-500"></div>
+                    <div class="relative bg-cyber-950 rounded-xl border border-cyber-600 overflow-hidden shadow-2xl">
+                        <!-- Simulated Cyber Window Header -->
+                        <div class="bg-cyber-900 px-4 py-3 border-b border-cyber-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+                                <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+                                <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
+                                <span class="text-xs font-mono text-slate-400 ml-2">git-fix-engine // dashboard-v1.0.preview</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[11px] font-mono text-neon-green flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-neon-green animate-ping"></span>
+                                    ONLINE • WEBSOCKET STREAMING
+                                </span>
+                                <a href="./index.html" class="text-xs font-mono text-neon-cyan hover:underline flex items-center gap-1">
+                                    <span>Interactive Mode</span>
+                                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Banner Image Container -->
+                        <div class="relative overflow-hidden bg-cyber-900 aspect-video flex items-center justify-center">
+                            <img src="Media/AaDUgycCFYJs4SS4LxsRkg-AaDUgycCfYdcBprBD9uIRQ.jpg" 
+                                 onerror="this.onerror=null; this.src='https://github.com/user-attachments/assets/1110dcb2-4af3-4308-8d51-27846b78db32';" 
+                                 alt="Git-Fix Cyberpunk Code Review Engine Showcase" 
+                                 class="w-full h-full object-cover">
+                            
+                            <!-- Floating Interactive Card inside Hero Visual -->
+                            <div class="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-auto sm:max-w-md bg-cyber-950/90 backdrop-blur-md border border-neon-cyan/40 p-4 rounded-lg shadow-xl">
+                                <div class="flex items-start gap-3">
+                                    <div class="p-2 rounded bg-neon-cyan/10 text-neon-cyan mt-0.5">
+                                        <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-mono font-bold text-white flex items-center justify-between">
+                                            <span>CRITICAL VULN INTERCEPTED</span>
+                                            <span class="text-neon-magenta">CONFIDENCE 0.98</span>
+                                        </div>
+                                        <p class="text-[12px] text-slate-300 mt-1 font-mono">SQL Injection averted in auth_handler.py:42 via AST tainted flow analysis.</p>
+                                        <div class="mt-2.5 flex items-center gap-2">
+                                            <a href="./index.html#simulation" class="text-[11px] px-2.5 py-1 rounded bg-neon-cyan text-cyber-950 font-bold font-mono hover:bg-white transition">Inspect Finding</a>
+                                            <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/blob/main/SECURITY_AUDIT.md" class="text-[11px] px-2.5 py-1 rounded bg-cyber-800 text-slate-300 font-mono hover:text-white transition">Read Audit Log</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Input Validation</h4>
-                        <p>Pydantic models on all endpoints</p>
-                    </div>
+
+            </div>
+        </section>
+
+        <!-- WHY GIT-FIX: THE PROBLEM VS THE SOLUTION -->
+        <section id="problem-solution" class="py-20 lg:py-28 bg-cyber-900/60 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-cyan px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Root Cause Analysis</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Why Traditional Code Reviews Fail
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Modern pull requests are too complex for hurried manual inspection. Git-Fix solves human fatigue with deterministic AST validation and an AI critic ensemble.
+                    </p>
                 </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Structured Logging</h4>
-                        <p>Request ID tracing, audit trail</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                    <!-- The Problem Box -->
+                    <div class="bg-cyber-950/80 border border-red-500/40 rounded-2xl p-7 relative overflow-hidden group hover:border-red-500 transition duration-300">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-3xl pointer-events-none rounded-full"></div>
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center font-bold">
+                                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-display font-bold text-red-400">🔴 The Problem</h3>
+                                <p class="text-xs font-mono text-slate-400">Current Industry Bottlenecks</p>
+                            </div>
+                        </div>
+
+                        <ul class="space-y-4 text-slate-300 text-sm">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">87% of security vulnerabilities</strong> slip past manual peer reviews into production deployments.</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">4.2 hours average latency</strong> per PR review, stalling engineering velocity and sprint deadlines.</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">$4.35M average cost</strong> of a single enterprise data breach caused by unverified inputs (IBM 2024).</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">Reviewer fatigue:</strong> Developers skim long diffs and rubber-stamp LGTM under high shipping pressure.</div>
+                            </li>
+                        </ul>
                     </div>
-                </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Pre-commit Hooks</h4>
-                        <p>Path traversal, secret scanning, injection detection</p>
-                    </div>
-                </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>CORS Policy</h4>
-                        <p>Restricted origins, credentials support</p>
-                    </div>
-                </div>
-                <div class="security-item">
-                    <div class="security-item-icon">✅</div>
-                    <div class="security-item-text">
-                        <h4>Request Size Limits</h4>
-                        <p>16MB max payload</p>
+
+                    <!-- The Git-Fix Solution Box -->
+                    <div class="bg-cyber-950/80 border border-neon-green/40 rounded-2xl p-7 relative overflow-hidden group hover:border-neon-green transition duration-300">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-neon-green/10 blur-3xl pointer-events-none rounded-full"></div>
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-lg bg-neon-green/10 text-neon-green flex items-center justify-center font-bold">
+                                <i data-lucide="check-check" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-display font-bold text-neon-green">🟢 The Git-Fix Solution</h3>
+                                <p class="text-xs font-mono text-slate-400">Autonomous Cyber Critique</p>
+                            </div>
+                        </div>
+
+                        <ul class="space-y-4 text-slate-300 text-sm">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-neon-green shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">&lt; 500ms automated review</strong> with real-time WebSocket feedback directly inside GitHub PR comments.</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-neon-green shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">98.2% critical catch rate</strong> with confidence-weighted multi-agent validation (Confidence &ge; 0.85).</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-neon-green shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">Zero-retention architecture:</strong> Your proprietary source code never leaves your isolated sandbox.</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-neon-green shrink-0 mt-0.5"></i>
+                                <div><strong class="text-white">Multi-Agent Critique Ensemble:</strong> Claude 3.5 Sonnet, DeepSeek &amp; GPT-4o working in consensus.</div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <div style="margin-top: 3rem; text-align: center;">
-                <h3 style="margin-bottom: 1.5rem;">🔍 Vulnerability Coverage (20+ Types)</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">Injection</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">SQLi, NoSQLi, Command, LDAP, XPATH</span>
+        <!-- CORE CAPABILITIES (4 PILLARS) -->
+        <section id="capabilities" class="py-20 lg:py-28 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-magenta px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Next-Gen Architecture</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Core Engine Capabilities
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Built for enterprise resilience and mission-critical repositories.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Card 1 -->
+                    <div class="bg-cyber-900/70 border border-cyber-700/80 rounded-xl p-6 hover:border-neon-cyan transition duration-300 hover:glow-box-cyan flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan flex items-center justify-center mb-5">
+                                <i data-lucide="shield" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-2">Security-First</h4>
+                            <p class="text-xs text-slate-400 mb-4 font-mono">Deep Vulnerability Interception</p>
+                            <ul class="space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> 98.2% critical catch rate</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> 20+ vulnerability categories</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> HashiCorp Vault PII Redaction</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Zero code storage guarantee</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyber-700/60 flex items-center justify-between">
+                            <span class="text-[11px] font-mono text-neon-cyan font-bold">OWASP Top 10</span>
+                            <a href="#security" class="text-[11px] font-mono text-slate-400 hover:text-white flex items-center gap-1">Specs <i data-lucide="arrow-right" class="w-3 h-3"></i></a>
+                        </div>
                     </div>
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">XSS</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Reflected, Stored, DOM, Template</span>
+
+                    <!-- Card 2 -->
+                    <div class="bg-cyber-900/70 border border-cyber-700/80 rounded-xl p-6 hover:border-neon-magenta transition duration-300 hover:glow-box-magenta flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-magenta/10 border border-neon-magenta/30 text-neon-magenta flex items-center justify-center mb-5">
+                                <i data-lucide="bot" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-2">AI Critic Ensemble</h4>
+                            <p class="text-xs text-slate-400 mb-4 font-mono">Multi-Agent Consensus</p>
+                            <ul class="space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Claude 3.5 + DeepSeek + GPT-4o</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Confidence Arbiter (&ge; 0.85 filter)</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> AST context injection</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Auto-fix suggested diffs</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyber-700/60 flex items-center justify-between">
+                            <span class="text-[11px] font-mono text-neon-magenta font-bold">LLM Ensemble</span>
+                            <a href="#architecture" class="text-[11px] font-mono text-slate-400 hover:text-white flex items-center gap-1">Pipeline <i data-lucide="arrow-right" class="w-3 h-3"></i></a>
+                        </div>
                     </div>
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">Auth/Session</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Secrets, JWT, Session fixation</span>
+
+                    <!-- Card 3 -->
+                    <div class="bg-cyber-900/70 border border-cyber-700/80 rounded-xl p-6 hover:border-neon-amber transition duration-300 hover:glow-box-amber flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-amber/10 border border-neon-amber/30 text-neon-amber flex items-center justify-center mb-5">
+                                <i data-lucide="activity" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-2">Real-Time Speed</h4>
+                            <p class="text-xs text-slate-400 mb-4 font-mono">Sub-Second Processing</p>
+                            <ul class="space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> &lt; 500ms pipeline latency</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> WebSocket live event push</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Redis cluster queuing</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Idempotent webhook ingress</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyber-700/60 flex items-center justify-between">
+                            <span class="text-[11px] font-mono text-neon-amber font-bold">Async Redis</span>
+                            <a href="#benchmarks" class="text-[11px] font-mono text-slate-400 hover:text-white flex items-center gap-1">Stats <i data-lucide="arrow-right" class="w-3 h-3"></i></a>
+                        </div>
                     </div>
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">Crypto</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Weak algorithms, hardcoded keys</span>
-                    </div>
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">Deserialization</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Pickle, YAML, XML, JSON</span>
-                    </div>
-                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
-                        <strong style="color: var(--secondary);">Path Traversal</strong><br>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Directory, Zip slip, Extraction</span>
+
+                    <!-- Card 4 -->
+                    <div class="bg-cyber-900/70 border border-cyber-700/80 rounded-xl p-6 hover:border-neon-green transition duration-300 hover:glow-box-green flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green flex items-center justify-center mb-5">
+                                <i data-lucide="code" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-2">Developer First</h4>
+                            <p class="text-xs text-slate-400 mb-4 font-mono">Seamless Workflow Integration</p>
+                            <ul class="space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Pre-commit local hooks</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Zero-config 60-second setup</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> Custom .coderabbit.yaml config</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-neon-green"></i> VS Code &amp; JetBrains extensions</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyber-700/60 flex items-center justify-between">
+                            <span class="text-[11px] font-mono text-neon-green font-bold">Zero Friction</span>
+                            <a href="#deployment" class="text-[11px] font-mono text-slate-400 hover:text-white flex items-center gap-1">Install <i data-lucide="arrow-right" class="w-3 h-3"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Deployment -->
-    <section class="deployment" id="deployment">
-        <h2 class="section-title">🐳 Quick Start & Deployment</h2>
-        
-        <div class="deployment-tabs">
-            <button class="tab-button active" onclick="switchTab(event, 'docker')">🐳 Docker</button>
-            <button class="tab-button" onclick="switchTab(event, 'manual')">🛠️ Manual</button>
-            <button class="tab-button" onclick="switchTab(event, 'k8s')">☸️ Kubernetes</button>
-        </div>
+        <!-- INTERACTIVE ARCHITECTURE & 5-STAGE PIPELINE -->
+        <section id="architecture" class="py-20 lg:py-28 bg-cyber-900/60 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-cyan px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Deep Technical Specification</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        The 5-Stage Analysis Pipeline
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Deterministic syntax parsing meets generative LLM verification in a hardened asynchronous topology.
+                    </p>
+                </div>
 
-        <div id="docker" class="tab-content active">
-            <h3>Docker (Recommended)</h3>
-            <div class="code-block"><code>
-# 1. Clone & configure
-git clone https://github.com/motherskitchenblr2/git-fix.git
-cd git-fix
+                <!-- Interactive 5 Stages Visual -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-12">
+                    <!-- Stage 1 -->
+                    <div class="pipeline-card cursor-pointer bg-cyber-950 border border-cyber-700 rounded-xl p-5 hover:border-neon-cyan transition duration-200" onclick="showStage(1)">
+                        <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                            <span>STAGE 01</span>
+                            <span class="text-neon-cyan font-bold">&lt; 15ms</span>
+                        </div>
+                        <div class="text-sm font-display font-bold text-white mb-1">Webhook Ingestion</div>
+                        <p class="text-xs text-slate-400">HMAC-SHA256 signature verification &amp; Redis queue dispatch.</p>
+                        <div class="mt-3 text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                            <i data-lucide="key" class="w-3 h-3 text-neon-cyan"></i>
+                            <span>Idempotent Key</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2 -->
+                    <div class="pipeline-card cursor-pointer bg-cyber-950 border border-cyber-700 rounded-xl p-5 hover:border-neon-cyan transition duration-200" onclick="showStage(2)">
+                        <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                            <span>STAGE 02</span>
+                            <span class="text-neon-cyan font-bold">&lt; 40ms</span>
+                        </div>
+                        <div class="text-sm font-display font-bold text-white mb-1">Tree-sitter AST</div>
+                        <p class="text-xs text-slate-400">Deterministic syntax tree extraction across 6 target languages.</p>
+                        <div class="mt-3 text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                            <i data-lucide="binary" class="w-3 h-3 text-neon-cyan"></i>
+                            <span>AST Nodes &amp; CFG</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3 -->
+                    <div class="pipeline-card cursor-pointer bg-cyber-950 border border-cyber-700 rounded-xl p-5 hover:border-neon-cyan transition duration-200" onclick="showStage(3)">
+                        <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                            <span>STAGE 03</span>
+                            <span class="text-neon-cyan font-bold">&lt; 65ms</span>
+                        </div>
+                        <div class="text-sm font-display font-bold text-white mb-1">RAG &amp; Vector DB</div>
+                        <p class="text-xs text-slate-400">Qdrant vector similarity search for repo standards &amp; context.</p>
+                        <div class="mt-3 text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                            <i data-lucide="database" class="w-3 h-3 text-neon-cyan"></i>
+                            <span>Qdrant Embeddings</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage 4 -->
+                    <div class="pipeline-card cursor-pointer bg-cyber-950 border border-neon-magenta/60 rounded-xl p-5 hover:border-neon-magenta transition duration-200 glow-box-magenta" onclick="showStage(4)">
+                        <div class="flex items-center justify-between text-xs font-mono text-neon-magenta mb-2">
+                            <span>STAGE 04</span>
+                            <span class="font-bold">&lt; 350ms</span>
+                        </div>
+                        <div class="text-sm font-display font-bold text-white mb-1">Multi-Agent Critique</div>
+                        <p class="text-xs text-slate-300">Security, Logic, Test Oracle &amp; Style critics + Arbiter.</p>
+                        <div class="mt-3 text-[11px] font-mono text-neon-magenta flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i>
+                            <span>Arbiter &ge; 0.85</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage 5 -->
+                    <div class="pipeline-card cursor-pointer bg-cyber-950 border border-cyber-700 rounded-xl p-5 hover:border-neon-green transition duration-200" onclick="showStage(5)">
+                        <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                            <span>STAGE 05</span>
+                            <span class="text-neon-green font-bold">&lt; 30ms</span>
+                        </div>
+                        <div class="text-sm font-display font-bold text-white mb-1">GitHub Dispatch</div>
+                        <p class="text-xs text-slate-400">Inline line-numbered comments, check runs &amp; auto-fix PRs.</p>
+                        <div class="mt-3 text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                            <i data-lucide="git-pull-request" class="w-3 h-3 text-neon-green"></i>
+                            <span>One-Click Fixes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage Detail Modal / Live Output Box -->
+                <div id="stage-detail-box" class="bg-cyber-950 border border-cyber-600 rounded-2xl p-6 sm:p-8 relative">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-cyber-700/80">
+                        <div>
+                            <span id="stage-badge" class="text-xs font-mono font-bold px-3 py-1 rounded bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/40 uppercase">Selected: Stage 04 — Multi-Agent Critique Ensemble</span>
+                            <h3 id="stage-title" class="text-xl sm:text-2xl font-display font-bold text-white mt-2">Specialized Multi-Agent LLM Ensemble with Confidence Arbiter</h3>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <a href="./index.html#pipeline" class="text-xs font-mono px-4 py-2 rounded bg-cyber-850 hover:bg-cyber-700 border border-neon-cyan/40 text-neon-cyan flex items-center gap-2 transition">
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                <span>Simulate In Dashboard</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-mono uppercase tracking-wider text-slate-400">Agent Roles</h4>
+                            <div class="space-y-2 text-xs font-mono">
+                                <div class="p-2.5 rounded bg-cyber-900 border border-cyber-700 text-slate-300">
+                                    <span class="text-red-400 font-bold">1. Security Critic:</span> SQLi, XSS, RCE, Secrets, Path Traversal
+                                </div>
+                                <div class="p-2.5 rounded bg-cyber-900 border border-cyber-700 text-slate-300">
+                                    <span class="text-yellow-400 font-bold">2. Logic Critic:</span> Off-by-one, nil checks, race conditions
+                                </div>
+                                <div class="p-2.5 rounded bg-cyber-900 border border-cyber-700 text-slate-300">
+                                    <span class="text-blue-400 font-bold">3. Test Oracle:</span> Untested branches, missing edge cases
+                                </div>
+                                <div class="p-2.5 rounded bg-cyber-900 border border-cyber-700 text-slate-300">
+                                    <span class="text-purple-400 font-bold">4. Style Critic:</span> Formatting, naming conventions, docstrings
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-mono uppercase tracking-wider text-slate-400">Safety &amp; Privacy Layer</h4>
+                            <div class="bg-cyber-900 border border-cyber-700 rounded-lg p-4 space-y-2 text-xs text-slate-300 font-mono">
+                                <div class="flex items-center gap-2 text-neon-green">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>HashiCorp Vault PII Masking</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-neon-green">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>Ephemeral K8s Workers</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-neon-green">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>Zero Code Persistence</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-neon-green">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>Confidence Floor &ge; 0.85</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-mono uppercase tracking-wider text-slate-400">Infrastructure Topology</h4>
+                            <div class="bg-cyber-900 border border-cyber-700 rounded-lg p-4 text-xs font-mono space-y-2 text-slate-300">
+                                <div><span class="text-slate-400">Queue:</span> <span class="text-neon-cyan">Redis 7 Cluster</span></div>
+                                <div><span class="text-slate-400">Database:</span> <span class="text-neon-cyan">PostgreSQL 15</span></div>
+                                <div><span class="text-slate-400">Vector Store:</span> <span class="text-neon-cyan">Qdrant DB</span></div>
+                                <div><span class="text-slate-400">Monitoring:</span> <span class="text-neon-cyan">Prometheus + Grafana</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEEP DIVE: THE SELF-IMPROVEMENT ENGINE -->
+        <section id="self-improvement" class="py-20 lg:py-28 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-amber px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Autonomous Compound Intelligence</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        The Self-Improvement Engine
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Git-Fix doesn't just review code — <span class="text-white font-semibold">it gets smarter with every single repository scan</span> via persistent memory, error-recovery reflexes, and an XP skill tree.
+                    </p>
+                </div>
+
+                <!-- 4 Subsystems Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+                    <!-- Subsystem 1: Three-Tier Memory -->
+                    <div class="bg-cyber-900/80 border border-cyber-700 rounded-xl p-6">
+                        <div class="w-10 h-10 rounded-lg bg-neon-cyan/10 text-neon-cyan flex items-center justify-center mb-4">
+                            <i data-lucide="hard-drive" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-base font-display font-bold text-white mb-2">Three-Tier Memory</h4>
+                        <p class="text-xs text-slate-400 mb-4">Persistent SQLite store that compounds knowledge over restarts.</p>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-cyan">Episodic:</span> Timestamped scan events &amp; recoveries
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-cyan">Semantic:</span> Consolidated facts &amp; security patterns
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-cyan">Procedural:</span> Learned workflows &amp; remediation
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subsystem 2: Self Error Handling -->
+                    <div class="bg-cyber-900/80 border border-cyber-700 rounded-xl p-6">
+                        <div class="w-10 h-10 rounded-lg bg-neon-magenta/10 text-neon-magenta flex items-center justify-center mb-4">
+                            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-base font-display font-bold text-white mb-2">Self Error Handling</h4>
+                        <p class="text-xs text-slate-400 mb-4">Classifies severity and executes autonomous recovery strategies.</p>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-magenta">Strategies:</span> Retry, fallback, degrade, skip
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-magenta">Reflexes:</span> Learns source-specific automated reflexes
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-magenta">Escalation:</span> Only triggers if autonomous recovery fails
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subsystem 3: Self-Learning Feedback -->
+                    <div class="bg-cyber-900/80 border border-cyber-700 rounded-xl p-6">
+                        <div class="w-10 h-10 rounded-lg bg-neon-green/10 text-neon-green flex items-center justify-center mb-4">
+                            <i data-lucide="git-merge" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-base font-display font-bold text-white mb-2">Self-Learning</h4>
+                        <p class="text-xs text-slate-400 mb-4">Converts review outcomes into weighted reusable lessons.</p>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-green">Feedback:</span> Pass / Fail / Retry outcome signals
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-green">Confidence:</span> Continuous score weight updates
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-green">Quality Floor:</span> Low-value pattern garbage collection
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subsystem 4: Self-Development & XP -->
+                    <div class="bg-cyber-900/80 border border-cyber-700 rounded-xl p-6">
+                        <div class="w-10 h-10 rounded-lg bg-neon-amber/10 text-neon-amber flex items-center justify-center mb-4">
+                            <i data-lucide="award" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-base font-display font-bold text-white mb-2">Self-Development</h4>
+                        <p class="text-xs text-slate-400 mb-4">Skill XP progression tracking and autonomous milestone plans.</p>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-amber">Skill Tree:</span> Novice &rarr; Competent &rarr; Expert
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-amber">Milestones:</span> Auto-generated training goals
+                            </div>
+                            <div class="p-2 rounded bg-cyber-950 border border-cyber-800 text-slate-300">
+                                <span class="text-neon-amber">Optimization:</span> Identifies weak skills &amp; retrains
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Terminal CLI Simulator -->
+                <div class="bg-cyber-950 border border-cyber-600 rounded-2xl overflow-hidden shadow-2xl">
+                    <div class="bg-cyber-900 px-6 py-4 border-b border-cyber-700 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            <span class="text-xs font-mono text-slate-300 font-semibold ml-2">Self-Improvement Interactive CLI Runner</span>
+                        </div>
+                        <!-- Command Switcher Tabs -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="runCliCommand('status')" class="cli-btn px-3 py-1.5 rounded text-xs font-mono bg-cyber-800 text-neon-cyan border border-cyber-600 hover:border-neon-cyan transition active-cli">cli status</button>
+                            <button onclick="runCliCommand('demo')" class="cli-btn px-3 py-1.5 rounded text-xs font-mono bg-cyber-800 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">cli demo</button>
+                            <button onclick="runCliCommand('dashboard')" class="cli-btn px-3 py-1.5 rounded text-xs font-mono bg-cyber-800 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">cli dashboard</button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-cyber-950 font-mono text-xs text-slate-300 overflow-x-auto relative">
+                        <!-- Copy Terminal Command Button -->
+                        <button onclick="copyCurrentCliCommand()" class="absolute top-4 right-4 px-3 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-600 text-neon-cyan text-xs flex items-center gap-1.5 transition">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="cli-copy-label">Copy Command</span>
+                        </button>
+
+                        <div id="cli-output" class="space-y-1.5 leading-relaxed">
+                            <span class="text-slate-500"># Initializing Self-Improvement System Inspector...</span><br>
+                            <span class="text-neon-cyan">$ python -m backend.self_improvement.cli status</span><br><br>
+                            <span class="text-neon-green font-bold">================================================================================</span><br>
+                            <span class="text-neon-green font-bold">  BRAIN STATUS: ACTIVE (3-Tier Compound Engine)</span><br>
+                            <span class="text-neon-green font-bold">================================================================================</span><br>
+                            <span class="text-white">  * Memory DB:</span> <span class="text-neon-cyan">~/.gitfix/memory/memory.db (SQLite)</span><br>
+                            <span class="text-white">  * Episodic Memories:</span> <span class="text-neon-amber">1,428 events recorded</span><br>
+                            <span class="text-white">  * Semantic Lessons:</span> <span class="text-neon-cyan">342 verified principles (Avg Confidence: 0.93)</span><br>
+                            <span class="text-white">  * Learned Reflexes:</span> <span class="text-neon-magenta">18 auto-recovery strategies stored</span><br>
+                            <span class="text-white">  * Skill Level:</span> <span class="text-neon-green">PROFICIENT (Level 4, 3,850 / 5,000 XP)</span><br>
+                            <span class="text-white">  * Active Improvement Plan:</span> <span class="text-slate-300">AST parsing optimization for Rust/Go</span><br>
+                            <span class="text-slate-500">--------------------------------------------------------------------------------</span><br>
+                            <span class="text-neon-cyan">[OK] Self-improvement pipeline running with zero errors.</span>
+                        </div>
+                    </div>
+
+                    <!-- Persistence Paths Footer -->
+                    <div class="bg-cyber-900/60 px-6 py-3 border-t border-cyber-800 text-[11px] font-mono text-slate-400 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <span>Storage location:</span> <code class="text-neon-cyan font-bold">~/.gitfix/memory/</code> (memory.db, reflexes.json, development.json)
+                        </div>
+                        <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/tree/main/backend/self_improvement" target="_blank" class="text-neon-cyan hover:underline flex items-center gap-1">
+                            <span>Inspect Source Code: backend/self_improvement/</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECURITY CONTROLS & VULNERABILITY COVERAGE (20+ TYPES) -->
+        <section id="security" class="py-20 lg:py-28 bg-cyber-900/60 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-green px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Enterprise Grade Defense</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Security Hardened Architecture
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        10 rigorously audited controls ensuring your intellectual property and cloud infrastructure remain impregnable.
+                    </p>
+                </div>
+
+                <!-- 10 Implemented Controls Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-16">
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">No Hardcoded Secrets</div>
+                        <div class="text-[11px] text-slate-400 mt-1">All credentials loaded via Env / HashiCorp Vault.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Strict Rate Limiting</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Per-endpoint Flask-Limiter with Redis backend.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Security Headers</div>
+                        <div class="text-[11px] text-slate-400 mt-1">CSP, HSTS, X-Frame-Options, X-Content-Type.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Input Validation</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Strict Pydantic models on 100% of endpoints.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Structured Tracing</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Correlation Request-ID and audit logging.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Pre-Commit Hooks</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Path traversal, secret scanning, injection check.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">CORS Policy</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Restricted origins and authenticated credentials.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Payload Clamping</div>
+                        <div class="text-[11px] text-slate-400 mt-1">16MB strict maximum request payload limit.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">No Debug Mode</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Zero stack trace leakage in production runtime.</div>
+                    </div>
+                    <div class="bg-cyber-950 border border-cyber-700 rounded-lg p-4">
+                        <div class="text-neon-green mb-2"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                        <div class="text-xs font-mono font-bold text-white">Zero Retention</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Source destroyed post-review in ephemeral pods.</div>
+                    </div>
+                </div>
+
+                <!-- Interactive 20+ Vulnerability Coverage Filter -->
+                <div class="bg-cyber-950 border border-cyber-700 rounded-2xl p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-xl font-display font-bold text-white">Vulnerability Coverage Matrix (20+ CVE Types)</h3>
+                            <p class="text-xs font-mono text-slate-400">Click a category to filter the real-time detection vector</p>
+                        </div>
+                        <a href="./SECURITY_AUDIT.md" class="text-xs font-mono text-neon-green hover:underline flex items-center gap-1.5">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>View SECURITY_AUDIT.md</span>
+                        </a>
+                    </div>
+
+                    <!-- Filter Buttons -->
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button onclick="filterVulns('all')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-neon-cyan border border-cyber-600 hover:border-neon-cyan transition active-vuln">All (20+)</button>
+                        <button onclick="filterVulns('injection')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">Injection</button>
+                        <button onclick="filterVulns('xss')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">XSS</button>
+                        <button onclick="filterVulns('auth')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">Auth &amp; Secrets</button>
+                        <button onclick="filterVulns('crypto')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">Crypto &amp; Deserialization</button>
+                        <button onclick="filterVulns('traversal')" class="vuln-tab px-3 py-1.5 rounded text-xs font-mono bg-cyber-850 text-slate-400 border border-cyber-600 hover:border-neon-cyan transition">Path Traversal &amp; SSRF</button>
+                    </div>
+
+                    <!-- Vulnerability Cards Grid -->
+                    <div id="vuln-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Item 1 -->
+                        <div class="vuln-card injection bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">SQL / NoSQL Injection</span>
+                                <span class="text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded">CRITICAL</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">String concatenation, raw SQL queries, unsafe MongoDB object queries.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">AST Taint-Flow Analysis</div>
+                        </div>
+
+                        <!-- Item 2 -->
+                        <div class="vuln-card injection bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">Command Injection</span>
+                                <span class="text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded">CRITICAL</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">Unsanitized subprocess, os.system, execve, or child_process invocations.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">Call-Graph Tracing</div>
+                        </div>
+
+                        <!-- Item 3 -->
+                        <div class="vuln-card xss bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">XSS (Reflected &amp; DOM)</span>
+                                <span class="text-neon-amber font-bold bg-amber-400/10 px-2 py-0.5 rounded">HIGH</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">dangerouslySetInnerHTML, unescaped template parameters, eval expressions.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">JSX/HTML AST Inspection</div>
+                        </div>
+
+                        <!-- Item 4 -->
+                        <div class="vuln-card auth bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">Hardcoded Secrets &amp; Keys</span>
+                                <span class="text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded">CRITICAL</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">AWS tokens, OpenAI keys, private RSA certificates, GitHub Personal Access Tokens.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">Entropy &amp; Pattern Scanning</div>
+                        </div>
+
+                        <!-- Item 5 -->
+                        <div class="vuln-card crypto bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">Unsafe Deserialization</span>
+                                <span class="text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded">CRITICAL</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">Python pickle.loads, PyYAML yaml.load, XML External Entity (XXE), Java ObjectInputStream.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">Static AST Blacklist</div>
+                        </div>
+
+                        <!-- Item 6 -->
+                        <div class="vuln-card traversal bg-cyber-900 border border-cyber-700/80 p-4 rounded-lg">
+                            <div class="flex items-center justify-between text-xs font-mono mb-1">
+                                <span class="text-neon-cyan font-bold">Path Traversal / Zip Slip</span>
+                                <span class="text-neon-amber font-bold bg-amber-400/10 px-2 py-0.5 rounded">HIGH</span>
+                            </div>
+                            <p class="text-xs text-slate-300 font-mono mt-2">Unbounded "../" file path resolving, tarfile extraction, and zip archive path bypasses.</p>
+                            <div class="mt-3 text-[11px] font-mono text-neon-green">Path Sanitization Engine</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PERFORMANCE BENCHMARKS & TESTING QUALITY -->
+        <section id="benchmarks" class="py-20 lg:py-28 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-cyan px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Empirical Verification</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Performance Benchmarks
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Measured across synthetic and real-world high-throughput production CI/CD runs.
+                    </p>
+                </div>
+
+                <div class="max-w-4xl mx-auto bg-cyber-950 border border-cyber-700 rounded-xl overflow-hidden mb-16">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left font-mono text-xs text-slate-300">
+                            <thead class="bg-cyber-900 border-b border-cyber-700 text-neon-cyan font-display">
+                                <tr>
+                                    <th class="p-4">Benchmark Metric</th>
+                                    <th class="p-4">Target SLA</th>
+                                    <th class="p-4">Current Benchmark</th>
+                                    <th class="p-4">Verification Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-cyber-800">
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
+                                        <span>Avg Review Latency</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">&lt; 500ms</td>
+                                    <td class="p-4 text-neon-amber font-bold">620ms</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-amber-500/10 text-neon-amber border border-amber-500/30">🟡 Optimizing</span></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="target" class="w-4 h-4 text-neon-green"></i>
+                                        <span>Critical Catch Rate</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">98.0%</td>
+                                    <td class="p-4 text-neon-green font-bold">98.2%</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Exceeds</span></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="filter" class="w-4 h-4 text-neon-cyan"></i>
+                                        <span>False Positive Rate</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">&lt; 5.0%</td>
+                                    <td class="p-4 text-neon-cyan font-bold">4.8%</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-cyan-500/10 text-neon-cyan border border-cyan-500/30">✅ On Target</span></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="languages" class="w-4 h-4 text-neon-magenta"></i>
+                                        <span>Supported Languages</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">12</td>
+                                    <td class="p-4 text-white font-bold">6 (Python, JS, TS, Go, Java, C++)</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-pink-500/10 text-neon-magenta border border-pink-500/30">🟡 Expanding</span></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="git-branch" class="w-4 h-4 text-neon-green"></i>
+                                        <span>CI/CD Integration</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">Ready</td>
+                                    <td class="p-4 text-neon-green font-bold">GitHub, GitLab, Bitbucket</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Ready</span></td>
+                                </tr>
+                                <tr class="hover:bg-cyber-900/50 transition">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                        <i data-lucide="shield-check" class="w-4 h-4 text-neon-green"></i>
+                                        <span>Zero-Retention Privacy</span>
+                                    </td>
+                                    <td class="p-4 text-slate-400">100% Guaranteed</td>
+                                    <td class="p-4 text-neon-green font-bold">Verified HashiCorp Vault</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Guaranteed</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Test Coverage Overview Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-center font-mono">
+                    <div class="p-4 rounded-xl bg-cyber-900 border border-cyber-700">
+                        <div class="text-2xl font-bold text-neon-green">94%</div>
+                        <div class="text-xs text-slate-400 mt-1">Unit Test Coverage</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-cyber-900 border border-cyber-700">
+                        <div class="text-2xl font-bold text-neon-green">87%</div>
+                        <div class="text-xs text-slate-400 mt-1">Integration Coverage</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-cyber-900 border border-cyber-700">
+                        <div class="text-2xl font-bold text-neon-amber">78%</div>
+                        <div class="text-xs text-slate-400 mt-1">E2E Test Coverage</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-cyber-900 border border-cyber-700">
+                        <div class="text-2xl font-bold text-neon-green">100%</div>
+                        <div class="text-xs text-slate-400 mt-1">Security Test Suite</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEPLOYMENT & QUICK START CENTER -->
+        <section id="deployment" class="py-20 lg:py-28 bg-cyber-900/60 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-green px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Ready in 60 Seconds</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Quick Start &amp; Deployment
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Run locally with Docker, deploy to Kubernetes clusters, or install pre-commit git hooks in your repositories.
+                    </p>
+                </div>
+
+                <div class="max-w-4xl mx-auto bg-cyber-950 border border-cyber-700 rounded-2xl overflow-hidden shadow-2xl">
+                    <!-- Deployment Option Tabs -->
+                    <div class="flex flex-wrap border-b border-cyber-700 bg-cyber-900 px-4 pt-3 gap-2">
+                        <button onclick="switchDeployTab('docker')" class="deploy-tab px-4 py-2.5 rounded-t-lg font-mono text-xs font-bold text-neon-cyan border-b-2 border-neon-cyan bg-cyber-950 flex items-center gap-2">
+                            <i data-lucide="container" class="w-4 h-4"></i>
+                            <span>🐳 Docker (Recommended)</span>
+                        </button>
+                        <button onclick="switchDeployTab('k8s')" class="deploy-tab px-4 py-2.5 rounded-t-lg font-mono text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-2">
+                            <i data-lucide="boxes" class="w-4 h-4"></i>
+                            <span>☸️ Kubernetes &amp; Helm</span>
+                        </button>
+                        <button onclick="switchDeployTab('manual')" class="deploy-tab px-4 py-2.5 rounded-t-lg font-mono text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-2">
+                            <i data-lucide="terminal" class="w-4 h-4"></i>
+                            <span>🛠️ Manual Setup</span>
+                        </button>
+                        <button onclick="switchDeployTab('hooks')" class="deploy-tab px-4 py-2.5 rounded-t-lg font-mono text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-2">
+                            <i data-lucide="git-commit" class="w-4 h-4"></i>
+                            <span>🔧 Pre-Commit Hooks</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab Contents -->
+                    <div class="p-6 relative">
+                        <!-- Copy Active Snippet Button -->
+                        <button onclick="copyActiveDeploySnippet()" class="absolute top-6 right-6 px-3 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-600 text-neon-cyan text-xs font-mono flex items-center gap-1.5 transition z-10">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="deploy-copy-label">Copy Snippet</span>
+                        </button>
+
+                        <!-- Tab 1: Docker -->
+                        <div id="deploy-docker" class="deploy-content">
+                            <div class="text-xs font-mono text-slate-400 mb-3">Launch complete 5-stage stack (API, Redis, Postgres, Qdrant, React Frontend):</div>
+                            <pre class="bg-cyber-900 border border-cyber-800 rounded-lg p-5 font-mono text-xs text-neon-cyan overflow-x-auto"><code id="code-docker"># 1. Clone this repository
+git clone https://github.com/motherskitchenblr2/Code-Rabbit-Alternative.git
+cd Code-Rabbit-Alternative
+
+# 2. Configure environment keys
 cp .env.example .env
-# Edit .env with your GitHub token & API keys
+# Edit .env with your GitHub webhook token & LLM keys
 
-# 2. Launch full stack
+# 3. Launch full cyberpunk stack
 docker-compose up -d
 
-# 3. Access dashboard
-open http://localhost:5173
-            </code></div>
-        </div>
+# 4. Open live interactive dashboard
+open http://localhost:5173</code></pre>
+                        </div>
 
-        <div id="manual" class="tab-content">
-            <h3>Manual Setup</h3>
-            <div class="code-block"><code>
-# Prerequisites: Python 3.11+ | Node 18+ | PostgreSQL 15 | Redis 7 | Qdrant
-
-# Backend
-cd backend
-pip install -r requirements.txt
-cp .env.example .env
-# Configure: GITHUB_WEBHOOK_SECRET, DATABASE_URL, REDIS_URL, QDRANT_URL
-python -m app
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev
-# Opens at http://localhost:5173
-            </code></div>
-        </div>
-
-        <div id="k8s" class="tab-content">
-            <h3>Kubernetes Production Deployment</h3>
-            <div class="code-block"><code>
-# Using Helm Chart
+                        <!-- Tab 2: K8s -->
+                        <div id="deploy-k8s" class="deploy-content hidden">
+                            <div class="text-xs font-mono text-slate-400 mb-3">Production Kubernetes deployment via Helm or native manifests:</div>
+                            <pre class="bg-cyber-900 border border-cyber-800 rounded-lg p-5 font-mono text-xs text-neon-cyan overflow-x-auto"><code id="code-k8s"># Install via official Helm Chart
 helm repo add gitfix https://charts.gitfix.io
 helm install gitfix gitfix/gitfix \
   --namespace gitfix \
   --set github.webhookSecret=$WEBHOOK_SECRET \
   --set database.password=$DB_PASSWORD
 
-# Or manually apply deployment
-kubectl apply -f k8s/gitfix-deployment.yaml
-kubectl apply -f k8s/gitfix-service.yaml
-            </code></div>
-        </div>
-    </section>
+# Or deploy native manifests in deploy/ directory
+kubectl apply -f deploy/docker/
+kubectl get pods -n gitfix</code></pre>
+                        </div>
 
-    <!-- Roadmap -->
-    <section class="roadmap">
-        <div class="roadmap-container">
-            <h2 class="section-title">📈 Roadmap Status</h2>
-            <div class="roadmap-list">
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>Core 5-Stage Pipeline</h4>
-                        <p>Webhook Ingestion → AST → RAG → Multi-Agent → GitHub Dispatch</p>
+                        <!-- Tab 3: Manual -->
+                        <div id="deploy-manual" class="deploy-content hidden">
+                            <div class="text-xs font-mono text-slate-400 mb-3">Prerequisites: Python 3.11+, Node 18+, Redis 7, Postgres 15:</div>
+                            <pre class="bg-cyber-900 border border-cyber-800 rounded-lg p-5 font-mono text-xs text-neon-cyan overflow-x-auto"><code id="code-manual"># Backend setup
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+python -m app
+
+# Frontend setup (in a separate terminal)
+cd frontend
+npm install
+npm run dev
+# Dashboard opens on http://localhost:5173</code></pre>
+                        </div>
+
+                        <!-- Tab 4: Hooks -->
+                        <div id="deploy-hooks" class="deploy-content hidden">
+                            <div class="text-xs font-mono text-slate-400 mb-3">Instant local code review before any git commit is dispatched:</div>
+                            <pre class="bg-cyber-900 border border-cyber-800 rounded-lg p-5 font-mono text-xs text-neon-cyan overflow-x-auto"><code id="code-hooks"># Automatic global installation
+cd scripts
+python install_hooks.py
+
+# Or install manually per repository:
+cp backend/hooks/pre-commit.py .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+
+# Git commits now automatically undergo AST security review!</code></pre>
+                        </div>
                     </div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>GitHub App Integration</h4>
-                        <p>Full webhook support with HMAC validation</p>
-                    </div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>Multi-Platform Support</h4>
-                        <p>GitLab, Bitbucket, Azure DevOps ready</p>
-                    </div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>IDE Extensions</h4>
-                        <p>VS Code, JetBrains, Vim support</p>
-                    </div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>Enterprise SSO</h4>
-                        <p>SAML/OIDC & SCIM provisioning</p>
-                    </div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-check">✅</div>
-                    <div class="roadmap-item-text">
-                        <h4>🧠 Self-Improvement Engine</h4>
-                        <p>Persistent memory, self-learning, skill development</p>
+
+                    <!-- Quick File Navigation Strip -->
+                    <div class="bg-cyber-900 px-6 py-4 border-t border-cyber-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                        <div class="flex items-center gap-4 text-slate-400">
+                            <a href="./docker-compose.yml" class="hover:text-neon-cyan flex items-center gap-1"><i data-lucide="file-code" class="w-3.5 h-3.5"></i> docker-compose.yml</a>
+                            <a href="./deploy.sh" class="hover:text-neon-cyan flex items-center gap-1"><i data-lucide="terminal" class="w-3.5 h-3.5"></i> deploy.sh</a>
+                            <a href="./Makefile" class="hover:text-neon-cyan flex items-center gap-1"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> Makefile</a>
+                        </div>
+                        <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/releases" target="_blank" class="text-neon-cyan hover:underline flex items-center gap-1">
+                            <span>View All Releases on GitHub</span>
+                            <i data-lucide="external-link" class="w-3 h-3"></i>
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Support -->
-    <section class="support">
-        <h2 class="section-title">💖 Support & Community</h2>
-        <div class="support-grid">
-            <div class="support-card">
-                <div class="support-card-icon">⭐</div>
-                <h4>Star Us</h4>
-                <p>If Git-Fix helps you, give us a star!</p>
-                <a href="https://github.com/motherskitchenblr2/git-fix">View on GitHub →</a>
-            </div>
-            <div class="support-card">
-                <div class="support-card-icon">🐛</div>
-                <h4>Report Bugs</h4>
-                <p>Found an issue? Let us know!</p>
-                <a href="https://github.com/motherskitchenblr2/git-fix/issues">Open an Issue →</a>
-            </div>
-            <div class="support-card">
-                <div class="support-card-icon">💡</div>
-                <h4>Request Features</h4>
-                <p>Have a great idea?</p>
-                <a href="https://github.com/motherskitchenblr2/git-fix/discussions">Start Discussion →</a>
-            </div>
-            <div class="support-card">
-                <div class="support-card-icon">📖</div>
-                <h4>Documentation</h4>
-                <p>Learn how to use Git-Fix</p>
-                <a href="https://gitfix.io/docs">Read Docs →</a>
-            </div>
-            <div class="support-card">
-                <div class="support-card-icon">💬</div>
-                <h4>Join Discord</h4>
-                <p>Connect with our community</p>
-                <a href="https://discord.gg/gitfix">Join Discord →</a>
-            </div>
-            <div class="support-card">
-                <div class="support-card-icon">🚀</div>
-                <h4>Live Demo</h4>
-                <p>Try Git-Fix right now</p>
-                <a href="https://gitfix.io">Go to Demo →</a>
-            </div>
-        </div>
-    </section>
+        <!-- COMMUNITY, SUPPORT & REPOSITORY HUBS -->
+        <section id="community" class="py-20 lg:py-28 border-b border-cyber-700/50 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="text-xs font-mono font-bold uppercase tracking-widest text-neon-magenta px-3 py-1 rounded bg-cyber-800 border border-cyber-700">Open Source Ecosystem</span>
+                    <h2 class="text-3xl sm:text-5xl font-display font-black text-white mt-4 uppercase">
+                        Community &amp; Resources
+                    </h2>
+                    <p class="text-slate-400 mt-3 text-base sm:text-lg">
+                        Everything is wired directly to the real repository files and official GitHub tracking URLs.
+                    </p>
+                </div>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3 style="color: var(--primary); margin-bottom: 1rem;">⚡ Git-Fix</h3>
-                <p>The Cyberpunk Code Review Engine — Security. Quality. Automated.</p>
-            </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    <!-- Card 1: Star on GitHub -->
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" rel="noopener noreferrer" class="bg-cyber-900 border border-cyber-700 rounded-xl p-6 hover:border-neon-cyan transition duration-300 hover:glow-box-cyan flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-cyan/10 text-neon-cyan flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="star" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Star the Repository</h4>
+                            <p class="text-xs text-slate-400">Help amplify Git-Fix across the open-source community by starring on GitHub.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-neon-cyan font-bold">
+                            <span>github.com/motherskitchenblr2 &rarr;</span>
+                        </div>
+                    </a>
 
-            <div class="footer-section">
-                <h4 style="color: var(--secondary); margin-bottom: 1rem;">Built With</h4>
-                <div class="tech-stack">
-                    <span class="tech-badge">Python 3.11+</span>
-                    <span class="tech-badge">Node 18+</span>
-                    <span class="tech-badge">FastAPI</span>
-                    <span class="tech-badge">Flask</span>
-                    <span class="tech-badge">React</span>
-                    <span class="tech-badge">TypeScript</span>
-                    <span class="tech-badge">PostgreSQL</span>
-                    <span class="tech-badge">Redis</span>
-                    <span class="tech-badge">Docker</span>
-                    <span class="tech-badge">Kubernetes</span>
+                    <!-- Card 2: Report Issues -->
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/issues" target="_blank" rel="noopener noreferrer" class="bg-cyber-900 border border-cyber-700 rounded-xl p-6 hover:border-red-400 transition duration-300 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-red-400/10 text-red-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="bug" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Report Vulnerabilities &amp; Bugs</h4>
+                            <p class="text-xs text-slate-400">Submit security findings or bug reports directly to our issue tracker.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-red-400 font-bold">
+                            <span>Open an Issue &rarr;</span>
+                        </div>
+                    </a>
+
+                    <!-- Card 3: Feature Discussions -->
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/discussions" target="_blank" rel="noopener noreferrer" class="bg-cyber-900 border border-cyber-700 rounded-xl p-6 hover:border-neon-magenta transition duration-300 hover:glow-box-magenta flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-magenta/10 text-neon-magenta flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="messages-square" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Join GitHub Discussions</h4>
+                            <p class="text-xs text-slate-400">Propose new LLM critique prompts, rules, or language parsers.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-neon-magenta font-bold">
+                            <span>Start Discussion &rarr;</span>
+                        </div>
+                    </a>
+
+                    <!-- Card 4: Pull Requests -->
+                    <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/pulls" target="_blank" rel="noopener noreferrer" class="bg-cyber-900 border border-cyber-700 rounded-xl p-6 hover:border-neon-green transition duration-300 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-green/10 text-neon-green flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="git-pull-request" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Contribute Pull Requests</h4>
+                            <p class="text-xs text-slate-400">Good first issues available for Rust support, Jira sync, and VS Code panels.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-neon-green font-bold">
+                            <span>View Active PRs &rarr;</span>
+                        </div>
+                    </a>
+
+                    <!-- Card 5: Full Spec Documentation -->
+                    <a href="./README.md" class="bg-cyber-900 border border-cyber-700 rounded-xl p-6 hover:border-neon-amber transition duration-300 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-amber/10 text-neon-amber flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="book-open" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Technical README.md</h4>
+                            <p class="text-xs text-slate-400">Access the full 570-line technical architectural documentation and guides.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-neon-amber font-bold">
+                            <span>Read README.md &rarr;</span>
+                        </div>
+                    </a>
+
+                    <!-- Card 6: Interactive Dashboard Simulator -->
+                    <a href="./index.html" class="bg-cyber-900 border border-neon-cyan/50 rounded-xl p-6 hover:border-neon-cyan transition duration-300 glow-box-cyan flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-lg bg-neon-cyan/20 text-neon-cyan flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="cpu" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-lg font-display font-bold text-white mb-1">Live Engine Simulator</h4>
+                            <p class="text-xs text-slate-400">Experience the live DesignArena interactive simulation and benchmark runner.</p>
+                        </div>
+                        <div class="mt-6 flex items-center text-xs font-mono text-neon-cyan font-bold">
+                            <span>Open Simulator &rarr;</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-cyber-950 border-t border-cyber-700/80 pt-16 pb-12 text-slate-400 text-xs font-mono">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                <div class="space-y-4 md:col-span-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5">
+                            <div class="w-full h-full bg-cyber-950 rounded flex items-center justify-center">
+                                <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
+                            </div>
+                        </div>
+                        <span class="font-display font-bold text-base text-white tracking-wider">GIT-FIX</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-cyber-800 text-neon-cyan border border-cyber-700">v1.0.0-cyberpunk</span>
+                    </div>
+                    <p class="text-slate-400 max-w-md leading-relaxed text-xs">
+                        The Cyberpunk Code Review Engine. Next-generation multi-agent code analysis, AST parsing, and zero-retention infrastructure. Built with ⚡️ and ☕ by the open-source community.
+                    </p>
+                    <div class="flex items-center gap-3 pt-2">
+                        <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="p-2 rounded bg-cyber-900 hover:bg-cyber-800 text-slate-300 hover:text-white border border-cyber-700 transition" aria-label="GitHub">
+                            <i data-lucide="github" class="w-4 h-4"></i>
+                        </a>
+                        <a href="./index.html" class="p-2 rounded bg-cyber-900 hover:bg-cyber-800 text-slate-300 hover:text-neon-cyan border border-cyber-700 transition" aria-label="Live Simulator">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                        </a>
+                        <a href="./SECURITY_AUDIT.md" class="p-2 rounded bg-cyber-900 hover:bg-cyber-800 text-slate-300 hover:text-neon-green border border-cyber-700 transition" aria-label="Security Audit">
+                            <i data-lucide="shield" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h5 class="text-white font-display font-bold text-xs uppercase tracking-wider mb-4">Core Repositories</h5>
+                    <ul class="space-y-2.5">
+                        <li><a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="hover:text-neon-cyan transition">GitHub Repository</a></li>
+                        <li><a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/issues" target="_blank" class="hover:text-neon-cyan transition">Issue Tracker</a></li>
+                        <li><a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/pulls" target="_blank" class="hover:text-neon-cyan transition">Pull Requests</a></li>
+                        <li><a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/discussions" target="_blank" class="hover:text-neon-cyan transition">Discussions</a></li>
+                        <li><a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative/blob/main/LICENSE" target="_blank" class="hover:text-neon-cyan transition">MIT License</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h5 class="text-white font-display font-bold text-xs uppercase tracking-wider mb-4">Local Files</h5>
+                    <ul class="space-y-2.5">
+                        <li><a href="./index.html" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="play" class="w-3 h-3 text-neon-cyan"></i> index.html (App)</a></li>
+                        <li><a href="./README.md" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="file-text" class="w-3 h-3"></i> README.md</a></li>
+                        <li><a href="./SECURITY_AUDIT.md" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3 h-3 text-neon-green"></i> SECURITY_AUDIT.md</a></li>
+                        <li><a href="./docker-compose.yml" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="file-code" class="w-3 h-3 text-neon-amber"></i> docker-compose.yml</a></li>
+                        <li><a href="./deploy.sh" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-3 h-3"></i> deploy.sh</a></li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="footer-section">
-                <h4 style="color: var(--secondary); margin-bottom: 1rem;">Quick Links</h4>
-                <div class="footer-links">
-                    <a href="https://github.com/motherskitchenblr2/git-fix">GitHub</a>
-                    <a href="https://gitfix.io">Website</a>
-                    <a href="https://gitfix.io/docs">Documentation</a>
-                    <a href="https://discord.gg/gitfix">Discord</a>
-                    <a href="https://github.com/motherskitchenblr2/git-fix/blob/main/LICENSE">License</a>
-                </div>
-            </div>
-
-            <div class="copyright">
-                <p>Copyright © 2024 Git-Fix Contributors. All rights reserved.</p>
-                <p>Built with ⚡️ and ☕ by the open-source community</p>
-                <p style="margin-top: 1rem; font-size: 0.85rem;">Git-Fix v1.0.0-cyberpunk — <em>Where security meets style, and code review becomes an art form.</em></p>
+            <div class="pt-8 border-t border-cyber-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p>Copyright &copy; 2026 Git-Fix Contributors. Released under the MIT License.</p>
+                <p class="text-slate-500">Built for high security, zero retention, and developer delight.</p>
             </div>
         </div>
     </footer>
 
+    <!-- Interactive Scripts -->
     <script>
-        function switchTab(evt, tabName) {
-            const tabcontent = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].classList.remove("active");
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (menuBtn && mobileMenu) {
+            menuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+
+        // Interactive Pipeline Stage Switcher
+        const stageData = {
+            1: {
+                badge: "STAGE 01 — WEBHOOK INGESTION",
+                title: "HMAC-SHA256 Signature Validation & Redis Queue Dispatch",
+                latency: "< 15ms"
+            },
+            2: {
+                badge: "STAGE 02 — TREE-SITTER AST PARSING",
+                title: "Deterministic Concrete Syntax Tree & Control Flow Extraction",
+                latency: "< 40ms"
+            },
+            3: {
+                badge: "STAGE 03 — RAG & QDRANT VECTOR RETRIEVAL",
+                title: "Semantic Codebase Context & Custom Rule Matching",
+                latency: "< 65ms"
+            },
+            4: {
+                badge: "STAGE 04 — MULTI-AGENT CRITIQUE ENSEMBLE",
+                title: "Claude 3.5 + DeepSeek + GPT-4o with Confidence Arbiter (≥ 0.85)",
+                latency: "< 350ms"
+            },
+            5: {
+                badge: "STAGE 05 — GITHUB DISPATCH & AUTO-FIX PR",
+                title: "Automated Line-Numbered Review Posting & Check Runs",
+                latency: "< 30ms"
             }
-            const tabbuttons = document.getElementsByClassName("tab-button");
-            for (let i = 0; i < tabbuttons.length; i++) {
-                tabbuttons[i].classList.remove("active");
+        };
+
+        function showStage(stageNum) {
+            const data = stageData[stageNum];
+            if (!data) return;
+            document.getElementById('stage-badge').textContent = data.badge;
+            document.getElementById('stage-title').textContent = data.title;
+            showToast(`Loaded ${data.badge} specs`);
+        }
+
+        // CLI Terminal Output Simulator
+        const cliData = {
+            status: `<span class="text-slate-500"># Querying Self-Improvement Engine Status...</span><br>
+<span class="text-neon-cyan">$ python -m backend.self_improvement.cli status</span><br><br>
+<span class="text-neon-green font-bold">================================================================================</span><br>
+<span class="text-neon-green font-bold">  BRAIN STATUS: ACTIVE (3-Tier Compound Engine)</span><br>
+<span class="text-neon-green font-bold">================================================================================</span><br>
+<span class="text-white">  * Memory DB:</span> <span class="text-neon-cyan">~/.gitfix/memory/memory.db (SQLite)</span><br>
+<span class="text-white">  * Episodic Memories:</span> <span class="text-neon-amber">1,428 events recorded</span><br>
+<span class="text-white">  * Semantic Lessons:</span> <span class="text-neon-cyan">342 verified principles (Avg Confidence: 0.93)</span><br>
+<span class="text-white">  * Learned Reflexes:</span> <span class="text-neon-magenta">18 auto-recovery strategies stored</span><br>
+<span class="text-white">  * Skill Level:</span> <span class="text-neon-green">PROFICIENT (Level 4, 3,850 / 5,000 XP)</span><br>
+<span class="text-white">  * Active Improvement Plan:</span> <span class="text-slate-300">AST parsing optimization for Rust/Go</span><br>
+<span class="text-slate-500">--------------------------------------------------------------------------------</span><br>
+<span class="text-neon-cyan">[OK] Self-improvement pipeline running with zero errors.</span>`,
+            
+            demo: `<span class="text-slate-500"># Executing Full Self-Improvement Lifecycle Demo...</span><br>
+<span class="text-neon-cyan">$ python -m backend.self_improvement.cli demo</span><br><br>
+<span class="text-neon-green">[DEMO] Step 1: Ingesting simulated SQLi finding...</span><br>
+<span class="text-slate-300">       Event saved to episodic memory (id: ep_9841)</span><br>
+<span class="text-neon-magenta">[DEMO] Step 2: Testing error recovery reflex (DB Timeout)...</span><br>
+<span class="text-slate-300">       Auto-recovery strategy 'retry_with_backoff' triggered. Success!</span><br>
+<span class="text-neon-amber">[DEMO] Step 3: Feeding back PASS signal for SQLi lesson...</span><br>
+<span class="text-slate-300">       Confidence increased from 0.88 -> 0.94 (+0.06 XP awarded)</span><br>
+<span class="text-neon-cyan">[DEMO] Step 4: Assessing 'AST-Analysis' skill... Level UP -> EXPERT!</span><br>
+<span class="text-neon-green font-bold">[DEMO COMPLETED] All 4 subsystems verified successfully!</span>`,
+
+            dashboard: `<span class="text-slate-500"># Launching Live HTML Status Dashboard...</span><br>
+<span class="text-neon-cyan">$ python -m backend.self_improvement.cli dashboard</span><br><br>
+<span class="text-neon-green">[+] Starting lightweight embedded HTTP server on 127.0.0.1:5050...</span><br>
+<span class="text-slate-300">[+] Loading memory store from ~/.gitfix/memory/memory.db...</span><br>
+<span class="text-slate-300">[+] Exporting skills and reflexes to live cyberpunk UI...</span><br>
+<span class="text-neon-cyan font-bold">[READY] Live dashboard available at: http://127.0.0.1:5050/dashboard</span><br>
+<span class="text-slate-400">(Press Ctrl+C to terminate server)</span>`
+        };
+
+        let currentCliMode = 'status';
+
+        function runCliCommand(mode) {
+            currentCliMode = mode;
+            const output = document.getElementById('cli-output');
+            if (cliData[mode]) {
+                output.innerHTML = cliData[mode];
             }
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
+            document.querySelectorAll('.cli-btn').forEach(btn => {
+                btn.classList.remove('text-neon-cyan', 'border-neon-cyan');
+                btn.classList.add('text-slate-400');
+            });
+            event.target.classList.remove('text-slate-400');
+            event.target.classList.add('text-neon-cyan', 'border-neon-cyan');
+            showToast(`Simulated CLI: ${mode}`);
+        }
+
+        function copyCurrentCliCommand() {
+            const cmds = {
+                status: 'python -m backend.self_improvement.cli status',
+                demo: 'python -m backend.self_improvement.cli demo',
+                dashboard: 'python -m backend.self_improvement.cli dashboard'
+            };
+            const cmd = cmds[currentCliMode] || cmds.status;
+            navigator.clipboard.writeText(cmd).then(() => {
+                showToast(`Copied to clipboard: ${cmd}`);
+            });
+        }
+
+        // Vulnerability Tab Filter
+        function filterVulns(cat) {
+            const cards = document.querySelectorAll('.vuln-card');
+            cards.forEach(card => {
+                if (cat === 'all' || card.classList.contains(cat)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('.vuln-tab').forEach(t => {
+                t.classList.remove('text-neon-cyan', 'border-neon-cyan');
+                t.classList.add('text-slate-400');
+            });
+            event.target.classList.remove('text-slate-400');
+            event.target.classList.add('text-neon-cyan', 'border-neon-cyan');
+            showToast(`Showing ${cat} vulnerabilities`);
+        }
+
+        // Deployment Tab Switcher
+        let activeDeployTab = 'docker';
+
+        function switchDeployTab(tab) {
+            activeDeployTab = tab;
+            document.querySelectorAll('.deploy-content').forEach(c => c.classList.add('hidden'));
+            const activeContent = document.getElementById(`deploy-${tab}`);
+            if (activeContent) activeContent.classList.remove('hidden');
+
+            document.querySelectorAll('.deploy-tab').forEach(b => {
+                b.classList.remove('text-neon-cyan', 'border-neon-cyan', 'bg-cyber-950');
+                b.classList.add('text-slate-400', 'border-transparent');
+            });
+            event.currentTarget.classList.remove('text-slate-400', 'border-transparent');
+            event.currentTarget.classList.add('text-neon-cyan', 'border-neon-cyan', 'bg-cyber-950');
+            showToast(`Switched to ${tab} setup instructions`);
+        }
+
+        function copyActiveDeploySnippet() {
+            const el = document.getElementById(`code-${activeDeployTab}`);
+            if (el) {
+                navigator.clipboard.writeText(el.innerText).then(() => {
+                    showToast(`Copied ${activeDeployTab} commands to clipboard!`);
+                });
+            }
         }
     </script>
 </body>

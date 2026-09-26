@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "name": "code-rabbit-alternative",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/landing",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/Landing.html",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/simulator",
+      "destination": "/index.html"
+    }
+  ]
+}
