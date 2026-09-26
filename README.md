@@ -2,9 +2,6 @@
 
 <img width="1776" height="896" alt="image" src="https://github.com/user-attachments/assets/1110dcb2-4af3-4308-8d51-27846b78db32" />
 
-
-# 🌃 Git-Fix
-
 ### **The Cyberpunk Code Review Engine** — *Security. Quality. Automated.*
 
 [![Git-Fix](https://img.shields.io/badge/Git--Fix-ff00ff?style=for-the-badge&logo=git&logoColor=white)](https://github.com/motherskitchenblr2/git-fix)
