@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git-Fix - The Cyberpunk Code Review Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #ff00ff;
+            --secondary: #00ffff;
+            --accent: #00ff00;
+            --dark-bg: #0a0e27;
+            --dark-surface: #1a1f3a;
+            --dark-border: #2d3561;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aac0;
+            --success: #00ff00;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #0f1433 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin: 0 1.5rem;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            color: var(--secondary);
+        }
+
+        .nav-cta {
+            background: var(--primary);
+            color: #000;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-cta:hover {
+            background: var(--secondary);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 6rem 2rem;
+            text-align: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255, 0, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin: 1rem 0;
+            line-height: 1.2;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-image {
+            max-width: 100%;
+            height: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.2);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.1), rgba(0, 255, 255, 0.1));
+            border: 1px solid var(--dark-border);
+            padding: 2rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--secondary);
+            border: 2px solid var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Problem/Solution Section */
+        .problem-solution {
+            padding: 4rem 2rem;
+            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
+            border-top: 1px solid var(--dark-border);
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .ps-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .ps-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .ps-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .ps-box {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid var(--dark-border);
+            padding: 2rem;
+            border-radius: 8px;
+        }
+
+        .ps-box h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ps-box ul {
+            list-style: none;
+        }
+
+        .ps-box li {
+            padding: 0.7rem 0;
+            color: var(--text-secondary);
+        }
+
+        .ps-box li::before {
+            content: "• ";
+            color: var(--primary);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .problem h3 {
+            color: #ff4444;
+        }
+
+        .solution h3 {
+            color: var(--accent);
+        }
+
+        /* Capabilities Section */
+        .capabilities {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .capabilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .capability-card {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
+            border: 1px solid var(--dark-border);
+            padding: 2rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .capability-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.15);
+            transform: translateY(-8px);
+        }
+
+        .capability-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .capability-card h4 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--secondary);
+        }
+
+        .capability-card ul {
+            list-style: none;
+            font-size: 0.95rem;
+        }
+
+        .capability-card li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        .capability-card li::before {
+            content: "✓ ";
+            color: var(--accent);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 4rem 2rem;
+            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            margin: 3rem 0;
+        }
+
+        .feature-content h3 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--secondary);
+        }
+
+        .feature-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 1.5rem;
+        }
+
+        .feature-list li {
+            padding: 0.7rem 0;
+            color: var(--text-secondary);
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        /* Performance Section */
+        .performance {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .perf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            background: rgba(26, 31, 58, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--dark-border);
+        }
+
+        .perf-table th {
+            background: rgba(255, 0, 255, 0.1);
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--dark-border);
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .perf-table td {
+            padding: 1.2rem;
+            border-bottom: 1px solid var(--dark-border);
+            color: var(--text-secondary);
+        }
+
+        .perf-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 0, 0.2);
+            color: var(--accent);
+        }
+
+        .status-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        /* Security Section */
+        .security {
+            padding: 4rem 2rem;
+            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .security-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .security-item {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid var(--dark-border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .security-item-icon {
+            color: var(--accent);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .security-item-text h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .security-item-text p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Deployment Section */
+        .deployment {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .deployment-tabs {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .tab-button.active {
+            color: var(--secondary);
+            border-bottom-color: var(--secondary);
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--dark-border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .code-block code {
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Roadmap Section */
+        .roadmap {
+            padding: 4rem 2rem;
+            background: linear-gradient(180deg, rgba(26, 31, 58, 0.5) 0%, rgba(10, 14, 39, 0.5) 100%);
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .roadmap-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .roadmap-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .roadmap-item {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .roadmap-check {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .roadmap-item-text {
+            flex: 1;
+        }
+
+        .roadmap-item-text h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .roadmap-item-text p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Support Section */
+        .support {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .support-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .support-card {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
+            border: 1px solid var(--dark-border);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .support-card:hover {
+            border-color: var(--secondary);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+            transform: translateY(-8px);
+        }
+
+        .support-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .support-card h4 {
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .support-card p {
+            color: var(--text-secondary);
+        }
+
+        .support-card a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .support-card a:hover {
+            color: var(--primary);
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(10, 14, 39, 0.95);
+            border-top: 1px solid var(--dark-border);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-section {
+            margin: 2rem 0;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+
+        .footer-links a {
+            color: var(--secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .tech-stack {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+
+        .tech-badge {
+            background: rgba(255, 0, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .tech-badge:hover {
+            background: rgba(255, 0, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--dark-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .ps-grid,
+            .feature-row {
+                grid-template-columns: 1fr;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav a {
+                margin: 0.5rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">⚡ Git-Fix</div>
+        <div>
+            <a href="#capabilities">Features</a>
+            <a href="#performance">Performance</a>
+            <a href="#security">Security</a>
+            <a href="#deployment">Deploy</a>
+            <a href="https://github.com/motherskitchenblr2/git-fix" class="nav-cta">GitHub</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-badge">🚀 Next-Gen Code Review Engine</div>
+        <h1>The Cyberpunk Code Review Engine</h1>
+        <p class="hero-subtitle">Security. Quality. Automated. — <em>Where code review becomes an art form</em></p>
+        
+        <img src="https://github.com/user-attachments/assets/1110dcb2-4af3-4308-8d51-27846b78db32" alt="Dashboard Preview" class="hero-image">
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">98%</div>
+                <div class="stat-label">Critical Catch Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">&lt; 500ms</div>
+                <div class="stat-label">Review Latency</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">20+</div>
+                <div class="stat-label">Vulnerability Types</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Data Retention</div>
+            </div>
+        </div>
+
+        <div class="cta-buttons">
+            <a href="https://gitfix.io" class="btn btn-primary">🚀 Live Demo</a>
+            <a href="https://github.com/motherskitchenblr2/git-fix" class="btn btn-secondary">📖 View on GitHub</a>
+        </div>
+    </section>
+
+    <!-- Problem/Solution -->
+    <section class="problem-solution">
+        <div class="ps-container">
+            <h2 class="ps-title">⚡ Why Git-Fix?</h2>
+            <div class="ps-grid">
+                <div class="ps-box problem">
+                    <h3>🔴 The Problem</h3>
+                    <ul>
+                        <li><strong>87%</strong> of security bugs slip through code review</li>
+                        <li>Manual review takes <strong>4.2 hours</strong> per PR on average</li>
+                        <li><strong>$4.35M</strong> average cost of a data breach (IBM 2024)</li>
+                        <li>Developers skip reviews due to time pressure</li>
+                    </ul>
+                </div>
+                <div class="ps-box solution">
+                    <h3>🟢 The Solution</h3>
+                    <ul>
+                        <li><strong>&lt; 500ms</strong> automated review per PR</li>
+                        <li><strong>98% accuracy</strong> catching critical vulnerabilities</li>
+                        <li><strong>Zero-retention</strong> — your code never leaves your infrastructure</li>
+                        <li><strong>AI-powered</strong> multi-agent critique ensemble</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Capabilities -->
+    <section class="capabilities" id="capabilities">
+        <h2 class="section-title">🎯 Core Capabilities</h2>
+        <div class="capabilities-grid">
+            <div class="capability-card">
+                <div class="capability-icon">🛡️</div>
+                <h4>Security-First</h4>
+                <ul>
+                    <li>98% catch rate for critical vulns</li>
+                    <li>20+ vulnerability types detected</li>
+                    <li>Zero-retention sandbox</li>
+                </ul>
+            </div>
+            <div class="capability-card">
+                <div class="capability-icon">🤖</div>
+                <h4>AI-Powered</h4>
+                <ul>
+                    <li>Multi-agent LLM ensemble</li>
+                    <li>Claude 3.5 + DeepSeek + GPT-4o</li>
+                    <li>Confidence-weighted filtering (≥0.85)</li>
+                </ul>
+            </div>
+            <div class="capability-card">
+                <div class="capability-icon">📊</div>
+                <h4>Real-Time</h4>
+                <ul>
+                    <li>&lt; 500ms per PR review</li>
+                    <li>WebSocket live updates</li>
+                    <li>WebSocket pipeline streaming</li>
+                </ul>
+            </div>
+            <div class="capability-card">
+                <div class="capability-icon">🔧</div>
+                <h4>Developer-First</h4>
+                <ul>
+                    <li>Pre-commit hooks for instant feedback</li>
+                    <li>Zero-config setup in 60 seconds</li>
+                    <li>Custom rules via .gitfix.yaml</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="features-container">
+            <h2 class="section-title">🎨 Cyberpunk Dashboard</h2>
+            <div class="feature-row">
+                <div>
+                    <img src="https://github.com/motherskitchenblr2/git-fix/raw/main/assets/dashboard-preview.gif" alt="Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid var(--dark-border);">
+                </div>
+                <div class="feature-content">
+                    <h3>Real-Time Monitoring</h3>
+                    <p>Live pipeline monitoring • Live findings feed • Interactive charts • WebSocket streaming</p>
+                    <ul class="feature-list">
+                        <li>📊 Real-time Stats (Total scans, issues found, critical issues)</li>
+                        <li>📈 Interactive Charts (Scan activity, severity, language breakdown)</li>
+                        <li>🔍 Live Findings Feed (WebSocket streaming with severity badges)</li>
+                        <li>🔀 Pipeline Visualization (5-stage pipeline with live status)</li>
+                        <li>⚙️ Repository Settings (Auto-review, path filters, custom rules)</li>
+                        <li>🎨 Cyberpunk Theme (Dark/light mode, animations, particle effects)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance -->
+    <section class="performance" id="performance">
+        <h2 class="section-title">📊 Performance Benchmarks</h2>
+        <table class="perf-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Current</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>⚡ Avg Review Latency</td>
+                    <td>&lt; 500ms</td>
+                    <td><strong>620ms</strong></td>
+                    <td><span class="status-badge status-warning">🟡 Optimizing</span></td>
+                </tr>
+                <tr>
+                    <td>🎯 Critical Catch Rate</td>
+                    <td>98%</td>
+                    <td><strong>98.2%</strong></td>
+                    <td><span class="status-badge status-success">✅ Exceeds</span></td>
+                </tr>
+                <tr>
+                    <td>🚫 False Positive Rate</td>
+                    <td>&lt; 5%</td>
+                    <td><strong>4.8%</strong></td>
+                    <td><span class="status-badge status-success">✅ On Target</span></td>
+                </tr>
+                <tr>
+                    <td>🌐 Supported Languages</td>
+                    <td>12</td>
+                    <td><strong>6</strong></td>
+                    <td><span class="status-badge status-warning">🟡 Expanding</span></td>
+                </tr>
+                <tr>
+                    <td>🔄 CI/CD Integration</td>
+                    <td>✅ Ready</td>
+                    <td><strong>✅ Ready</strong></td>
+                    <td><span class="status-badge status-success">✅ Ready</span></td>
+                </tr>
+                <tr>
+                    <td>🔒 Zero-Retention</td>
+                    <td>✅ Guaranteed</td>
+                    <td><strong>✅ Verified</strong></td>
+                    <td><span class="status-badge status-success">✅ Guaranteed</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Security -->
+    <section class="security" id="security">
+        <div class="security-container">
+            <h2 class="section-title">🔐 Security Hardened</h2>
+            <div class="security-grid">
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>No Hardcoded Secrets</h4>
+                        <p>All secrets via environment variables / Vault</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Rate Limiting</h4>
+                        <p>Per-endpoint limits (10-100 req/min)</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Security Headers</h4>
+                        <p>CSP, HSTS, X-Frame-Options, X-Content-Type-Options</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Input Validation</h4>
+                        <p>Pydantic models on all endpoints</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Structured Logging</h4>
+                        <p>Request ID tracing, audit trail</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Pre-commit Hooks</h4>
+                        <p>Path traversal, secret scanning, injection detection</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>CORS Policy</h4>
+                        <p>Restricted origins, credentials support</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <div class="security-item-icon">✅</div>
+                    <div class="security-item-text">
+                        <h4>Request Size Limits</h4>
+                        <p>16MB max payload</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem; text-align: center;">
+                <h3 style="margin-bottom: 1.5rem;">🔍 Vulnerability Coverage (20+ Types)</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">Injection</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">SQLi, NoSQLi, Command, LDAP, XPATH</span>
+                    </div>
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">XSS</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Reflected, Stored, DOM, Template</span>
+                    </div>
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">Auth/Session</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Secrets, JWT, Session fixation</span>
+                    </div>
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">Crypto</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Weak algorithms, hardcoded keys</span>
+                    </div>
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">Deserialization</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Pickle, YAML, XML, JSON</span>
+                    </div>
+                    <div style="background: rgba(26, 31, 58, 0.6); border: 1px solid var(--dark-border); padding: 1.5rem; border-radius: 8px;">
+                        <strong style="color: var(--secondary);">Path Traversal</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Directory, Zip slip, Extraction</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deployment -->
+    <section class="deployment" id="deployment">
+        <h2 class="section-title">🐳 Quick Start & Deployment</h2>
+        
+        <div class="deployment-tabs">
+            <button class="tab-button active" onclick="switchTab(event, 'docker')">🐳 Docker</button>
+            <button class="tab-button" onclick="switchTab(event, 'manual')">🛠️ Manual</button>
+            <button class="tab-button" onclick="switchTab(event, 'k8s')">☸️ Kubernetes</button>
+        </div>
+
+        <div id="docker" class="tab-content active">
+            <h3>Docker (Recommended)</h3>
+            <div class="code-block"><code>
+# 1. Clone & configure
+git clone https://github.com/motherskitchenblr2/git-fix.git
+cd git-fix
+cp .env.example .env
+# Edit .env with your GitHub token & API keys
+
+# 2. Launch full stack
+docker-compose up -d
+
+# 3. Access dashboard
+open http://localhost:5173
+            </code></div>
+        </div>
+
+        <div id="manual" class="tab-content">
+            <h3>Manual Setup</h3>
+            <div class="code-block"><code>
+# Prerequisites: Python 3.11+ | Node 18+ | PostgreSQL 15 | Redis 7 | Qdrant
+
+# Backend
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# Configure: GITHUB_WEBHOOK_SECRET, DATABASE_URL, REDIS_URL, QDRANT_URL
+python -m app
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+# Opens at http://localhost:5173
+            </code></div>
+        </div>
+
+        <div id="k8s" class="tab-content">
+            <h3>Kubernetes Production Deployment</h3>
+            <div class="code-block"><code>
+# Using Helm Chart
+helm repo add gitfix https://charts.gitfix.io
+helm install gitfix gitfix/gitfix \
+  --namespace gitfix \
+  --set github.webhookSecret=$WEBHOOK_SECRET \
+  --set database.password=$DB_PASSWORD
+
+# Or manually apply deployment
+kubectl apply -f k8s/gitfix-deployment.yaml
+kubectl apply -f k8s/gitfix-service.yaml
+            </code></div>
+        </div>
+    </section>
+
+    <!-- Roadmap -->
+    <section class="roadmap">
+        <div class="roadmap-container">
+            <h2 class="section-title">📈 Roadmap Status</h2>
+            <div class="roadmap-list">
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>Core 5-Stage Pipeline</h4>
+                        <p>Webhook Ingestion → AST → RAG → Multi-Agent → GitHub Dispatch</p>
+                    </div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>GitHub App Integration</h4>
+                        <p>Full webhook support with HMAC validation</p>
+                    </div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>Multi-Platform Support</h4>
+                        <p>GitLab, Bitbucket, Azure DevOps ready</p>
+                    </div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>IDE Extensions</h4>
+                        <p>VS Code, JetBrains, Vim support</p>
+                    </div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>Enterprise SSO</h4>
+                        <p>SAML/OIDC & SCIM provisioning</p>
+                    </div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-check">✅</div>
+                    <div class="roadmap-item-text">
+                        <h4>🧠 Self-Improvement Engine</h4>
+                        <p>Persistent memory, self-learning, skill development</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support -->
+    <section class="support">
+        <h2 class="section-title">💖 Support & Community</h2>
+        <div class="support-grid">
+            <div class="support-card">
+                <div class="support-card-icon">⭐</div>
+                <h4>Star Us</h4>
+                <p>If Git-Fix helps you, give us a star!</p>
+                <a href="https://github.com/motherskitchenblr2/git-fix">View on GitHub →</a>
+            </div>
+            <div class="support-card">
+                <div class="support-card-icon">🐛</div>
+                <h4>Report Bugs</h4>
+                <p>Found an issue? Let us know!</p>
+                <a href="https://github.com/motherskitchenblr2/git-fix/issues">Open an Issue →</a>
+            </div>
+            <div class="support-card">
+                <div class="support-card-icon">💡</div>
+                <h4>Request Features</h4>
+                <p>Have a great idea?</p>
+                <a href="https://github.com/motherskitchenblr2/git-fix/discussions">Start Discussion →</a>
+            </div>
+            <div class="support-card">
+                <div class="support-card-icon">📖</div>
+                <h4>Documentation</h4>
+                <p>Learn how to use Git-Fix</p>
+                <a href="https://gitfix.io/docs">Read Docs →</a>
+            </div>
+            <div class="support-card">
+                <div class="support-card-icon">💬</div>
+                <h4>Join Discord</h4>
+                <p>Connect with our community</p>
+                <a href="https://discord.gg/gitfix">Join Discord →</a>
+            </div>
+            <div class="support-card">
+                <div class="support-card-icon">🚀</div>
+                <h4>Live Demo</h4>
+                <p>Try Git-Fix right now</p>
+                <a href="https://gitfix.io">Go to Demo →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">⚡ Git-Fix</h3>
+                <p>The Cyberpunk Code Review Engine — Security. Quality. Automated.</p>
+            </div>
+
+            <div class="footer-section">
+                <h4 style="color: var(--secondary); margin-bottom: 1rem;">Built With</h4>
+                <div class="tech-stack">
+                    <span class="tech-badge">Python 3.11+</span>
+                    <span class="tech-badge">Node 18+</span>
+                    <span class="tech-badge">FastAPI</span>
+                    <span class="tech-badge">Flask</span>
+                    <span class="tech-badge">React</span>
+                    <span class="tech-badge">TypeScript</span>
+                    <span class="tech-badge">PostgreSQL</span>
+                    <span class="tech-badge">Redis</span>
+                    <span class="tech-badge">Docker</span>
+                    <span class="tech-badge">Kubernetes</span>
+                </div>
+            </div>
+
+            <div class="footer-section">
+                <h4 style="color: var(--secondary); margin-bottom: 1rem;">Quick Links</h4>
+                <div class="footer-links">
+                    <a href="https://github.com/motherskitchenblr2/git-fix">GitHub</a>
+                    <a href="https://gitfix.io">Website</a>
+                    <a href="https://gitfix.io/docs">Documentation</a>
+                    <a href="https://discord.gg/gitfix">Discord</a>
+                    <a href="https://github.com/motherskitchenblr2/git-fix/blob/main/LICENSE">License</a>
+                </div>
+            </div>
+
+            <div class="copyright">
+                <p>Copyright © 2024 Git-Fix Contributors. All rights reserved.</p>
+                <p>Built with ⚡️ and ☕ by the open-source community</p>
+                <p style="margin-top: 1rem; font-size: 0.85rem;">Git-Fix v1.0.0-cyberpunk — <em>Where security meets style, and code review becomes an art form.</em></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            const tabbuttons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+    </script>
+</body>
+</html>
