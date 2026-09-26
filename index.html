@@ -163,20 +163,20 @@
 
     <!-- Navigation Header -->
     <header class="sticky top-0 z-50 backdrop-blur-xl bg-cyber-950/85 border-b border-cyber-700/60 transition-all">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
             <!-- Brand Logo -->
-            <a href="#" class="flex items-center gap-3 group">
-                <div class="w-11 h-11 rounded-lg bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 shadow-lg group-hover:glow-box-cyan transition duration-300">
+            <a href="#" class="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 shadow-lg group-hover:glow-box-cyan transition duration-300 shrink-0">
                     <div class="w-full h-full bg-cyber-950 rounded-[7px] flex items-center justify-center">
-                        <i data-lucide="zap" class="w-6 h-6 text-neon-cyan group-hover:text-neon-magenta transition"></i>
+                        <i data-lucide="zap" class="w-5 h-5 sm:w-6 sm:h-6 text-neon-cyan group-hover:text-neon-magenta transition"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-display font-extrabold text-xl tracking-wider text-white group-hover:text-neon-cyan transition">GIT-FIX</span>
-                        <span class="text-[10px] uppercase font-mono font-bold tracking-widest px-2 py-0.5 rounded bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/40">v1.0</span>
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                        <span class="font-display font-extrabold text-lg sm:text-xl tracking-wider text-white group-hover:text-neon-cyan transition">GIT-FIX</span>
+                        <span class="text-[9px] sm:text-[10px] uppercase font-mono font-bold tracking-widest px-1.5 sm:px-2 py-0.5 rounded bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/40">v1.0</span>
                     </div>
-                    <span class="text-xs text-slate-400 font-mono hidden sm:block">The Cyberpunk Code Review Engine</span>
+                    <span class="text-[11px] text-slate-400 font-mono hidden sm:block">The Cyberpunk Code Review Engine</span>
                 </div>
             </a>
 
@@ -190,28 +190,28 @@
                 <a href="#deployment" class="hover:text-neon-cyan transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-slate-400"></i>Deploy</a>
             </nav>
 
-            <!-- Header Action Buttons -->
-            <div class="flex items-center gap-2.5">
+            <!-- Header Action Buttons (Responsive & Collision-Free) -->
+            <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 <!-- Agentic OpenCode WebUI Workspace Link -->
-                <a href="./app.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-800 hover:bg-cyber-700 text-neon-green border border-neon-green/40 hover:border-neon-green transition text-xs font-mono font-bold glow-box-green">
+                <a href="./app.html" class="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-cyber-800 hover:bg-cyber-700 text-neon-green border border-neon-green/40 hover:border-neon-green transition text-xs font-mono font-bold glow-box-green shrink-0">
                     <i data-lucide="bot" class="w-3.5 h-3.5"></i>
-                    <span>Swarm WebUI</span>
+                    <span class="inline">Swarm WebUI</span>
                 </a>
 
                 <!-- Live Interactive Simulator Link -->
-                <a href="./simulator.html" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-neon-cyan/40 hover:border-neon-cyan transition text-xs font-mono font-semibold glow-box-cyan">
+                <a href="./simulator.html" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-neon-cyan/40 hover:border-neon-cyan transition text-xs font-mono font-semibold glow-box-cyan shrink-0">
                     <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
                     <span>Simulator</span>
                 </a>
 
-                <!-- GitHub Repo Direct Link -->
-                <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-neon-magenta to-pink-600 hover:from-pink-600 hover:to-neon-magenta text-white font-semibold text-xs transition duration-200 shadow-lg shadow-neon-magenta/25 hover:glow-box-magenta">
+                <!-- GitHub Repo Direct Link (Hidden on mobile, available in drawer menu) -->
+                <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-neon-magenta to-pink-600 hover:from-pink-600 hover:to-neon-magenta text-white font-semibold text-xs transition duration-200 shadow-lg shadow-neon-magenta/25 hover:glow-box-magenta shrink-0">
                     <i data-lucide="github" class="w-3.5 h-3.5"></i>
                     <span class="font-display tracking-wide">Star</span>
                 </a>
 
                 <!-- Mobile Menu Button -->
-                <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-lg bg-cyber-850 border border-cyber-700 text-slate-300 hover:text-white" aria-label="Toggle navigation">
+                <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-lg bg-cyber-850 border border-cyber-700 text-slate-300 hover:text-white shrink-0" aria-label="Toggle navigation">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -219,6 +219,7 @@
 
         <!-- Mobile Dropdown Navigation -->
         <div id="mobile-menu" class="hidden lg:hidden bg-cyber-950/95 border-b border-cyber-700 px-6 py-5 space-y-3">
+            <a href="./app.html" class="block py-2.5 px-4 rounded bg-neon-green/20 text-neon-green border border-neon-green/40 font-mono text-center text-sm font-bold glow-box-green">🚀 Launch Swarm Agentic WebUI</a>
             <a href="#problem-solution" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Why Git-Fix</a>
             <a href="#capabilities" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Capabilities</a>
             <a href="#architecture" class="block py-2 text-slate-300 hover:text-neon-cyan font-mono text-sm">Architecture & Pipeline</a>
@@ -1061,71 +1062,79 @@
                     </p>
                 </div>
 
-                <div class="max-w-4xl mx-auto bg-cyber-950 border border-cyber-700 rounded-xl overflow-hidden mb-16">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left font-mono text-xs text-slate-300">
+                <!-- Performance Benchmarks Table with Touch Horizontal Scroll & Never-Crush Badges -->
+                <div class="max-w-4xl mx-auto bg-cyber-950 border border-cyber-700 rounded-xl overflow-hidden mb-16 shadow-2xl">
+                    <div class="p-3 bg-cyber-900/90 border-b border-cyber-700 flex items-center justify-between text-[11px] font-mono sm:hidden">
+                        <span class="text-neon-cyan font-bold flex items-center gap-1.5">
+                            <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+                            <span>SLA Benchmarks</span>
+                        </span>
+                        <span class="text-slate-400 flex items-center gap-1">Swipe table →</span>
+                    </div>
+                    <div class="overflow-x-auto scrollbar-thin">
+                        <table class="w-full min-w-[640px] text-left font-mono text-xs text-slate-300 divide-y divide-cyber-800">
                             <thead class="bg-cyber-900 border-b border-cyber-700 text-neon-cyan font-display">
                                 <tr>
-                                    <th class="p-4">Benchmark Metric</th>
-                                    <th class="p-4">Target SLA</th>
-                                    <th class="p-4">Current Benchmark</th>
-                                    <th class="p-4">Verification Status</th>
+                                    <th class="p-4 whitespace-nowrap">Benchmark Metric</th>
+                                    <th class="p-4 whitespace-nowrap">Target SLA</th>
+                                    <th class="p-4 whitespace-nowrap">Current Benchmark</th>
+                                    <th class="p-4 whitespace-nowrap">Verification Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-cyber-800">
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
                                         <span>Avg Review Latency</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">&lt; 500ms</td>
-                                    <td class="p-4 text-neon-amber font-bold">620ms</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-amber-500/10 text-neon-amber border border-amber-500/30">🟡 Optimizing</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">&lt; 500ms</td>
+                                    <td class="p-4 text-neon-amber font-bold whitespace-nowrap">620ms</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-neon-amber border border-amber-500/30 whitespace-nowrap font-bold">🟡 Optimizing</span></td>
                                 </tr>
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="target" class="w-4 h-4 text-neon-green"></i>
                                         <span>Critical Catch Rate</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">98.0%</td>
-                                    <td class="p-4 text-neon-green font-bold">98.2%</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Exceeds</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">98.0%</td>
+                                    <td class="p-4 text-neon-green font-bold whitespace-nowrap">98.2%</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-neon-green border border-green-500/30 whitespace-nowrap font-bold">✅ Exceeds</span></td>
                                 </tr>
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="filter" class="w-4 h-4 text-neon-cyan"></i>
                                         <span>False Positive Rate</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">&lt; 5.0%</td>
-                                    <td class="p-4 text-neon-cyan font-bold">4.8%</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-cyan-500/10 text-neon-cyan border border-cyan-500/30">✅ On Target</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">&lt; 5.0%</td>
+                                    <td class="p-4 text-neon-cyan font-bold whitespace-nowrap">4.8%</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-neon-cyan border border-cyan-500/30 whitespace-nowrap font-bold">✅ On Target</span></td>
                                 </tr>
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="languages" class="w-4 h-4 text-neon-magenta"></i>
                                         <span>Supported Languages</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">12</td>
-                                    <td class="p-4 text-white font-bold">6 (Python, JS, TS, Go, Java, C++)</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-pink-500/10 text-neon-magenta border border-pink-500/30">🟡 Expanding</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">12</td>
+                                    <td class="p-4 text-white font-bold whitespace-nowrap">6 (Python, JS, TS, Go, Java, C++)</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/10 text-neon-magenta border border-pink-500/30 whitespace-nowrap font-bold">🟡 Expanding</span></td>
                                 </tr>
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="git-branch" class="w-4 h-4 text-neon-green"></i>
                                         <span>CI/CD Integration</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">Ready</td>
-                                    <td class="p-4 text-neon-green font-bold">GitHub, GitLab, Bitbucket</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Ready</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">Ready</td>
+                                    <td class="p-4 text-neon-green font-bold whitespace-nowrap">GitHub, GitLab, Bitbucket</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-neon-green border border-green-500/30 whitespace-nowrap font-bold">✅ Ready</span></td>
                                 </tr>
                                 <tr class="hover:bg-cyber-900/50 transition">
-                                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                                    <td class="p-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
                                         <i data-lucide="shield-check" class="w-4 h-4 text-neon-green"></i>
                                         <span>Zero-Retention Privacy</span>
                                     </td>
-                                    <td class="p-4 text-slate-400">100% Guaranteed</td>
-                                    <td class="p-4 text-neon-green font-bold">Verified HashiCorp Vault</td>
-                                    <td class="p-4"><span class="px-2.5 py-1 rounded bg-green-500/10 text-neon-green border border-green-500/30">✅ Guaranteed</span></td>
+                                    <td class="p-4 text-slate-400 whitespace-nowrap">100% Guaranteed</td>
+                                    <td class="p-4 text-neon-green font-bold whitespace-nowrap">Verified HashiCorp Vault</td>
+                                    <td class="p-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-neon-green border border-green-500/30 whitespace-nowrap font-bold">✅ Guaranteed</span></td>
                                 </tr>
                             </tbody>
                         </table>

@@ -87,7 +87,12 @@
         .text-glow-cyan { text-shadow: 0 0 10px rgba(0, 240, 255, 0.6); }
         .text-glow-magenta { text-shadow: 0 0 10px rgba(255, 0, 127, 0.6); }
 
-        /* Custom scrollbar */
+        /* Custom scrollbar & utilities */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #070a16; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #1d2956; border-radius: 2px; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #070a16; }
         ::-webkit-scrollbar-thumb { background: #1d2956; border-radius: 3px; }
@@ -117,42 +122,42 @@
         <span id="toast-text">System Ready</span>
     </div>
 
-    <!-- Top App Navigation Bar -->
-    <header class="h-14 bg-cyber-950/95 border-b border-cyber-700/80 px-4 flex items-center justify-between z-30 shrink-0">
-        <!-- Left: Brand + Workspace Roster -->
-        <div class="flex items-center gap-4">
-            <a href="./index.html" class="flex items-center gap-2 group">
-                <div class="w-8 h-8 rounded bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 group-hover:glow-cyan transition">
+    <!-- Top App Navigation Bar (Responsive & Collision-Free) -->
+    <header class="h-14 bg-cyber-950/95 border-b border-cyber-700/80 px-3 sm:px-4 flex items-center justify-between z-30 shrink-0 gap-2">
+        <!-- Left: Brand + Workspace Roster Button -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <a href="./index.html" class="flex items-center gap-2 group shrink-0">
+                <div class="w-8 h-8 rounded bg-gradient-to-tr from-neon-magenta to-neon-cyan p-0.5 group-hover:glow-cyan transition shrink-0">
                     <div class="w-full h-full bg-cyber-950 rounded-[3px] flex items-center justify-center">
                         <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2">
                     <span class="font-display font-black text-sm tracking-wider text-white">GIT-FIX</span>
-                    <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40">SWARM-UI</span>
+                    <span class="text-[9px] sm:text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40 hidden xs:inline">SWARM</span>
                 </div>
             </a>
 
             <!-- Left Panel Toggle / Drawer Pin Button -->
-            <button id="toggle-left-panel-btn" onclick="toggleLeftPanel()" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-xs font-mono text-slate-300 transition" title="Toggle Navigation Panel">
-                <i data-lucide="sidebar" class="w-3.5 h-3.5 text-neon-cyan"></i>
-                <span class="hidden sm:inline">Panel</span>
+            <button id="toggle-left-panel-btn" onclick="toggleLeftPanel()" class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-700 text-xs font-mono text-slate-300 transition shrink-0" title="Toggle Swarm Roster Panel">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                <span class="hidden sm:inline">Roster</span>
                 <span id="left-panel-pin-indicator" class="text-[10px]">📌</span>
             </button>
 
-            <!-- Active Swarm Agents Live Counter -->
-            <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyber-900 border border-cyber-700 text-xs font-mono">
+            <!-- Active Swarm Agents Live Counter (Desktop only) -->
+            <div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyber-900 border border-cyber-700 text-xs font-mono">
                 <span class="flex h-2 w-2 relative">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-neon-green"></span>
                 </span>
                 <span class="text-slate-300">Swarm:</span>
-                <span class="text-neon-cyan font-bold">6 Autonomous Agents Active</span>
+                <span class="text-neon-cyan font-bold">6 Active</span>
             </div>
         </div>
 
-        <!-- Center: Core Hub Tabs Selector (Chat, Editor, Tasks, Integrations, Ollama) -->
-        <div class="flex items-center gap-1 bg-cyber-900 border border-cyber-700 rounded-lg p-1 text-xs font-mono">
+        <!-- Center: Desktop Core Hub Tabs Selector (Hidden on mobile) -->
+        <div class="hidden md:flex items-center gap-1 bg-cyber-900 border border-cyber-700 rounded-lg p-1 text-xs font-mono shrink-0">
             <button onclick="switchHub('chat')" id="hub-btn-chat" class="hub-btn px-3 py-1.5 rounded font-semibold transition flex items-center gap-1.5 bg-cyber-750 text-neon-cyan border border-neon-cyan/40">
                 <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
                 <span>Swarm Chat</span>
@@ -175,10 +180,10 @@
             </button>
         </div>
 
-        <!-- Right: PR Ingestion, Export, Terminal Drawer Control & Repository Links -->
-        <div class="flex items-center gap-2">
-            <!-- GitHub PR Import Modal Trigger -->
-            <button onclick="openPrModal()" class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-cyber-700 text-xs font-mono transition" title="Import GitHub Pull Request">
+        <!-- Right: Actions, Terminal Toggle & Links -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <!-- GitHub PR Import Modal Trigger (Desktop) -->
+            <button onclick="openPrModal()" class="hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-neon-cyan border border-cyber-700 text-xs font-mono transition" title="Import GitHub Pull Request">
                 <i data-lucide="git-pull-request" class="w-3.5 h-3.5"></i>
                 <span>Import PR</span>
             </button>
@@ -186,38 +191,65 @@
             <!-- Export Security Audit Report -->
             <button onclick="exportAuditReport()" class="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-neon-green border border-cyber-700 text-xs font-mono transition" title="Export Security Audit Report (.md)">
                 <i data-lucide="file-text" class="w-3.5 h-3.5 text-neon-green"></i>
-                <span class="hidden 2xl:inline">Audit</span><span>.md</span>
+                <span>Audit</span>
             </button>
 
             <!-- Export Git Patch -->
             <button onclick="exportGitPatch()" class="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-neon-magenta border border-cyber-700 text-xs font-mono transition" title="Export Unified Git Patch (.patch)">
                 <i data-lucide="file-diff" class="w-3.5 h-3.5 text-neon-magenta"></i>
-                <span class="hidden 2xl:inline">Git</span><span>.patch</span>
+                <span>Patch</span>
             </button>
 
             <!-- Terminal Drawer Trigger -->
-            <button id="toggle-terminal-btn" onclick="toggleTerminal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-600 text-neon-cyan text-xs font-mono font-semibold transition glow-cyan">
+            <button id="toggle-terminal-btn" onclick="toggleTerminal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded bg-cyber-850 hover:bg-cyber-700 border border-cyber-600 text-neon-cyan text-xs font-mono font-semibold transition glow-cyan shrink-0">
                 <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
                 <span>Terminal</span>
                 <span id="terminal-pin-badge" class="text-[10px] text-neon-magenta font-bold">📌</span>
             </button>
 
-            <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-white border border-cyber-700 transition" title="GitHub Repo">
+            <a href="https://github.com/motherskitchenblr2/Code-Rabbit-Alternative" target="_blank" class="hidden sm:inline-flex p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-white border border-cyber-700 transition shrink-0" title="GitHub Repo">
                 <i data-lucide="github" class="w-4 h-4"></i>
             </a>
-            <a href="./index.html" class="p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-neon-cyan border border-cyber-700 transition" title="Landing Page">
+            <a href="./index.html" class="p-1.5 rounded bg-cyber-850 hover:bg-cyber-700 text-slate-300 hover:text-neon-cyan border border-cyber-700 transition shrink-0" title="Landing Page">
                 <i data-lucide="home" class="w-4 h-4"></i>
             </a>
         </div>
     </header>
 
+    <!-- Mobile Responsive Hub Tabs Strip (Directly Below Top Bar on < md) -->
+    <div class="md:hidden flex items-center overflow-x-auto scrollbar-thin bg-cyber-950 border-b border-cyber-800 px-2 py-1.5 gap-1.5 shrink-0 z-20">
+        <button onclick="switchHub('chat')" id="m-hub-btn-chat" class="m-hub-btn px-2.5 py-1 rounded-lg text-xs font-mono font-bold whitespace-nowrap flex items-center gap-1 bg-cyber-800 text-neon-cyan border border-neon-cyan/40 shrink-0">
+            <i data-lucide="message-square" class="w-3 h-3"></i>
+            <span>Chat</span>
+        </button>
+        <button onclick="switchHub('editor')" id="m-hub-btn-editor" class="m-hub-btn px-2.5 py-1 rounded-lg text-xs font-mono whitespace-nowrap flex items-center gap-1 text-slate-400 hover:text-white bg-cyber-900 border border-cyber-800 shrink-0">
+            <i data-lucide="code" class="w-3 h-3"></i>
+            <span>Editor</span>
+        </button>
+        <button onclick="switchHub('tasks')" id="m-hub-btn-tasks" class="m-hub-btn px-2.5 py-1 rounded-lg text-xs font-mono whitespace-nowrap flex items-center gap-1 text-slate-400 hover:text-white bg-cyber-900 border border-cyber-800 shrink-0">
+            <i data-lucide="check-square" class="w-3 h-3"></i>
+            <span>TODO (<span id="m-todo-badge">4</span>)</span>
+        </button>
+        <button onclick="switchHub('integrations')" id="m-hub-btn-integrations" class="m-hub-btn px-2.5 py-1 rounded-lg text-xs font-mono whitespace-nowrap flex items-center gap-1 text-slate-400 hover:text-white bg-cyber-900 border border-cyber-800 shrink-0">
+            <i data-lucide="key" class="w-3 h-3"></i>
+            <span>AI Keys</span>
+        </button>
+        <button onclick="switchHub('ollama')" id="m-hub-btn-ollama" class="m-hub-btn px-2.5 py-1 rounded-lg text-xs font-mono whitespace-nowrap flex items-center gap-1 text-slate-400 hover:text-white bg-cyber-900 border border-cyber-800 shrink-0">
+            <i data-lucide="cpu" class="w-3 h-3 text-neon-green"></i>
+            <span>Ollama</span>
+        </button>
+    </div>
+
     <!-- Main Workspace Container -->
-    <div class="flex-1 flex overflow-hidden relative">
+    <div class="flex-1 flex overflow-hidden relative w-full">
+
+        <!-- Mobile Drawer Backdrop Overlay -->
+        <div id="left-panel-backdrop" onclick="closeLeftPanel()" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-40 md:hidden transition-opacity"></div>
 
         <!-- ========================================================================= -->
-        <!-- LEFT PANEL (Drawer / Collapsible with 📌 Pin and ❌ Close)               -->
+        <!-- LEFT PANEL (Drawer Overlay on Mobile, Docked Sidebar on Desktop)          -->
         <!-- ========================================================================= -->
-        <aside id="left-panel" class="w-64 bg-cyber-950 border-r border-cyber-700/80 flex flex-col shrink-0 transition-all duration-300 z-20 overflow-hidden relative">
+        <aside id="left-panel" class="fixed md:relative inset-y-0 left-0 z-50 md:z-20 w-72 max-w-[85vw] md:w-64 bg-cyber-950/98 backdrop-blur-xl border-r border-cyber-700/80 flex flex-col shrink-0 transition-all duration-300 overflow-hidden shadow-2xl -translate-x-full md:translate-x-0 md:-ml-64">
             <!-- Panel Header with Pin and Close Controls -->
             <div class="p-3 border-b border-cyber-700/60 flex items-center justify-between">
                 <div class="flex items-center gap-2 text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
@@ -329,34 +361,34 @@
         <!-- ========================================================================= -->
         <!-- CENTER STAGE (Switches dynamically between the 5 Hubs)                    -->
         <!-- ========================================================================= -->
-        <main class="flex-1 flex flex-col overflow-hidden relative bg-cyber-900/30">
+        <main class="flex-1 flex flex-col overflow-hidden relative bg-cyber-900/30 w-full min-w-0">
 
             <!-- --------------------------------------------------------------------- -->
             <!-- 1. SWARM CHAT INTERFACE (OpenCode WebUI Style)                        -->
             <!-- --------------------------------------------------------------------- -->
-            <section id="hub-chat" class="hub-view flex-1 flex flex-col overflow-hidden">
+            <section id="hub-chat" class="hub-view flex-1 flex flex-col overflow-hidden w-full min-w-0">
                 <!-- Chat Action Header & Mode Indicator -->
-                <div class="h-10 bg-cyber-950/80 border-b border-cyber-700/60 px-4 flex items-center justify-between text-xs font-mono text-slate-400">
-                    <div class="flex items-center gap-2">
+                <div class="h-10 bg-cyber-950/80 border-b border-cyber-700/60 px-3 sm:px-4 flex items-center justify-between text-xs font-mono text-slate-400">
+                    <div class="flex items-center gap-1.5 sm:gap-2">
                         <span class="text-neon-cyan font-bold">Target:</span>
-                        <select id="chat-agent-target" class="bg-cyber-850 border border-cyber-700 text-white rounded px-2 py-0.5 text-xs focus:outline-none focus:border-neon-cyan">
-                            <option value="all">@swarm-all (Full Agent Consensus)</option>
-                            <option value="coordinator">@coordinator (Lead Architect)</option>
-                            <option value="security">@security (Vulnerability Auditor)</option>
-                            <option value="shell">@shell (Terminal &amp; DevOps Runner)</option>
-                            <option value="coder">@coder (Code Craftsman)</option>
+                        <select id="chat-agent-target" class="bg-cyber-850 border border-cyber-700 text-white rounded px-1.5 sm:px-2 py-0.5 text-xs focus:outline-none focus:border-neon-cyan max-w-[130px] xs:max-w-none">
+                            <option value="all">@swarm-all (Full Consensus)</option>
+                            <option value="coordinator">@coordinator (Lead)</option>
+                            <option value="security">@security (Auditor)</option>
+                            <option value="shell">@shell (Shell Runner)</option>
+                            <option value="coder">@coder (Engineer)</option>
                             <option value="qa">@qa (Test Oracle)</option>
-                            <option value="ollama">@ollama (Offline Local LLM)</option>
+                            <option value="ollama">@ollama (Offline Local)</option>
                         </select>
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <span class="hidden sm:inline text-slate-500">Shell execution:</span>
-                        <span class="text-neon-green flex items-center gap-1">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <span class="hidden md:inline text-slate-500">Shell execution:</span>
+                        <span class="text-neon-green flex items-center gap-1 text-[11px] sm:text-xs">
                             <i data-lucide="check" class="w-3 h-3"></i>
-                            ENABLED IN CHAT
+                            <span class="hidden xs:inline">ENABLED IN CHAT</span><span class="xs:hidden">SHELL ON</span>
                         </span>
-                        <button onclick="clearChat()" class="hover:text-red-400 text-slate-400 ml-2" title="Clear thread">
+                        <button onclick="clearChat()" class="hover:text-red-400 text-slate-400 ml-1 sm:ml-2" title="Clear thread">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -426,18 +458,18 @@
                             <!-- Hidden Image File Input -->
                             <input type="file" id="chat-image-input" accept="image/*" class="hidden" onchange="handleImageSelected(event)">
 
-                            <textarea id="chat-input" rows="2" placeholder="Ask swarm of agents, or type command (e.g. /run npm install, /fix auth_handler.py, /pull llama3.2)..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-xl p-3 pr-36 text-xs font-mono text-white placeholder-slate-500 focus:outline-none resize-none transition shadow-inner"></textarea>
+                            <textarea id="chat-input" rows="2" placeholder="Ask swarm of agents, or type command (e.g. /run npm install, /fix auth_handler.py, /pull llama3.2)..." class="w-full bg-cyber-900 border border-cyber-700 focus:border-neon-cyan rounded-xl p-3 pr-28 sm:pr-36 text-xs font-mono text-white placeholder-slate-500 focus:outline-none resize-none transition shadow-inner"></textarea>
                             
-                            <div class="absolute right-2.5 flex items-center gap-1.5">
+                            <div class="absolute right-2 sm:right-2.5 flex items-center gap-1 sm:gap-1.5">
                                 <!-- Attach Screenshot Button -->
-                                <button type="button" onclick="document.getElementById('chat-image-input').click()" class="p-2 rounded-lg bg-cyber-800 hover:bg-cyber-750 text-slate-300 hover:text-neon-cyan transition" title="Attach UI Screenshot / Image for Vision Analysis">
+                                <button type="button" onclick="document.getElementById('chat-image-input').click()" class="p-1.5 sm:p-2 rounded-lg bg-cyber-800 hover:bg-cyber-750 text-slate-300 hover:text-neon-cyan transition" title="Attach UI Screenshot / Image for Vision Analysis">
                                     <i data-lucide="image" class="w-4 h-4"></i>
                                 </button>
-                                <button type="button" onclick="openTerminalCommandPrompt()" class="p-2 rounded-lg bg-cyber-800 hover:bg-cyber-750 text-slate-300 hover:text-neon-green transition" title="Execute terminal command in chat">
+                                <button type="button" onclick="openTerminalCommandPrompt()" class="p-1.5 sm:p-2 rounded-lg bg-cyber-800 hover:bg-cyber-750 text-slate-300 hover:text-neon-green transition" title="Execute terminal command in chat">
                                     <i data-lucide="terminal" class="w-4 h-4"></i>
                                 </button>
-                                <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-blue-400 hover:to-neon-cyan text-cyber-950 font-bold text-xs font-mono transition shadow-lg glow-cyan flex items-center gap-1.5">
-                                    <span>Dispatch</span>
+                                <button type="submit" class="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-blue-400 hover:to-neon-cyan text-cyber-950 font-bold text-xs font-mono transition shadow-lg glow-cyan flex items-center gap-1 sm:gap-1.5">
+                                    <span class="hidden xs:inline">Dispatch</span>
                                     <i data-lucide="send" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
@@ -449,49 +481,62 @@
             <!-- --------------------------------------------------------------------- -->
             <!-- 2. EDITING HUB TAB (Complete Code Editing & Customization)            -->
             <!-- --------------------------------------------------------------------- -->
-            <section id="hub-editor" class="hub-view flex-1 hidden flex-col overflow-hidden">
+            <section id="hub-editor" class="hub-view flex-1 hidden flex-col overflow-hidden w-full min-w-0">
                 <!-- Editor Toolbar with 3-Mode View Switcher (Code / Diff Viewer / Live Preview) -->
-                <div class="h-10 bg-cyber-950 border-b border-cyber-700 px-4 flex items-center justify-between text-xs font-mono">
-                    <div class="flex items-center gap-3">
-                        <span class="text-neon-cyan font-bold flex items-center gap-1.5">
+                <div class="h-auto min-h-10 bg-cyber-950 border-b border-cyber-700 px-3 sm:px-4 py-1.5 sm:py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <span class="text-neon-cyan font-bold flex items-center gap-1.5 shrink-0">
                             <i data-lucide="file-code" class="w-4 h-4 text-neon-cyan"></i>
-                            <span id="current-editor-file">landing.html</span>
+                            <span id="current-editor-file" class="truncate max-w-[110px] sm:max-w-none">landing.html</span>
                         </span>
-                        <span class="text-slate-500">|</span>
+                        <span class="text-slate-500 hidden sm:inline">|</span>
                         
                         <!-- 3-Mode View Switcher -->
                         <div class="flex items-center bg-cyber-900 border border-cyber-700 rounded-lg p-0.5">
-                            <button id="editor-view-code-btn" onclick="setEditorView('code')" class="px-2.5 py-1 rounded bg-cyber-750 text-neon-cyan font-bold transition flex items-center gap-1">
+                            <button id="editor-view-code-btn" onclick="setEditorView('code')" class="px-2 sm:px-2.5 py-1 rounded bg-cyber-750 text-neon-cyan font-bold transition flex items-center gap-1">
                                 <i data-lucide="code" class="w-3 h-3"></i>
                                 <span>Code</span>
                             </button>
-                            <button id="editor-view-diff-btn" onclick="setEditorView('diff')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition flex items-center gap-1">
+                            <button id="editor-view-diff-btn" onclick="setEditorView('diff')" class="px-2 sm:px-2.5 py-1 rounded text-slate-400 hover:text-white transition flex items-center gap-1">
                                 <i data-lucide="git-commit" class="w-3 h-3 text-neon-magenta"></i>
-                                <span>Diff Viewer</span>
+                                <span>Diff</span>
                             </button>
-                            <button id="editor-view-preview-btn" onclick="setEditorView('preview')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition flex items-center gap-1">
+                            <button id="editor-view-preview-btn" onclick="setEditorView('preview')" class="px-2 sm:px-2.5 py-1 rounded text-slate-400 hover:text-white transition flex items-center gap-1">
                                 <i data-lucide="eye" class="w-3 h-3 text-neon-green"></i>
-                                <span>Live Preview</span>
+                                <span class="hidden sm:inline">Live </span><span>Preview</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <button onclick="requestAgentFix()" class="px-2.5 py-1 rounded bg-neon-magenta/20 hover:bg-neon-magenta/30 border border-neon-magenta/50 text-neon-magenta text-xs font-bold transition flex items-center gap-1">
+                    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <button onclick="requestAgentFix()" class="px-2 sm:px-2.5 py-1 rounded bg-neon-magenta/20 hover:bg-neon-magenta/30 border border-neon-magenta/50 text-neon-magenta text-xs font-bold transition flex items-center gap-1">
                             <i data-lucide="sparkles" class="w-3 h-3"></i>
-                            <span>Agent Auto-Fix Bug</span>
+                            <span class="hidden sm:inline">Agent Auto-Fix Bug</span>
+                            <span class="sm:hidden">Auto-Fix</span>
                         </button>
-                        <button onclick="saveEditorCode()" class="px-3 py-1 rounded bg-neon-cyan text-cyber-950 font-bold text-xs transition hover:bg-white flex items-center gap-1">
+                        <button onclick="saveEditorCode()" class="px-2.5 sm:px-3 py-1 rounded bg-neon-cyan text-cyber-950 font-bold text-xs transition hover:bg-white flex items-center gap-1">
                             <i data-lucide="save" class="w-3 h-3"></i>
-                            <span>Save File</span>
+                            <span>Save</span>
                         </button>
                     </div>
                 </div>
 
+                <!-- Mobile File Selector Bar (Horizontal scroll on < md) -->
+                <div class="md:hidden flex items-center overflow-x-auto scrollbar-thin bg-cyber-950/95 border-b border-cyber-800 px-3 py-1.5 gap-1.5 shrink-0 z-10">
+                    <span class="text-[10px] uppercase font-mono text-slate-500 shrink-0">Files:</span>
+                    <button onclick="openFileInEditor('landing.html')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-700 text-neon-cyan shrink-0">landing.html</button>
+                    <button onclick="openFileInEditor('index.html')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-slate-300 hover:text-white shrink-0">index.html</button>
+                    <button onclick="openFileInEditor('backend/autofix/auth_handler.py')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-red-400 hover:text-white shrink-0">auth_handler.py</button>
+                    <button onclick="openFileInEditor('vercel.json')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-neon-amber hover:text-white shrink-0">vercel.json</button>
+                    <button onclick="openFileInEditor('.coderabbit.yaml')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-neon-magenta hover:text-white shrink-0">.coderabbit.yaml</button>
+                    <button onclick="openFileInEditor('docker-compose.yml')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-neon-green hover:text-white shrink-0">docker-compose.yml</button>
+                    <button onclick="openFileInEditor('backend/app.py')" class="px-2 py-0.5 rounded text-xs font-mono bg-cyber-900 border border-cyber-800 text-blue-400 hover:text-white shrink-0">backend/app.py</button>
+                </div>
+
                 <!-- Editor Workspace: File Explorer Sidebar + View Panels -->
-                <div class="flex-1 flex overflow-hidden">
-                    <!-- File Explorer Tree -->
-                    <div class="w-56 bg-cyber-950 border-r border-cyber-700/80 p-3 overflow-y-auto text-xs font-mono space-y-1 shrink-0">
+                <div class="flex-1 flex overflow-hidden w-full min-w-0">
+                    <!-- File Explorer Tree (Desktop >= md) -->
+                    <div class="hidden md:block w-56 bg-cyber-950 border-r border-cyber-700/80 p-3 overflow-y-auto text-xs font-mono space-y-1 shrink-0">
                         <div class="text-[10px] uppercase text-slate-500 tracking-wider mb-2">Repository Files</div>
                         <div onclick="openFileInEditor('landing.html')" class="file-item p-1.5 rounded hover:bg-cyber-800 cursor-pointer text-neon-cyan font-bold flex items-center gap-2 bg-cyber-900 border border-cyber-700">
                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
@@ -631,7 +676,7 @@
             <!-- --------------------------------------------------------------------- -->
             <!-- 3. "TODO" TASK MANAGER HUB (Avoid Missing or Skipping Steps)          -->
             <!-- --------------------------------------------------------------------- -->
-            <section id="hub-tasks" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+            <section id="hub-tasks" class="hub-view flex-1 hidden flex-col overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
                 <!-- Task Progress Header -->
                 <div class="bg-cyber-950 border border-cyber-700 rounded-2xl p-6 mb-6">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -729,7 +774,7 @@
             <!-- --------------------------------------------------------------------- -->
             <!-- 4. INTEGRATIONS HUB (Multimodal AI API Keys & Auto-Validation)       -->
             <!-- --------------------------------------------------------------------- -->
-            <section id="hub-integrations" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+            <section id="hub-integrations" class="hub-view flex-1 hidden flex-col overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
                 <div class="mb-6">
                     <span class="text-xs font-mono uppercase text-neon-cyan tracking-wider font-bold">Zero-Config AI Gateway</span>
                     <h2 class="text-2xl font-display font-bold text-white mt-1">Multimodal AI Integrations</h2>
@@ -820,7 +865,7 @@
             <!-- --------------------------------------------------------------------- -->
             <!-- 5. OLLAMA API & OFFLINE AI MODELS PULLING SYSTEM                      -->
             <!-- --------------------------------------------------------------------- -->
-            <section id="hub-ollama" class="hub-view flex-1 hidden flex-col overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+            <section id="hub-ollama" class="hub-view flex-1 hidden flex-col overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
                 <!-- Ollama Connection Banner -->
                 <div class="bg-cyber-950 border border-cyber-700 rounded-2xl p-6 mb-6">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -967,20 +1012,21 @@
         <!-- ========================================================================= -->
         <div id="terminal-drawer" class="terminal-bottom absolute bottom-0 left-0 right-0 h-64 bg-cyber-950 border-t border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl">
             <!-- Terminal Header Controls -->
-            <div class="h-9 bg-cyber-900 border-b border-cyber-700/80 px-4 flex items-center justify-between text-xs font-mono">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-1.5">
+            <div class="h-9 bg-cyber-900 border-b border-cyber-700/80 px-2 sm:px-4 flex items-center justify-between text-xs font-mono overflow-x-auto scrollbar-thin">
+                <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <div class="flex items-center gap-1.5 shrink-0">
                         <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
                         <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
                     </div>
-                    <span class="text-white font-bold flex items-center gap-1">
+                    <span class="text-white font-bold flex items-center gap-1 shrink-0">
                         <i data-lucide="terminal" class="w-3.5 h-3.5 text-neon-cyan"></i>
-                        <span>root@gitfix-swarm-node:~#</span>
+                        <span class="hidden sm:inline">root@gitfix-swarm-node:~#</span>
+                        <span class="sm:hidden">gitfix:~#</span>
                     </span>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <!-- Layout Mode Switcher (Bottom vs Right Side) -->
                     <button onclick="toggleTerminalDockPosition()" id="terminal-dock-btn" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-700 text-slate-300 hover:text-neon-cyan text-[11px] transition flex items-center gap-1" title="Switch Dock Position (Bottom / Right Side)">
                         <i data-lucide="layout-panel-left" class="w-3 h-3"></i>
@@ -989,7 +1035,7 @@
 
                     <!-- Pin Button "📌" -->
                     <button onclick="toggleTerminalPin()" id="terminal-pin-btn" class="px-2 py-0.5 rounded bg-cyber-800 hover:bg-cyber-700 text-neon-magenta text-[11px] transition" title="Pin / Hold Terminal Open">
-                        📌 Pin
+                        📌<span class="hidden xs:inline"> Pin</span>
                     </button>
 
                     <!-- Clear Buffer Button -->
@@ -1050,13 +1096,22 @@
                 btn.classList.remove('bg-cyber-750', 'text-neon-cyan', 'border', 'border-neon-cyan/40');
                 btn.classList.add('text-slate-400');
             });
+            document.querySelectorAll('.m-hub-btn').forEach(btn => {
+                btn.classList.remove('bg-cyber-800', 'text-neon-cyan', 'border-neon-cyan/40');
+                btn.classList.add('bg-cyber-900', 'text-slate-400', 'border-cyber-800');
+            });
 
             const activeView = document.getElementById(`hub-${hubName}`);
             const activeBtn = document.getElementById(`hub-btn-${hubName}`);
+            const activeMobileBtn = document.getElementById(`m-hub-btn-${hubName}`);
             if (activeView) activeView.classList.remove('hidden');
             if (activeBtn) {
                 activeBtn.classList.remove('text-slate-400');
                 activeBtn.classList.add('bg-cyber-750', 'text-neon-cyan', 'border', 'border-neon-cyan/40');
+            }
+            if (activeMobileBtn) {
+                activeMobileBtn.classList.remove('bg-cyber-900', 'text-slate-400', 'border-cyber-800');
+                activeMobileBtn.classList.add('bg-cyber-800', 'text-neon-cyan', 'border-neon-cyan/40');
             }
 
             if (hubName === 'editor') {
@@ -1070,7 +1125,7 @@
         // LEFT PANEL CONTROLS (📌 PIN & ❌ CLOSE)
         // =========================================================================
         let leftPanelPinned = true;
-        let leftPanelOpen = true;
+        let leftPanelOpen = window.innerWidth >= 1024;
 
         function toggleLeftPanel() {
             leftPanelOpen = !leftPanelOpen;
@@ -1088,35 +1143,55 @@
             const pinIndicator = document.getElementById('left-panel-pin-indicator');
             const pinBtn = document.getElementById('left-pin-btn');
             if (leftPanelPinned) {
-                pinIndicator.textContent = "📌";
-                pinBtn.classList.add('text-neon-cyan');
+                if (pinIndicator) pinIndicator.textContent = "📌";
+                if (pinBtn) pinBtn.classList.add('text-neon-cyan');
                 showToast("Left panel PINNED open");
             } else {
-                pinIndicator.textContent = "";
-                pinBtn.classList.remove('text-neon-cyan');
+                if (pinIndicator) pinIndicator.textContent = "";
+                if (pinBtn) pinBtn.classList.remove('text-neon-cyan');
                 showToast("Left panel UNPINNED (auto-hides on mobile)");
             }
         }
 
         function applyLeftPanelState() {
             const panel = document.getElementById('left-panel');
-            if (leftPanelOpen) {
-                panel.classList.remove('-ml-64');
+            const backdrop = document.getElementById('left-panel-backdrop');
+            const isMobile = window.innerWidth < 768;
+
+            if (isMobile) {
+                if (leftPanelOpen) {
+                    panel.classList.remove('-translate-x-full');
+                    panel.classList.add('translate-x-0');
+                    if (backdrop) backdrop.classList.remove('hidden');
+                } else {
+                    panel.classList.remove('translate-x-0');
+                    panel.classList.add('-translate-x-full');
+                    if (backdrop) backdrop.classList.add('hidden');
+                }
             } else {
-                panel.classList.add('-ml-64');
+                if (backdrop) backdrop.classList.add('hidden');
+                panel.classList.remove('-translate-x-full');
+                if (leftPanelOpen) {
+                    panel.classList.remove('md:-ml-64');
+                } else {
+                    panel.classList.add('md:-ml-64');
+                }
             }
         }
 
         function selectAgentTarget(agent) {
             document.getElementById('chat-agent-target').value = agent;
             switchHub('chat');
+            if (window.innerWidth < 768) {
+                closeLeftPanel();
+            }
             showToast(`Target agent set to: @${agent}`);
         }
 
         // =========================================================================
         // TERMINAL DRAWER CONTROLS (BOTTOM / RIGHT DOCK + 📌 PIN + ❌ CLOSE)
         // =========================================================================
-        let terminalOpen = true;
+        let terminalOpen = window.innerWidth >= 1024;
         let terminalPinned = true;
         let terminalDockPosition = 'bottom'; // 'bottom' or 'right'
 
@@ -1136,12 +1211,12 @@
             const badge = document.getElementById('terminal-pin-badge');
             const pinBtn = document.getElementById('terminal-pin-btn');
             if (terminalPinned) {
-                badge.style.display = 'inline';
-                pinBtn.classList.add('text-neon-magenta');
+                if (badge) badge.style.display = 'inline';
+                if (pinBtn) pinBtn.classList.add('text-neon-magenta');
                 showToast("Terminal PINNED open");
             } else {
-                badge.style.display = 'none';
-                pinBtn.classList.remove('text-neon-magenta');
+                if (badge) badge.style.display = 'none';
+                if (pinBtn) pinBtn.classList.remove('text-neon-magenta');
                 showToast("Terminal UNPINNED");
             }
         }
@@ -1153,13 +1228,13 @@
             if (terminalDockPosition === 'bottom') {
                 // Switch to Right Side
                 terminalDockPosition = 'right';
-                dockLabel.textContent = "Dock: Right";
-                drawer.className = "terminal-right absolute top-0 right-0 bottom-0 w-80 sm:w-96 bg-cyber-950 border-l border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl";
+                if (dockLabel) dockLabel.textContent = "Dock: Right";
+                drawer.className = "terminal-right absolute top-0 right-0 bottom-0 w-full sm:w-96 max-w-full bg-cyber-950 border-l border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl";
                 showToast("Terminal docked to RIGHT SIDE");
             } else {
                 // Switch to Bottom
                 terminalDockPosition = 'bottom';
-                dockLabel.textContent = "Dock: Bottom";
+                if (dockLabel) dockLabel.textContent = "Dock: Bottom";
                 drawer.className = "terminal-bottom absolute bottom-0 left-0 right-0 h-64 bg-cyber-950 border-t border-cyber-700/80 flex flex-col z-40 transition-all duration-300 shadow-2xl";
                 showToast("Terminal docked to BOTTOM");
             }
@@ -1478,9 +1553,15 @@
             const completed = Array.from(checkboxes).filter(cb => cb.checked).length;
             const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-            document.getElementById('todo-percent').textContent = `${percent}%`;
-            document.getElementById('todo-progress-bar').style.width = `${percent}%`;
-            document.getElementById('todo-badge').textContent = total - completed;
+            const percentEl = document.getElementById('todo-percent');
+            const progressEl = document.getElementById('todo-progress-bar');
+            const badgeEl = document.getElementById('todo-badge');
+            const mBadgeEl = document.getElementById('m-todo-badge');
+
+            if (percentEl) percentEl.textContent = `${percent}%`;
+            if (progressEl) progressEl.style.width = `${percent}%`;
+            if (badgeEl) badgeEl.textContent = total - completed;
+            if (mBadgeEl) mBadgeEl.textContent = total - completed;
         }
 
         function toggleTodo(cb) {
@@ -1937,7 +2018,14 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            applyLeftPanelState();
+            applyTerminalState();
             restoreWorkspaceState();
+            updateTodoStats();
+        });
+
+        window.addEventListener('resize', () => {
+            applyLeftPanelState();
         });
     </script>
 
