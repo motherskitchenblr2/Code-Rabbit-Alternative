@@ -2,22 +2,25 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "name": "code-rabbit-alternative",
   "cleanUrls": true,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/landing.html"
+      "src": "^/$",
+      "dest": "/landing.html"
     },
     {
-      "source": "/landing",
-      "destination": "/landing.html"
+      "src": "^/landing(?:\\.html)?$",
+      "dest": "/landing.html"
     },
     {
-      "source": "/Landing.html",
-      "destination": "/landing.html"
+      "src": "^/Landing(?:\\.html)?$",
+      "dest": "/landing.html"
     },
     {
-      "source": "/simulator",
-      "destination": "/index.html"
+      "src": "^/simulator/?$",
+      "dest": "/index.html"
+    },
+    {
+      "handle": "filesystem"
     }
   ]
 }
